@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Bell, CheckCircle2, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 
-export const NotificationBell: React.FC = () => {
+interface NotificationBellProps {
+  size?: 'sm' | 'md';
+}
+
+export const NotificationBell: React.FC<NotificationBellProps> = ({ size = 'md' }) => {
   const { notifications, markNotificationRead, clearAllNotifications, setCurrentPage } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -58,6 +62,8 @@ export const NotificationBell: React.FC = () => {
     ? `Notifications, ${unreadCount} unread`
     : 'Notifications';
 
+  const isSmall = size === 'sm';
+
   return (
     <div className="relative inline-flex items-center justify-center flex-shrink-0">
       <button
@@ -67,12 +73,18 @@ export const NotificationBell: React.FC = () => {
         aria-label={accessibleLabel}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        className="relative w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-[#0B2748] border border-transparent hover:border-[#1E3A5F] transition-all flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C99A3D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#06172C]"
+        className={isSmall
+          ? "relative w-7 h-7 rounded-md text-slate-300 hover:text-white hover:bg-[#0D2340] border border-transparent hover:border-[#1E3A5F] transition-all flex items-center justify-center focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]"
+          : "relative w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl text-slate-300 hover:text-white hover:bg-[#0B2748] border border-transparent hover:border-[#1E3A5F] transition-all flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C99A3D] focus-visible:ring-offset-2 focus-visible:ring-offset-[#06172C]"
+        }
       >
-        <Bell className="w-5 h-5 text-slate-200" aria-hidden="true" />
+        <Bell className={isSmall ? "w-3.5 h-3.5 text-slate-300" : "w-5 h-5 text-slate-200"} aria-hidden="true" />
         {unreadCount > 0 && (
           <span 
-            className="absolute top-1 right-1 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-[#C99A3D] text-[10px] font-bold text-[#06172C] shadow-sm leading-none pointer-events-none ring-2 ring-[#06172C]"
+            className={isSmall
+              ? "absolute -top-1 -right-1 flex min-w-[15px] h-[15px] px-0.5 items-center justify-center rounded-full bg-[#C99A3D] text-[9px] font-bold text-[#06172C] leading-none pointer-events-none ring-1 ring-[#040D1A]"
+              : "absolute top-1 right-1 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-[#C99A3D] text-[10px] font-bold text-[#06172C] shadow-sm leading-none pointer-events-none ring-2 ring-[#06172C]"
+            }
             aria-hidden="true"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
