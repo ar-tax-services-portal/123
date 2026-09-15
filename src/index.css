@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Exact Brand Tokens per Part 1 Specification */
+    --color-primary-midnight-navy: #06172C;
+    --color-deep-navy: #081E36;
+    --color-elevated-navy: #0D2746;
+    --color-navy-hover: #14375D;
+
+    --color-refined-gold: #C99A3D;
+    --color-bright-gold: #E2B957;
+    --color-soft-champagne: #EAD7A3;
+    --color-muted-gold-surface: #F4E7C3;
+
+    --color-warm-ivory: #F7F1E5;
+    --color-soft-ivory-surface: #FBF8F1;
+
+    --color-primary-dark-text: #10233D;
+    --color-secondary-text: #52657B;
+    --color-muted-text: #718096;
+    --color-text-on-dark: #F7F1E5;
+
+    --color-navy-border: #244567;
+    --color-gold-border: #B98B32;
+    --color-light-border: #D8C9A5;
+
+    --color-success: #138A67;
+    --color-warning: #B87319;
+    --color-error: #B42318;
+    --color-error-bg: #FFF1F0;
+    --color-information: #2563A6;
+
+    /* Semantic Mappings */
+    --color-page-background: #06172C;
+    --color-surface-dark: #081E36;
+    --color-surface-elevated: #0D2746;
+    --color-surface-light: #FBF8F1;
+    --color-surface-highlight: #F7F1E5;
+    --color-brand-primary: #C99A3D;
+    --color-brand-hover: #E2B957;
+    --color-text-primary: #10233D;
+    --color-text-secondary: #52657B;
+    --color-border: #244567;
+    --color-focus: #C99A3D;
+
+    /* Legacy compatibility aliases */
+    --color-midnight: #06172C;
+    --color-heritage: #0B2748;
+    --color-gold: #C99A3D;
+    --color-champagne: #E2BD67;
+    --color-ivory: #F8F6F1;
+  }
+
+  body {
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    background-color: #06172C;
+    color: #F8F6F1;
+  }
+
+  .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  /* Universal select and option high-contrast baseline rule */
+  select option {
+    background-color: #FBF8F1;
+    color: #10233D;
+    font-weight: 500;
+  }
+  select.bg-slate-900 option,
+  select.bg-navy option,
+  .dark-select option {
+    background-color: #0D2746;
+    color: #F7F1E5;
+  }
+}
+
+/* Premium executive brand utility classes */
+.bg-surface-ivory {
+  background-color: #FBF8F1;
+}
+
+.bg-surface-ivory-warm {
+  background-color: #F7F1E5;
+}
+
+.bg-surface-muted-gold {
+  background-color: #F4E7C3;
+}
+
+.border-ivory-light {
+  border-color: #D8C9A5;
+}
+
+.border-gold-refined {
+  border-color: #B98B32;
+}
+
+.border-navy-refined {
+  border-color: #244567;
+}
+
+.text-navy-primary {
+  color: #10233D;
+}
+
+.text-navy-secondary {
+  color: #52657B;
+}
+
+.text-navy-muted {
+  color: #718096;
+}
+
+.text-gold-refined {
+  color: #C99A3D;
+}
+
+.text-gold-bright {
+  color: #E2B957;
+}
+
+.gold-shimmer {
+  background: linear-gradient(135deg, #C99A3D 0%, #E2BD67 50%, #C99A3D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-border-subtle {
+  border-color: rgba(201, 154, 61, 0.35);
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #C99A3D 0%, #E2B957 100%);
+}
+
+.navy-card-gradient {
+  background: linear-gradient(180deg, #0B2748 0%, #06172C 100%);
+}
+
+/* Accessible focus ring standards */
+*:focus-visible {
+  outline: 2px solid #C99A3D;
+  outline-offset: 2px;
+}
