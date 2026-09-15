@@ -21,41 +21,41 @@ export const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="bg-[#050E1A] text-slate-300 border-t border-[#0B2748] pt-16 pb-12">
+    <footer className="bg-[#031323] text-slate-300 border-t border-[#1A365D] pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[#0B2748]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[#1A365D]">
           
           {/* Column 1: Brand & Firm Identity */}
           <div className="lg:col-span-2 space-y-4">
             <BrandLogo size="md" />
             <p className="text-slate-400 text-sm leading-relaxed max-w-md pt-2">
               Preserving Wealth. Building Legacies. Delivering boutique, client-first tax preparation, 
-              strategic business accounting, and wealth coordination for individuals, entrepreneurs, and families.
+              strategic business tax advisory, and wealth coordination for individuals, entrepreneurs, and families.
             </p>
 
             <div className="space-y-2.5 pt-2 text-sm text-slate-300">
               <div className="flex items-center gap-3">
-                <MapPin className="w-4 h-4 text-[#C99A3D] flex-shrink-0" />
+                <MapPin className="w-4 h-4 text-[#C99A32] flex-shrink-0" />
                 <span>Columbia, South Carolina, USA</span>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-[#C99A3D] flex-shrink-0" />
-                <a href="tel:678-205-9486" className="hover:text-[#E2BD67] transition-colors font-medium">
+                <Phone className="w-4 h-4 text-[#C99A32] flex-shrink-0" />
+                <a href="tel:678-205-9486" className="hover:text-[#D7AC4A] transition-colors font-medium">
                   678-205-9486
                 </a>
               </div>
               <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-[#C99A3D] flex-shrink-0" />
-                <a href="mailto:info@artaxservices.com" className="hover:text-[#E2BD67] transition-colors">
+                <Mail className="w-4 h-4 text-[#C99A32] flex-shrink-0" />
+                <a href="mailto:info@artaxservices.com" className="hover:text-[#D7AC4A] transition-colors">
                   info@artaxservices.com
                 </a>
               </div>
             </div>
 
-            <div className="pt-3 flex items-center gap-2 text-xs text-[#E2BD67]">
-              <ShieldCheck className="w-4 h-4 text-[#C99A3D]" />
-              <span>Bank-Grade 256-bit AES Encryption Vault</span>
+            <div className="pt-3 flex items-center gap-2 text-xs text-[#E8C66A]">
+              <ShieldCheck className="w-4 h-4 text-[#C99A32]" />
+              <span>Encrypted in Transit &amp; Rest • Access-Controlled Client Vault</span>
             </div>
           </div>
 
@@ -225,25 +225,31 @@ export const Footer: React.FC = () => {
 
         </div>
 
-        {/* Professional Disclaimers Notice */}
-        <div className="py-6 text-xs text-slate-500 leading-relaxed border-b border-[#1E3A5F]/60">
+        {/* Professional Disclaimers Architecture */}
+        <div className="py-6 text-xs text-slate-400/90 leading-relaxed border-b border-[#1A365D] space-y-2">
           <p>
-            <strong className="text-slate-400">Professional Notice:</strong> A/R Tax Services, LLC provides professional tax preparation, bookkeeping, and business consulting services. 
-            Accounting personnel do not provide legal counsel, court representation, or securities brokerage services. Estate planning coordination, living wills, and trust structures 
-            are facilitated in direct coordination with independent, properly licensed legal professionals. No specific tax savings, deductions, or refund amounts are guaranteed, 
-            as individual outcomes depend strictly on client-provided records and applicable federal and state tax statutes.
+            <strong className="text-[#E8C66A]">General Information Disclaimer:</strong> Information provided through this website is for general informational and educational purposes and should not, by itself, be considered individualized tax, legal, investment, or financial advice.
+          </p>
+          <p>
+            <strong className="text-[#E8C66A]">No Guarantee:</strong> Tax outcomes depend on individual facts, applicable law, documentation, and governmental interpretation. No particular tax result, refund, savings amount, audit outcome, or governmental determination is guaranteed.
+          </p>
+          <p>
+            <strong className="text-[#E8C66A]">No Government Affiliation:</strong> A/R Tax Services, LLC is an independent private business and is not affiliated with, endorsed by, or acting on behalf of the Internal Revenue Service (IRS) or any state taxing authority.
+          </p>
+          <p>
+            <strong className="text-[#E8C66A]">Professional Relationship:</strong> Use of the public website alone does not establish a professional engagement or client relationship. Professional engagements are established solely through a formal, mutually executed engagement agreement.
           </p>
         </div>
 
         {/* Bottom copyright & attribution */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
             © {new Date().getFullYear()} A/R Tax Services, LLC. All rights reserved. Columbia, South Carolina.
           </div>
           <div className="flex items-center gap-4 text-slate-400">
-            <span className="text-[#E2BD67] font-medium">Founder: Desmond Hinds</span>
+            <span className="text-[#D7AC4A] font-medium">Founder: Desmond Hinds</span>
             <span>•</span>
-            <span>Tagline: “Preserving Wealth. Building Legacies.”</span>
+            <span>Discreet U.S. Tax Advisory</span>
           </div>
         </div>
       </div>
