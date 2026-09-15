@@ -12,6 +12,8 @@ export function getAssetUrl(path: string): string {
 export const BRAND_ASSETS = {
   logoPng: getAssetUrl('images/ar-tax-services-logo.png'),
   logoWebp: getAssetUrl('images/ar-tax-services-logo.webp'),
+  logoMonochrome: getAssetUrl('images/ar-tax-logo-monochrome.png'),
+  logoMonochromeHeader: getAssetUrl('images/ar-tax-logo-monochrome-header.png'),
   logo192: getAssetUrl('images/ar-logo-192.png'),
   founderWebp: getAssetUrl('images/desmond-hinds-founder-portrait.webp'),
   founderJpg: getAssetUrl('images/desmond-hinds-founder-portrait.jpg'),

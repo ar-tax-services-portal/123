@@ -92,6 +92,7 @@ export type PageRoute =
   | 'disclaimers'
   | 'cookies'
   | 'portals'
+  | 'public_v2'
   | 'not_found';
 
 export interface AppNotification {

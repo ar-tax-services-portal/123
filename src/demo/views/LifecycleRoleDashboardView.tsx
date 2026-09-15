@@ -70,7 +70,6 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react';
-import { WorkCycleProgress } from '../components/WorkCycleProgress';
 
 interface LifecycleRoleDashboardViewProps {
   role: DemoRole;
