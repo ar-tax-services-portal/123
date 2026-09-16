@@ -185,7 +185,7 @@ export const INITIAL_DEMO_ENGAGEMENTS: DemoEngagement[] = [
     taxYear: 2025,
     jurisdiction: 'Federal & SC',
     formType: 'Form 1120-S & SC1120S',
-    currentStage: 'Obtain Approval',
+    currentStage: 'Sign',
     currentStatus: 'Ready for Client Review',
     assignedStaff: 'Marcus Vance, EA (Prep) / Elena Rostova, CPA (QC)',
     assignedPreparerId: 'usr_acc_marcus',

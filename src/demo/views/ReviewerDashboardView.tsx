@@ -6,7 +6,6 @@
 import React, { useState, useEffect } from 'react';
 import { DemoEngagement, DemoTaxWorkpaper, DemoAuditEvent } from '../types';
 import { demoDataStore } from '../services/DemoDataService';
-import { WorkCycleProgress } from '../components/WorkCycleProgress';
 import { 
   Scale, 
   CheckCircle, 
@@ -32,16 +31,23 @@ import {
 } from '../../taxguard';
 
 interface ReviewerDashboardViewProps {
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
   onOpenAiAssistant: () => void;
 }
 
-export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ 
+  activeNavId, 
+  onSelectNav, 
+  onOpenAiAssistant 
+}) => {
   const [engagements, setEngagements] = useState<DemoEngagement[]>([]);
   const [workpapers, setWorkpapers] = useState<DemoTaxWorkpaper[]>([]);
   const [selectedEngagement, setSelectedEngagement] = useState<DemoEngagement | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [reviewerTab, setReviewerTab] = useState<'certification' | 'side_by_side' | 'deliverables' | 'approval_gate' | 'diagnostics' | 'research'>('certification');
+
+  const currentSection = activeNavId && activeNavId !== 'default' ? activeNavId : 'queue';
 
   const refresh = () => {
     const allEngs = demoDataStore.getEngagements();
@@ -147,50 +153,22 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
         </div>
       </div>
 
-      {/* Reviewer Sub-Navigation Tabs */}
-      <div className="border-b border-neutral-200 flex flex-wrap gap-1 text-xs">
-        {[
-          { id: 'certification', label: 'QC Review Queue & Certification', icon: Scale },
-          { id: 'side_by_side', label: 'Side-by-Side OCR & Provenance', icon: Layers },
-          { id: 'deliverables', label: 'Branded Deliverables & Dossiers', icon: FileText },
-          { id: 'approval_gate', label: 'Maker-Checker Approval Gate', icon: ShieldCheck },
-          { id: 'diagnostics', label: 'Variance & Discrepancy Check', icon: ShieldAlert },
-          { id: 'research', label: 'IRC / Statutory Defense Research', icon: BookOpen }
-        ].map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setReviewerTab(tab.id as any)}
-              className={`px-3.5 py-2 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-[1px] ${
-                reviewerTab === tab.id
-                  ? 'border-black text-black font-bold bg-neutral-50'
-                  : 'border-transparent text-neutral-600 hover:text-black'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Sub-Tab: Side-by-Side OCR & Provenance Review */}
-      {reviewerTab === 'side_by_side' && (
+      {/* Section: Side-by-Side OCR & Provenance Review */}
+      {currentSection === 'side_by_side' && (
         <div className="pt-1">
           <SideBySideReviewWorkspace userRole="reviewer" />
         </div>
       )}
 
-      {/* Sub-Tab: Branded Deliverables & Workpaper Packages */}
-      {reviewerTab === 'deliverables' && (
+      {/* Section: Branded Deliverables & Workpaper Packages */}
+      {currentSection === 'deliverables' && (
         <div className="pt-1">
           <BrandedDeliverablesGenerator userRole="reviewer" />
         </div>
       )}
 
-      {/* Sub-Tab 2: Maker-Checker Approval Gate */}
-      {reviewerTab === 'approval_gate' && (
+      {/* Section: Maker-Checker Approval Gate */}
+      {currentSection === 'approval_gate' && (
         <div className="space-y-6">
           <div className="border border-neutral-300 p-5 bg-white">
             <ApprovalGate userRole="reviewer" />
@@ -201,22 +179,22 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
         </div>
       )}
 
-      {/* Sub-Tab 3: Variance & Discrepancy Diagnostics */}
-      {reviewerTab === 'diagnostics' && (
+      {/* Section: Variance & Discrepancy Diagnostics */}
+      {currentSection === 'diagnostics' && (
         <div className="border border-neutral-300 p-5 bg-white">
           <DiscrepancyPanel userRole="reviewer" />
         </div>
       )}
 
-      {/* Sub-Tab 4: IRC / Statutory Defense Research */}
-      {reviewerTab === 'research' && (
+      {/* Section: IRC / Statutory Defense Research */}
+      {currentSection === 'research' && (
         <div className="border border-neutral-300 p-5 bg-white">
           <AIResearchAssistant userRole="reviewer" />
         </div>
       )}
 
-      {/* Sub-Tab 1: Active Senior Review Queue & Selected Return Quality Gate */}
-      {reviewerTab === 'certification' && (
+      {/* Section: Active Senior Review Queue & Certification (Default / Overview / Queue) */}
+      {(currentSection === 'queue' || currentSection === 'certification' || currentSection === 'overview' || currentSection === 'workpapers') && (
         <>
           {/* Review Queue Table */}
       <div className="border border-neutral-300 overflow-x-auto">
@@ -301,8 +279,6 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
               Assigned Reviewer: <strong>Elena Rostova, CPA</strong>
             </div>
           </div>
-
-          <WorkCycleProgress currentStage={selectedEngagement.currentStage} compact />
 
           {/* Workpapers Traceability Matrix */}
           <div className="space-y-3">

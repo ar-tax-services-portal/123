@@ -475,7 +475,6 @@ export type WorkCycleStage =
   | 'Plan'
   | 'Prepare Taxes'
   | 'Approve'
-  | 'Obtain Approval'
   | 'Sign'
   | 'File'
   | 'Government Feedback'

@@ -6,16 +6,23 @@
 import React, { useState, useEffect } from 'react';
 import { DemoEngagement } from '../types';
 import { demoDataStore } from '../services/DemoDataService';
-import { WorkCycleProgress } from '../components/WorkCycleProgress';
 import { Sparkles, Activity, Users, AlertTriangle, Calendar, CheckCircle } from 'lucide-react';
 
 interface OperationsDashboardViewProps {
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
   onOpenAiAssistant: () => void;
 }
 
-export const OperationsDashboardView: React.FC<OperationsDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const OperationsDashboardView: React.FC<OperationsDashboardViewProps> = ({ 
+  activeNavId, 
+  onSelectNav, 
+  onOpenAiAssistant 
+}) => {
   const [engagements, setEngagements] = useState<DemoEngagement[]>([]);
   const [activeTab, setActiveTab] = useState<'board' | 'capacity' | 'deadlines'>('board');
+
+  const currentTab = activeNavId && activeNavId !== 'default' ? activeNavId : activeTab;
 
   const refresh = () => {
     setEngagements(demoDataStore.getEngagements());
@@ -49,29 +56,8 @@ export const OperationsDashboardView: React.FC<OperationsDashboardViewProps> = (
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
-        {[
-          { id: 'board', label: 'Firmwide Engagement Workflow' },
-          { id: 'capacity', label: 'Staff Capacity & Utilization Matrix' },
-          { id: 'deadlines', label: 'Statutory Filing Deadlines' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-3 py-2 border-b-2 font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'border-black text-black font-bold'
-                : 'border-transparent text-neutral-600 hover:text-black'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab: Board */}
-      {activeTab === 'board' && (
+      {/* Tab: Board / Overview */}
+      {(currentTab === 'board' || currentTab === 'overview') && (
         <div className="space-y-4">
           <div className="border border-neutral-300 p-4 bg-white space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-black">
@@ -118,7 +104,7 @@ export const OperationsDashboardView: React.FC<OperationsDashboardViewProps> = (
       )}
 
       {/* Tab: Capacity */}
-      {activeTab === 'capacity' && (
+      {currentTab === 'capacity' && (
         <div className="border border-neutral-300 p-5 space-y-4 bg-white text-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             Staff Workload &amp; Capacity Utilization (Tax Season Pacing)
@@ -141,7 +127,7 @@ export const OperationsDashboardView: React.FC<OperationsDashboardViewProps> = (
       )}
 
       {/* Tab: Deadlines */}
-      {activeTab === 'deadlines' && (
+      {currentTab === 'deadlines' && (
         <div className="border border-neutral-300 p-5 space-y-3 bg-white text-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             Filing Season Statutory Deadlines (Calendar Year 2026)

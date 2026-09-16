@@ -33,6 +33,10 @@ export const DeveloperContactNotice: React.FC<DeveloperContactNoticeProps> = ({ 
               +63 917 966 8814
             </a>
           </div>
+          <div className="pt-2 border-t border-neutral-200 text-[11px] text-neutral-700 space-y-1">
+            <p><strong>Compliance-supporting technology.</strong> Final legal, regulatory, accounting, and tax requirements must be validated by qualified U.S. professionals.</p>
+            <p className="text-[10px] text-neutral-500 font-mono">Demonstration Environment – No Live Filing, Payment, Signature, Banking Connection, or Government Submission</p>
+          </div>
         </div>
       </div>
     </div>

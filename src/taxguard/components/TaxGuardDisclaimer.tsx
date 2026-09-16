@@ -12,7 +12,7 @@ export const TaxGuardDisclaimer: React.FC<{ compact?: boolean }> = ({ compact = 
       <div className="border border-[#C99A32]/40 bg-[#FAF8F5] p-2.5 text-[11px] text-[#4A5568] flex items-start gap-2">
         <ShieldCheck className="w-3.5 h-3.5 text-[#C99A32] flex-shrink-0 mt-0.5" />
         <p className="leading-snug">
-          <strong className="text-[#061A2F]">TaxGuard AI Notice:</strong> Technology-assisted document processing and workflow recommendations. AI-generated results may contain errors and must be reviewed by an authorized tax professional. The platform does not replace professional judgment and does not independently file tax returns.
+          <strong className="text-[#061A2F]">Compliance-supporting technology.</strong> Final legal, regulatory, accounting, and tax requirements must be validated by qualified U.S. professionals. Projected outcomes are estimates and are not guaranteed. Demonstration Environment – No Live Filing, Payment, Signature, Banking Connection, or Government Submission.
         </p>
       </div>
     );
@@ -28,8 +28,12 @@ export const TaxGuardDisclaimer: React.FC<{ compact?: boolean }> = ({ compact = 
         </span>
       </div>
       <p className="text-[11px] leading-relaxed text-[#4A5568]">
-        TaxGuard AI provides technology-assisted document processing, research support, and workflow recommendations. AI-generated results may contain errors and must be reviewed by an authorized tax professional. The platform does not replace professional judgment and does not independently file tax returns. Final tax positions, elections, and submissions remain the legal responsibility of authorized signatories and CPAs/EAs.
+        <strong>Compliance-supporting technology. Final legal, regulatory, accounting, and tax requirements must be validated by qualified U.S. professionals.</strong> Projected outcomes are estimates and are not guaranteed. AI-generated analysis does not constitute final professional advice.
       </p>
+      <div className="border-t border-[#C99A32]/20 pt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-600">
+        <span>Demonstration Environment – No Live Filing, Payment, Signature, Banking Connection, or Government Submission</span>
+        <span>IRC § 7216 & Circular 230 Protected</span>
+      </div>
     </div>
   );
 };

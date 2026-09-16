@@ -7,13 +7,21 @@ import React, { useState } from 'react';
 import { Sparkles, UserPlus, CheckCircle, FileText, Search } from 'lucide-react';
 
 interface IntakeDashboardViewProps {
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
   onOpenAiAssistant: () => void;
 }
 
-export const IntakeDashboardView: React.FC<IntakeDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const IntakeDashboardView: React.FC<IntakeDashboardViewProps> = ({ 
+  activeNavId, 
+  onSelectNav, 
+  onOpenAiAssistant 
+}) => {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'conflict' | 'proposals'>('pipeline');
   const [conflictResult, setConflictResult] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
+
+  const currentTab = activeNavId && activeNavId !== 'default' ? activeNavId : activeTab;
 
   const handleConflictCheck = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,29 +52,8 @@ export const IntakeDashboardView: React.FC<IntakeDashboardViewProps> = ({ onOpen
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
-        {[
-          { id: 'pipeline', label: 'Prospective Client Inquiries' },
-          { id: 'conflict', label: 'Conflict-of-Interest Clearance Tool' },
-          { id: 'proposals', label: 'Engagement Proposals & Retainers' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-3 py-2 border-b-2 font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'border-black text-black font-bold'
-                : 'border-transparent text-neutral-600 hover:text-black'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab: Pipeline */}
-      {activeTab === 'pipeline' && (
+      {/* Tab: Pipeline / Overview */}
+      {(currentTab === 'pipeline' || currentTab === 'overview') && (
         <div className="border border-neutral-300 p-4 space-y-3 bg-white text-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             Active Prospective Client Inquiries
@@ -84,7 +71,7 @@ export const IntakeDashboardView: React.FC<IntakeDashboardViewProps> = ({ onOpen
       )}
 
       {/* Tab: Conflict */}
-      {activeTab === 'conflict' && (
+      {currentTab === 'conflict' && (
         <div className="border border-neutral-300 p-5 space-y-4 bg-white text-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             AICPA Conflict-of-Interest &amp; Independence Verification
@@ -114,7 +101,7 @@ export const IntakeDashboardView: React.FC<IntakeDashboardViewProps> = ({ onOpen
       )}
 
       {/* Tab: Proposals */}
-      {activeTab === 'proposals' && (
+      {currentTab === 'proposals' && (
         <div className="border border-neutral-300 p-5 space-y-3 bg-white text-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             Executed Engagement Letters &amp; Retainer Agreements

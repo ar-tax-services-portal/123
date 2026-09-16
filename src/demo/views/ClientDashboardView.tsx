@@ -12,7 +12,6 @@ import {
   DemoTransaction 
 } from '../types';
 import { demoDataStore } from '../services/DemoDataService';
-import { WorkCycleProgress } from '../components/WorkCycleProgress';
 import { SimulatedActionModal, SimulatedActionType } from '../components/SimulatedActionModal';
 import { 
   FileText, 
@@ -48,9 +47,15 @@ import {
 
 interface ClientDashboardViewProps {
   onOpenAiAssistant: () => void;
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
 }
 
-export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ 
+  onOpenAiAssistant,
+  activeNavId,
+  onSelectNav
+}) => {
   const [client, setClient] = useState<DemoClient | undefined>(undefined);
   const [engagements, setEngagements] = useState<DemoEngagement[]>([]);
   const [documents, setDocuments] = useState<DemoDocument[]>([]);
@@ -63,8 +68,10 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
   // Live Camera Scanner State
   const [showScanner, setShowScanner] = useState<boolean>(false);
 
-  // Active tab within Client Portal
-  const [activeTab, setActiveTab] = useState<'overview' | 'vault' | 'questionnaire' | 'ledger' | 'return_review' | 'estimated_tax' | 'tax_planning' | 'voice_assistant' | 'billing' | 'notices' | 'archive'>('overview');
+  // Active tab within Client Portal - drives or synchronizes with left sidebar
+  const [internalTab, setInternalTab] = useState<string>('overview');
+  const currentTab = activeNavId || internalTab;
+  const setTab = onSelectNav || setInternalTab;
 
   // Modal State
   const [modalAction, setModalAction] = useState<SimulatedActionType | null>(null);
@@ -154,40 +161,31 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
 
   return (
     <div className="space-y-6">
-      {/* 1. Portal Sub-Nav / Modules & Discretion Mode Switch */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D8DCE2] pb-1">
-        <div className="flex flex-wrap gap-1 text-xs">
-          {[
-            { id: 'overview', label: 'Overview & Status' },
-            { id: 'vault', label: 'Secure Document Vault' },
-            { id: 'questionnaire', label: 'Tax Organizer & Questionnaire' },
-            { id: 'ledger', label: 'Income & Expense Records' },
-            { id: 'return_review', label: 'Draft Return & Signature' },
-            { id: 'estimated_tax', label: 'Estimated Tax & Safe Harbor' },
-            { id: 'tax_planning', label: 'Tax Strategy Forecast' },
-            { id: 'voice_assistant', label: 'Voice Assistant (PTT)' },
-            { id: 'billing', label: 'Fee Invoices & Payments' },
-            { id: 'notices', label: 'Tax Notices & Transcripts' },
-            { id: 'archive', label: 'Prior Year Archive' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2.5 font-medium transition-all text-xs border-b-2 -mb-[1px] ${
-                activeTab === tab.id
-                  ? 'border-[#C99A32] text-[#061A2F] font-bold bg-[#FBFAF7]'
-                  : 'border-transparent text-[#667085] hover:text-[#061A2F] hover:border-[#D8DCE2]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* 1. Portal Workspace Header & Discretion Mode Switch */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D8DCE2] pb-3">
+        <div>
+          <h2 className="text-base font-bold text-[#061A2F]">
+            {currentTab === 'overview' && 'Client Overview & Active Filing Status'}
+            {currentTab === 'vault' && 'Secure Document Vault & Records'}
+            {currentTab === 'questionnaire' && 'Tax Organizer & Intake Questionnaire'}
+            {currentTab === 'ledger' && 'Income & Expense Workpapers'}
+            {currentTab === 'return_review' && 'Draft Return Review & Form 8879-S Authorization'}
+            {currentTab === 'estimated_tax' && 'Estimated Tax & Safe Harbor Vouchers'}
+            {currentTab === 'tax_planning' && 'Tax Strategy Forecast & Scenario Modeler'}
+            {currentTab === 'voice_assistant' && 'TaxGuard Voice Assistant'}
+            {currentTab === 'billing' && 'Fee Invoices & Payments'}
+            {currentTab === 'notices' && 'Tax Notices & Transcripts'}
+            {currentTab === 'archive' && 'Prior Year Tax Archive'}
+          </h2>
+          <p className="text-xs text-[#667085]">
+            A/R Tax Services, LLC • Client Demonstration Portal
+          </p>
         </div>
 
         {/* UHNW Privacy / Discretion Mode Toggle */}
         <button
           onClick={() => setDiscretionMode(!discretionMode)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium border transition-colors cursor-pointer ${
             discretionMode
               ? 'bg-[#F7F4ED] border-[#C99A32]/60 text-[#061A2F]'
               : 'bg-white border-[#D8DCE2] text-[#667085] hover:text-[#061A2F]'
@@ -208,8 +206,8 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
         </button>
       </div>
 
-      {/* 2. Primary Active Engagement Card with Master 12-Stage Cycle */}
-      {activeEngagement && (
+      {/* 2. Primary Active Engagement Card - DISPLAYED ONLY ON OVERVIEW TO PREVENT SCREEN CLUTTER */}
+      {currentTab === 'overview' && activeEngagement && (
         <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#D8DCE2] pb-3.5">
             <div>
@@ -220,9 +218,9 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
                 <span>•</span>
                 <span className="text-[#C99A32] font-semibold">TIN: {discretionMode ? '••-••••890' : '82-9104890'}</span>
               </div>
-              <h2 className="text-base font-bold text-[#061A2F] tracking-tight mt-0.5">
+              <h3 className="text-base font-bold text-[#061A2F] tracking-tight mt-0.5">
                 {activeEngagement.formType} — {activeEngagement.businessName || activeEngagement.clientName}
-              </h2>
+              </h3>
             </div>
             <div className="flex items-center gap-2">
               <span className="border border-[#C99A32]/40 px-3 py-1 text-xs font-semibold uppercase bg-[#F7F4ED] text-[#061A2F] rounded">
@@ -233,9 +231,6 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
               </span>
             </div>
           </div>
-
-          {/* Master 12-Stage Visual Progress */}
-          <WorkCycleProgress currentStage={activeEngagement.currentStage} />
 
           {/* Key Engagement Metrics & Next Step */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
@@ -255,10 +250,10 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
         </div>
       )}
 
-      {/* 3. TAB CONTENT */}
+      {/* 3. WORKSPACE CONTENT */}
 
-      {/* TAB: OVERVIEW */}
-      {activeTab === 'overview' && (
+      {/* SECTION: OVERVIEW */}
+      {currentTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Quick Action Alerts */}
           <div className="lg:col-span-2 space-y-4">
@@ -278,8 +273,8 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
                     Elena Rostova, CPA has certified your return workpapers. Please inspect the draft return and authorize simulated Form 8879-S electronic filing.
                   </p>
                   <button
-                    onClick={() => setActiveTab('return_review')}
-                    className="px-4 py-2 bg-[#061A2F] text-white text-xs font-semibold tracking-wide rounded hover:bg-[#031323] transition-colors"
+                    onClick={() => setTab('return_review')}
+                    className="px-4 py-2 bg-[#061A2F] text-white text-xs font-semibold tracking-wide rounded hover:bg-[#031323] transition-colors cursor-pointer"
                   >
                     Open Return Review Workspace
                   </button>
@@ -299,8 +294,8 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
                     Invoice INV-2026-0144 covers Form 1120-S preparation and Q4 bookkeeping close.
                   </p>
                   <button
-                    onClick={() => setActiveTab('billing')}
-                    className="px-3.5 py-1.5 border border-[#061A2F] text-xs font-semibold text-[#061A2F] rounded hover:bg-[#061A2F] hover:text-white transition-colors"
+                    onClick={() => setTab('billing')}
+                    className="px-3.5 py-1.5 border border-[#061A2F] text-xs font-semibold text-[#061A2F] rounded hover:bg-[#061A2F] hover:text-white transition-colors cursor-pointer"
                   >
                     View &amp; Simulate Payment
                   </button>
@@ -323,8 +318,8 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
                     ))}
                   </ul>
                   <button
-                    onClick={() => setActiveTab('vault')}
-                    className="px-3.5 py-1.5 border border-[#D8DCE2] text-xs font-medium text-[#061A2F] rounded hover:bg-[#F7F4ED] transition-colors"
+                    onClick={() => setTab('vault')}
+                    className="px-3.5 py-1.5 border border-[#D8DCE2] text-xs font-medium text-[#061A2F] rounded hover:bg-[#F7F4ED] transition-colors cursor-pointer"
                   >
                     Upload Missing Records
                   </button>
@@ -401,7 +396,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: SECURE DOCUMENT VAULT */}
-      {activeTab === 'vault' && (
+      {currentTab === 'vault' && (
         <div className="space-y-6">
           {/* Quick Action: Live Camera Scanner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#F7F4ED] border border-[#C99A32]/40 rounded-lg">
@@ -553,7 +548,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: QUESTIONNAIRE & ORGANIZER */}
-      {activeTab === 'questionnaire' && (
+      {currentTab === 'questionnaire' && (
         <div className="space-y-6">
           {/* Missing Document & Item Diagnostic Panel */}
           <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs">
@@ -628,7 +623,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: LEDGER & EXPENSES */}
-      {activeTab === 'ledger' && (
+      {currentTab === 'ledger' && (
         <div className="space-y-4">
           <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs flex items-center justify-between">
             <div>
@@ -683,7 +678,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: RETURN REVIEW & SIGNATURE */}
-      {activeTab === 'return_review' && (
+      {currentTab === 'return_review' && (
         <div className="space-y-6">
           <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D8DCE2] pb-3">
@@ -796,7 +791,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: BILLING & INVOICES */}
-      {activeTab === 'billing' && (
+      {currentTab === 'billing' && (
         <div className="space-y-4">
           <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#061A2F]">
@@ -842,7 +837,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
                             setSelectedInvoice(inv);
                             setModalAction('pay_invoice');
                           }}
-                          className="px-3.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded hover:bg-[#031323] transition-colors"
+                          className="px-3.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded hover:bg-[#031323] transition-colors cursor-pointer"
                         >
                           Simulate Payment
                         </button>
@@ -861,28 +856,28 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: ESTIMATED TAX & SAFE HARBOR */}
-      {activeTab === 'estimated_tax' && (
+      {currentTab === 'estimated_tax' && (
         <div className="pt-1">
           <EstimatedPaymentsCenter userRole="client" />
         </div>
       )}
 
       {/* TAB: TAX PLANNING & SCENARIOS */}
-      {activeTab === 'tax_planning' && (
+      {currentTab === 'tax_planning' && (
         <div className="pt-1">
           <TaxPlanningScenarioModeler userRole="client" />
         </div>
       )}
 
       {/* TAB: VOICE ASSISTANT */}
-      {activeTab === 'voice_assistant' && (
+      {currentTab === 'voice_assistant' && (
         <div className="pt-1">
           <TaxGuardVoiceAssistant userRole="client" />
         </div>
       )}
 
       {/* TAB: NOTICES */}
-      {activeTab === 'notices' && (
+      {currentTab === 'notices' && (
         <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
           <div className="border-b border-[#D8DCE2] pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#061A2F]">
@@ -906,7 +901,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       )}
 
       {/* TAB: ARCHIVE */}
-      {activeTab === 'archive' && (
+      {currentTab === 'archive' && (
         <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
           <div className="border-b border-[#D8DCE2] pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#061A2F]">

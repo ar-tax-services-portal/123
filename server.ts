@@ -27,6 +27,9 @@ import { consultationRoomRouter } from './src/server/routes/consultationRoom.rou
 import { intakeRouter } from './src/server/routes/intake.routes';
 import { stagingRouter } from './src/server/routes/staging.routes';
 import { monitoringRouter } from './src/server/routes/monitoring.routes';
+import { taxguardRouter, handleLegacyTaxGuardRoute } from './src/server/routes/taxguard.routes';
+import { db } from './src/server/db';
+import { AuthenticatedRequest } from './src/server/auth';
 
 const app = express();
 const PORT = 3000;
@@ -89,6 +92,28 @@ app.use('/api/consultation-rooms', consultationRoomRouter);
 app.use('/api/intake', intakeRouter);
 app.use('/api/staging', stagingRouter);
 app.use('/api/monitoring', monitoringRouter);
+app.use('/api/taxguard', taxguardRouter);
+
+// Legacy /taxguard route redirection and security gate
+app.use(['/taxguard', '/taxguard/*'], (req: AuthenticatedRequest, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : (req.headers['x-session-token'] as string);
+
+  if (token) {
+    const session = db.sessions.get(token);
+    if (session && Date.now() <= session.expiresAt) {
+      const user = db.users.get(session.userId);
+      if (user && user.status !== 'disabled' && user.status !== 'suspended') {
+        req.user = user;
+        req.token = token;
+      }
+    }
+  }
+
+  handleLegacyTaxGuardRoute(req, res);
+});
 
 // Serve public assets explicitly
 app.use(express.static(path.join(process.cwd(), 'public')));

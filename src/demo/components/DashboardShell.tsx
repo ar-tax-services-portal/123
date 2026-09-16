@@ -5,8 +5,9 @@
  */
 
 import React, { useState } from 'react';
-import { DemoRole, DEMO_ROLES, DemoRoleConfig, WorkCycleStage } from '../types';
+import { DemoRole, DEMO_ROLES, DemoRoleConfig, WorkCycleStage, WORK_CYCLE_STAGES } from '../types';
 import { DemoAuthService } from '../services/DemoAuthService';
+import { demoDataStore } from '../services/DemoDataService';
 import { DemoBanner } from './DemoBanner';
 import { DeveloperContactNotice } from './DeveloperContactNotice';
 import { WorkCycleProgress } from './WorkCycleProgress';
@@ -105,6 +106,36 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
       default: return 'Onboard';
     }
   };
+
+  const getAuthoritativeStage = (): { stage: WorkCycleStage; engagementName?: string } => {
+    const engagements = demoDataStore.getEngagements();
+    if (role === 'client') {
+      const clientEng = engagements.find(e => e.clientId === 'cli_perotti') || engagements[0];
+      if (clientEng?.currentStage && WORK_CYCLE_STAGES.includes(clientEng.currentStage)) {
+        return { stage: clientEng.currentStage, engagementName: clientEng.clientName };
+      }
+      return { stage: 'Sign' };
+    }
+    if (role === 'reviewer') {
+      const reviewEng = engagements.find(e => e.currentStatus === 'Senior Review' || e.approvalState === 'Pending Review');
+      if (reviewEng?.currentStage && WORK_CYCLE_STAGES.includes(reviewEng.currentStage)) {
+        return { stage: reviewEng.currentStage, engagementName: reviewEng.clientName };
+      }
+      return { stage: 'Review' };
+    }
+    if (role === 'accountant') {
+      const prepEng = engagements.find(e => e.currentStatus === 'Tax Preparation' || e.currentStage === 'Prepare Taxes') || engagements[0];
+      if (prepEng?.currentStage && WORK_CYCLE_STAGES.includes(prepEng.currentStage)) {
+        return { stage: prepEng.currentStage, engagementName: prepEng.clientName };
+      }
+      return { stage: 'Prepare Taxes' };
+    }
+    return { stage: getStageForRole(role) };
+  };
+
+  const { stage: authoritativeStage, engagementName } = getAuthoritativeStage();
+  const stageIndex = WORK_CYCLE_STAGES.indexOf(authoritativeStage);
+  const isOverview = !activeNavId || activeNavId === 'overview' || (navItems.length > 0 && activeNavId === navItems[0].id);
 
   const roleConfig: DemoRoleConfig = DEMO_ROLES[role];
   const session = DemoAuthService.getSession(role);
@@ -420,30 +451,37 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
           {/* Main Dashboard Screen Content */}
           <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-[#FBFAF7] max-w-7xl w-full mx-auto space-y-6">
-            {/* 18-Stage Unified Operating Cycle Indicator */}
-            <div className="border border-[#D8DCE2] bg-white p-3 rounded-lg shadow-xs">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#D8DCE2]">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#667085] font-bold">
-                    18-Stage Tax Operating Lifecycle
-                  </span>
-                  <span className="text-[10px] font-mono bg-[#061A2F] text-[#E8C66A] border border-[#C99A32]/40 px-2 py-0.5 font-bold uppercase rounded">
-                    Stage: {getStageForRole(role)}
-                  </span>
+            {/* 18-Stage Authoritative Operating Cycle Indicator - Rendered ONLY on Overview to prevent duplication & clutter */}
+            {isOverview && (
+              <div className="border border-[#D8DCE2] bg-white p-3 rounded-lg shadow-xs">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#D8DCE2]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#667085] font-bold">
+                      18-Stage Tax Operating Lifecycle
+                    </span>
+                    <span className="text-[10px] font-mono bg-[#061A2F] text-[#E8C66A] border border-[#C99A32]/40 px-2 py-0.5 font-bold uppercase rounded">
+                      Stage {stageIndex + 1} of 18: {authoritativeStage}
+                    </span>
+                    {engagementName && (
+                      <span className="text-[11px] text-[#667085] font-sans">
+                        • Connected to {engagementName}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowCycleProgress(!showCycleProgress)}
+                    className="text-[10px] font-mono text-[#667085] hover:text-[#1A2028] underline font-medium cursor-pointer"
+                  >
+                    {showCycleProgress ? '▲ Compact Summary' : '▼ Expand Full 18 Stages'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowCycleProgress(!showCycleProgress)}
-                  className="text-[10px] font-mono text-[#667085] hover:text-[#1A2028] underline font-medium"
-                >
-                  {showCycleProgress ? '▲ Compact View' : '▼ Expand Full 18-Stage Map'}
-                </button>
+                {showCycleProgress ? (
+                  <WorkCycleProgress currentStage={authoritativeStage} />
+                ) : (
+                  <WorkCycleProgress currentStage={authoritativeStage} compact />
+                )}
               </div>
-              {showCycleProgress ? (
-                <WorkCycleProgress currentStage={getStageForRole(role)} />
-              ) : (
-                <WorkCycleProgress currentStage={getStageForRole(role)} compact />
-              )}
-            </div>
+            )}
 
             {children}
           </main>

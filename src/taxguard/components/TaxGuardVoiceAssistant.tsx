@@ -49,7 +49,7 @@ export const TaxGuardVoiceAssistant: React.FC<{ userRole: string }> = ({ userRol
   const [recordingDuration, setRecordingDuration] = useState<number>(0);
   const [transcriptInput, setTranscriptInput] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState<boolean>(true);
+  const [audioPlaybackEnabled, setAudioPlaybackEnabled] = useState<boolean>(false); // Strict default: Sensitive tax responses are never played aloud automatically
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<VoiceMessage[]>([
@@ -125,6 +125,46 @@ export const TaxGuardVoiceAssistant: React.FC<{ userRole: string }> = ({ userRol
     setMessages(prev => [...prev, userMsg]);
     setTranscriptInput('');
     setIsProcessing(true);
+
+    // Prompt injection safeguards
+    const injectionPatterns = [
+      /ignore\s+(all\s+)?(previous|prior)\s+instructions/i,
+      /reveal\s+(system\s+prompt|api\s+key|password|credentials|secret)/i,
+      /drop\s+table/i,
+      /exec\(|eval\(/i,
+      /bypass\s+(authorization|rbac|security|guardrails)/i,
+      /you\s+are\s+now\s+in\s+unrestricted\s+mode/i,
+      /system\s+override/i
+    ];
+
+    if (injectionPatterns.some(p => p.test(userText))) {
+      TaxGuardAuditService.logEvent({
+        tenantId: 'tenant_ar_tax_prod',
+        userId: userRole,
+        userEmail: `${userRole}@artaxservices.com`,
+        userRole,
+        action: 'PROMPT_INJECTION_DETECTED',
+        recordType: 'governance',
+        recordId: 'voice_session_sec_01',
+        ipAddress: '127.0.0.1 (authenticated)',
+        result: 'denied',
+        riskLevel: 'critical',
+        details: `Blocked prompt injection attempt in voice query: "${userText.slice(0, 80)}"`
+      });
+
+      setTimeout(() => {
+        const blockedMsg: VoiceMessage = {
+          id: `vmsg_${Date.now() + 1}`,
+          sender: 'assistant',
+          transcript: 'Security Guardrail: The query was halted because it matched prohibited prompt-injection or system instruction override patterns. Voice assistant queries are strictly scoped to statutory U.S. tax queries under firm governance controls.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          confidence: 1.0
+        };
+        setMessages(prev => [...prev, blockedMsg]);
+        setIsProcessing(false);
+      }, 500);
+      return;
+    }
 
     setTimeout(() => {
       let responseText = '';

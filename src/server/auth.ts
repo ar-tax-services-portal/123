@@ -361,3 +361,119 @@ export function blockRecruiterFromTaxRecords(req: AuthenticatedRequest, res: Res
   }
   next();
 }
+
+// Tenant isolation middleware: Staff in Tenant A cannot access Tenant B records
+export function requireTenantIsolation(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  const requestedTenantId = req.headers['x-tenant-id'] || req.params.tenantId || req.query.tenantId || req.body?.tenantId;
+  const userTenantId = (req.user as any).tenantId || 'tenant_ar_tax_prod';
+
+  if (requestedTenantId && requestedTenantId !== userTenantId) {
+    db.logSecurityEvent({
+      eventType: 'CROSS_TENANT_ACCESS_ATTEMPT',
+      ipAddress: req.ip || 'unknown',
+      userId: req.user.id,
+      details: `User ${req.user.email} (Tenant: ${userTenantId}) attempted cross-tenant access to ${requestedTenantId}.`,
+      severity: 'critical'
+    });
+
+    return res.status(403).json({
+      error: 'Forbidden: Cross-tenant access is strictly prohibited by security isolation boundary.',
+      code: 'TENANT_ISOLATION_VIOLATION'
+    });
+  }
+
+  next();
+}
+
+// Professional Practitioner Authority: Only CPAs/EAs can approve tax positions, sign returns, or submit resolution requests
+export function requirePractitionerAuthority(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  const role = req.user.role;
+  // Compliance staff, recruiters, support staff, and administrators do NOT have authority to approve tax positions or sign returns
+  if (['compliance', 'recruiter', 'support', 'client', 'prospective_client', 'admin', 'administrator', 'super_admin'].includes(role)) {
+    db.logSecurityEvent({
+      eventType: 'UNAUTHORIZED_TAX_APPROVAL_ATTEMPT',
+      ipAddress: req.ip || 'unknown',
+      userId: req.user.id,
+      details: `Non-practitioner user ${req.user.email} (Role: ${role}) attempted to certify/approve a tax filing or resolution position.`,
+      severity: 'critical'
+    });
+
+    return res.status(403).json({
+      error: 'Forbidden: Circular 230 practitioner credential (CPA/EA/Attorney) required. Compliance, administrative, and support roles cannot approve tax positions or filing packages.',
+      code: 'PRACTITIONER_AUTHORITY_REQUIRED'
+    });
+  }
+
+  next();
+}
+
+// Maker-Checker authorization gate: Preparer cannot approve own work; requires separate Senior Reviewer
+export function requireMakerChecker(getPreparerId?: (req: AuthenticatedRequest) => string | undefined) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+
+    const preparerId = getPreparerId ? getPreparerId(req) : (req.body?.preparerId || req.query?.preparerId);
+
+    // Maker cannot approve own work
+    if (preparerId && req.user.id === preparerId) {
+      db.logSecurityEvent({
+        eventType: 'MAKER_CHECKER_SELF_APPROVAL_ATTEMPT',
+        ipAddress: req.ip || 'unknown',
+        userId: req.user.id,
+        details: `Preparer ${req.user.name} (${req.user.id}) attempted to self-approve/certify their own workpaper or filing package.`,
+        severity: 'critical'
+      });
+
+      return res.status(403).json({
+        error: 'Forbidden: Maker-Checker violation. The preparer cannot review and finally certify their own filing-critical work. Independent Senior Reviewer (CPA/EA) sign-off required.',
+        code: 'MAKER_CHECKER_SELF_APPROVAL_FORBIDDEN'
+      });
+    }
+
+    // Role must be senior reviewer or partner
+    if (['accountant', 'staff'].includes(req.user.role)) {
+      return res.status(403).json({
+        error: 'Forbidden: Maker-Checker violation. Preparer role cannot provide final quality review sign-off. Senior Reviewer (CPA/EA) required.',
+        code: 'MAKER_CHECKER_REVIEWER_REQUIRED'
+      });
+    }
+
+    // Administrators cannot bypass maker-checker
+    if (['admin', 'administrator', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        error: 'Forbidden: Administrative bypass prohibited. System administrators do not automatically receive professional authority to approve tax positions or filing packages.',
+        code: 'ADMIN_TAX_APPROVAL_FORBIDDEN'
+      });
+    }
+
+    next();
+  };
+}
+
+// Scrub internal reviewer notes when serving to clients
+export function filterReviewerNotesForClients(data: any, userRole: string): any {
+  if (userRole === 'client' || userRole === 'prospective_client') {
+    if (Array.isArray(data)) {
+      return data.map(item => filterReviewerNotesForClients(item, userRole));
+    }
+    if (data && typeof data === 'object') {
+      const sanitized = { ...data };
+      delete sanitized.internalReviewerNotes;
+      delete sanitized.reviewerNotes;
+      delete sanitized.qcFlags;
+      delete sanitized.preparerNotes;
+      return sanitized;
+    }
+  }
+  return data;
+}

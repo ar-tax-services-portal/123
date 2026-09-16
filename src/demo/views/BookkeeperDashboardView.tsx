@@ -9,13 +9,21 @@ import { demoDataStore } from '../services/DemoDataService';
 import { Sparkles, CheckCircle, RefreshCw, Layers } from 'lucide-react';
 
 interface BookkeeperDashboardViewProps {
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
   onOpenAiAssistant: () => void;
 }
 
-export const BookkeeperDashboardView: React.FC<BookkeeperDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const BookkeeperDashboardView: React.FC<BookkeeperDashboardViewProps> = ({ 
+  activeNavId, 
+  onSelectNav, 
+  onOpenAiAssistant 
+}) => {
   const [transactions, setTransactions] = useState<DemoTransaction[]>([]);
   const [activeTab, setActiveTab] = useState<'inbox' | 'reconciliation' | 'accounts' | 'close'>('inbox');
   const [reconciledNotice, setReconciledNotice] = useState(false);
+
+  const currentTab = activeNavId && activeNavId !== 'default' ? activeNavId : activeTab;
 
   const refresh = () => {
     setTransactions(demoDataStore.getTransactions());
@@ -63,36 +71,14 @@ export const BookkeeperDashboardView: React.FC<BookkeeperDashboardViewProps> = (
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
-        {[
-          { id: 'inbox', label: 'Bank Feed Categorization Inbox' },
-          { id: 'reconciliation', label: 'Zero-Variance Bank Reconciliation' },
-          { id: 'accounts', label: 'Master Chart of Accounts' },
-          { id: 'close', label: 'Month-End Close Checklist' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-3 py-2 border-b-2 font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'border-black text-black font-bold'
-                : 'border-transparent text-neutral-600 hover:text-black'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {reconciledNotice && (
         <div className="border border-black p-3 bg-neutral-50 text-xs font-bold text-black">
           Reconciliation verified: Ending Statement Balance matches General Ledger Cash with exactly $0.00 variance.
         </div>
       )}
 
-      {/* Tab: Inbox */}
-      {activeTab === 'inbox' && (
+      {/* Tab: Inbox / Overview */}
+      {(currentTab === 'inbox' || currentTab === 'overview') && (
         <div className="border border-neutral-300 overflow-x-auto">
           <div className="p-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between text-xs">
             <span className="font-bold uppercase tracking-wider text-black">
@@ -151,7 +137,7 @@ export const BookkeeperDashboardView: React.FC<BookkeeperDashboardViewProps> = (
       )}
 
       {/* Tab: Reconciliation */}
-      {activeTab === 'reconciliation' && (
+      {currentTab === 'reconciliation' && (
         <div className="border border-neutral-300 p-5 space-y-4 bg-white">
           <div className="border-b border-neutral-200 pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-black">
@@ -178,7 +164,7 @@ export const BookkeeperDashboardView: React.FC<BookkeeperDashboardViewProps> = (
       )}
 
       {/* Tab: Chart of Accounts */}
-      {activeTab === 'accounts' && (
+      {currentTab === 'accounts' && (
         <div className="border border-neutral-300 p-4 space-y-3 bg-white">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             Standard Chart of Accounts (GAAP Tax-Basis Compliant)
@@ -213,7 +199,7 @@ export const BookkeeperDashboardView: React.FC<BookkeeperDashboardViewProps> = (
       )}
 
       {/* Tab: Month-End Close */}
-      {activeTab === 'close' && (
+      {currentTab === 'close' && (
         <div className="border border-neutral-300 p-5 space-y-3 bg-white">
           <h3 className="text-xs font-bold uppercase tracking-wider text-black">
             Month-End Financial Close Verification Checklist

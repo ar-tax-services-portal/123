@@ -118,6 +118,15 @@ export const UnifiedActionCenter: React.FC<{ userRole: string }> = ({ userRole }
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const handleCompleteTask = (taskId: string) => {
+    const taskToComplete = tasks.find(t => t.id === taskId);
+    if (taskToComplete && (taskToComplete.type === 'Approval Request' || taskToComplete.type === 'Review Request')) {
+      if (['admin', 'compliance', 'billing', 'recruiter'].includes(userRole)) {
+        setActionNotice('Professional Boundary Enforced: Only credentialed Senior Reviewers (CPA/EA) possess authority to approve tax positions or filing packages. System administrators, compliance officers, and non-practitioners cannot approve.');
+        setTimeout(() => setActionNotice(null), 5000);
+        return;
+      }
+    }
+
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         TaxGuardAuditService.logEvent({

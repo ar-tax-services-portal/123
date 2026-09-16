@@ -6,7 +6,6 @@
 import React, { useState, useEffect } from 'react';
 import { DemoEngagement, DemoTaxWorkpaper } from '../types';
 import { demoDataStore } from '../services/DemoDataService';
-import { WorkCycleProgress } from '../components/WorkCycleProgress';
 import { 
   FileSpreadsheet, 
   Send, 
@@ -34,15 +33,22 @@ import {
 } from '../../taxguard';
 
 interface AccountantDashboardViewProps {
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
   onOpenAiAssistant: () => void;
 }
 
-export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = ({ 
+  activeNavId, 
+  onSelectNav, 
+  onOpenAiAssistant 
+}) => {
   const [engagements, setEngagements] = useState<DemoEngagement[]>([]);
   const [workpapers, setWorkpapers] = useState<DemoTaxWorkpaper[]>([]);
   const [selectedEngId, setSelectedEngId] = useState<string>('eng_2025_summit');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<'workpapers' | 'draft_prep' | 'fixed_assets' | 'entities' | 'smart_forms' | 'lead_dossier' | 'missing_items' | 'diagnostics' | 'research'>('workpapers');
+
+  const currentSection = activeNavId && activeNavId !== 'default' ? activeNavId : 'prep';
 
   // New adjustment inputs
   const [newTitle, setNewTitle] = useState('');
@@ -148,8 +154,6 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
             </div>
           </div>
 
-          <WorkCycleProgress currentStage={currentEngagement.currentStage} compact />
-
           {/* Preparer Actions Bar */}
           <div className="p-3 border border-neutral-200 bg-neutral-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div>
@@ -165,39 +169,8 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
             </button>
           </div>
 
-          {/* Preparer Sub-Navigation Tabs */}
-          <div className="border-b border-neutral-200 flex flex-wrap gap-1 text-xs">
-            {[
-              { id: 'workpapers', label: 'Book-to-Tax (M-1)', icon: FileSpreadsheet },
-              { id: 'draft_prep', label: 'Draft Return & Diagnostics', icon: Sparkles },
-              { id: 'fixed_assets', label: 'Form 4562 Fixed Assets', icon: Calendar },
-              { id: 'entities', label: 'Entity Graph & Basis', icon: Layers },
-              { id: 'smart_forms', label: 'Smart Forms', icon: Layers },
-              { id: 'lead_dossier', label: 'Lead Workpaper Dossier', icon: FileCheck },
-              { id: 'missing_items', label: 'Missing Item Tracking', icon: AlertCircle },
-              { id: 'diagnostics', label: 'Diagnostics', icon: ShieldAlert },
-              { id: 'research', label: 'IRC Research', icon: BookOpen }
-            ].map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setSubTab(tab.id as any)}
-                  className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-[1px] ${
-                    subTab === tab.id
-                      ? 'border-black text-black font-bold bg-neutral-50'
-                      : 'border-transparent text-neutral-600 hover:text-black'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Sub-Tab 1: Workpapers & Adjustments Table */}
-          {subTab === 'workpapers' && (
+          {/* Section: Workpapers & Adjustments Table */}
+          {(currentSection === 'prep' || currentSection === 'overview' || currentSection === 'workpapers' || currentSection === 'm1' || currentSection === 'trial_balance' || currentSection === 'depreciation') && (
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-black">
                 Book-to-Tax Workpapers &amp; Section 179 Depreciation Schedules
@@ -247,8 +220,8 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
             </div>
           )}
 
-          {/* Sub-Tab: Draft Return Preparation & Diagnostics */}
-          {subTab === 'draft_prep' && (
+          {/* Section: Draft Return Preparation & Diagnostics */}
+          {currentSection === 'draft_prep' && (
             <div className="pt-1">
               <DraftReturnPreparer 
                 userRole="accountant" 
@@ -257,50 +230,50 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
             </div>
           )}
 
-          {/* Sub-Tab: Form 4562 Fixed Assets & South Carolina Non-Conformity */}
-          {subTab === 'fixed_assets' && (
+          {/* Section: Form 4562 Fixed Assets & South Carolina Non-Conformity */}
+          {currentSection === 'fixed_assets' && (
             <div className="pt-1">
               <FixedAssetRegister userRole="accountant" />
             </div>
           )}
 
-          {/* Sub-Tab: Entity Intelligence & Basis Mapping */}
-          {subTab === 'entities' && (
+          {/* Section: Entity Intelligence & Basis Mapping */}
+          {currentSection === 'entities' && (
             <div className="pt-1">
               <EntityRelationshipGraph userRole="accountant" />
             </div>
           )}
 
-          {/* Sub-Tab 2: Smart Forms & Field Mapping */}
-          {subTab === 'smart_forms' && (
+          {/* Section: Smart Forms & Field Mapping */}
+          {currentSection === 'smart_forms' && (
             <div className="pt-1">
               <SmartFormWorkspace userRole="accountant" />
             </div>
           )}
 
-          {/* Sub-Tab 3: Lead Workpaper Dossier */}
-          {subTab === 'lead_dossier' && (
+          {/* Section: Lead Workpaper Dossier */}
+          {currentSection === 'lead_dossier' && (
             <div className="pt-1">
               <WorkpaperEditor userRole="accountant" />
             </div>
           )}
 
-          {/* Sub-Tab 4: Missing Item Tracking */}
-          {subTab === 'missing_items' && (
+          {/* Section: Missing Item Tracking */}
+          {currentSection === 'missing_items' && (
             <div className="pt-1">
               <MissingItemsPanel userRole="accountant" />
             </div>
           )}
 
-          {/* Sub-Tab 5: Discrepancy Diagnostics */}
-          {subTab === 'diagnostics' && (
+          {/* Section: Discrepancy Diagnostics */}
+          {currentSection === 'diagnostics' && (
             <div className="pt-1">
               <DiscrepancyPanel userRole="accountant" />
             </div>
           )}
 
-          {/* Sub-Tab 6: IRC / Statutory Research */}
-          {subTab === 'research' && (
+          {/* Section: IRC / Statutory Research */}
+          {currentSection === 'research' && (
             <div className="pt-1">
               <AIResearchAssistant userRole="accountant" />
             </div>
