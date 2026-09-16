@@ -47,7 +47,9 @@ const VirtualConsultationRoom = lazy(() => import('./components/consultation/Vir
 import { ShieldAlert } from 'lucide-react';
 import { DemoAppRouter } from './demo/DemoAppRouter';
 import { PublicV2Router } from './public-v2/PublicV2Router';
-import { TaxGuardApp } from './taxguard/TaxGuardApp';
+import { DemoAuthService } from './demo/services/DemoAuthService';
+import { DEMO_ROLES, DemoRole } from './demo/types';
+import { ErrorPageView } from './demo/components/ErrorPages';
 
 function isTaxGuardRouteUrl(): boolean {
   if (typeof window === 'undefined') return false;
@@ -132,10 +134,27 @@ const AppContent: React.FC = () => {
     window.scrollTo(0, 0);
   }, [currentPage]);
 
-  // Check if TaxGuard AI Operations Engine is active
+  // TaxGuard AI is an integrated service layer, not a standalone console.
+  // Redirect authenticated users to their own authorized role dashboard; show 403 if unauthenticated.
   const isTaxGuard = isTaxGuardRoute || isTaxGuardRouteUrl() || (currentPage as string) === 'taxguard';
   if (isTaxGuard) {
-    return <TaxGuardApp onExit={() => { window.location.hash = '#/'; }} />;
+    const activeRoles = DemoAuthService.getActiveRoles();
+    if (activeRoles && activeRoles.length > 0) {
+      const primaryRole = activeRoles[0] as DemoRole;
+      const targetPath = DEMO_ROLES[primaryRole]?.dashboardPath || '#/client/dashboard';
+      if (window.location.hash !== targetPath) {
+        window.location.hash = targetPath;
+      }
+      return <DemoAppRouter />;
+    }
+    return (
+      <ErrorPageView
+        type="403"
+        customMessage="Access to standalone TaxGuard console has been removed. TaxGuard AI operates as an integrated service layer within authorized role dashboards. Please log in to your designated role dashboard."
+        onNavigateHome={() => { window.location.hash = '#/'; }}
+        onNavigateLogin={() => { window.location.hash = '#/portals'; }}
+      />
+    );
   }
 
   // Check if Public Page 2 is active

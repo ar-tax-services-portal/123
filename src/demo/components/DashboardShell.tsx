@@ -340,15 +340,14 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                 />
               </div>
 
-              {/* TaxGuard AI Operations Direct Link */}
-              <a
-                href="#taxguard/dashboard"
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#C99A32]/50 bg-[#FAF9F5] hover:bg-[#F7F4ED] text-[#061A2F] text-xs font-bold rounded transition-colors"
-                title="TaxGuard AI Operations Engine (Powered by Ophireum AI Technology)"
+              {/* TaxGuard AI Integrated Active Status Badge */}
+              <span
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#D8DCE2] bg-[#FAF9F5] text-[#667085] text-xs rounded"
+                title="TaxGuard AI intelligence layer active in this role workspace"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-[#C99A32]" />
-                <span>TaxGuard AI</span>
-              </a>
+                <span className="text-[11px] font-sans font-semibold text-[#061A2F]">TaxGuard Active</span>
+              </span>
 
               {/* Notifications */}
               <div className="relative">

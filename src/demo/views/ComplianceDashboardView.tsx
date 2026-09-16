@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { DemoAuditEvent } from '../types';
 import { demoDataStore } from '../services/DemoDataService';
-import { ShieldCheck, Lock, FileText, Sparkles, Key, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Lock, FileText, Sparkles, Key, CheckCircle, ShieldAlert, History } from 'lucide-react';
+import { AuditEventViewer, AIGovernancePanel } from '../../taxguard';
 
 interface ComplianceDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -14,7 +15,7 @@ interface ComplianceDashboardViewProps {
 
 export const ComplianceDashboardView: React.FC<ComplianceDashboardViewProps> = ({ onOpenAiAssistant }) => {
   const [auditLogs, setAuditLogs] = useState<DemoAuditEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<'audit' | 'irc7216' | 'credentials' | 'retention'>('audit');
+  const [activeTab, setActiveTab] = useState<'audit' | 'taxguard_audit' | 'ai_governance' | 'irc7216' | 'credentials' | 'retention'>('audit');
 
   const refresh = () => {
     setAuditLogs(demoDataStore.getAuditLogs());
@@ -52,6 +53,8 @@ export const ComplianceDashboardView: React.FC<ComplianceDashboardViewProps> = (
       <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
         {[
           { id: 'audit', label: 'Immutable Practice Audit Trail' },
+          { id: 'taxguard_audit', label: 'TaxGuard Cryptographic Audit Ledger' },
+          { id: 'ai_governance', label: 'TaxGuard AI Safety & Model Controls' },
           { id: 'irc7216', label: 'IRC § 7216 Consent Registry' },
           { id: 'credentials', label: 'IRS PTIN / EFIN Credentials' },
           { id: 'retention', label: 'Document Retention & Destruction' }
@@ -114,6 +117,20 @@ export const ComplianceDashboardView: React.FC<ComplianceDashboardViewProps> = (
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Tab: TaxGuard Audit Ledger */}
+      {activeTab === 'taxguard_audit' && (
+        <div className="border border-neutral-300 p-5 bg-white">
+          <AuditEventViewer userRole="compliance" />
+        </div>
+      )}
+
+      {/* Tab: AI Governance */}
+      {activeTab === 'ai_governance' && (
+        <div className="border border-neutral-300 p-5 bg-white">
+          <AIGovernancePanel userRole="compliance" />
         </div>
       )}
 

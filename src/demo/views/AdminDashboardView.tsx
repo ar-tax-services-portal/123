@@ -22,6 +22,7 @@ import {
   AlertCircle,
   FileCheck
 } from 'lucide-react';
+import { IntegrationHealthPanel } from '../../taxguard';
 
 interface AdminDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -128,6 +129,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             Open Integration Registry
           </button>
         </div>
+      </div>
+
+      {/* TaxGuard AI Enterprise Integration Health Panel */}
+      <div className="border border-neutral-300 p-5 bg-white space-y-3">
+        <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-black flex items-center gap-2">
+              <Key className="w-4 h-4 text-black" />
+              <span>TaxGuard AI Enterprise Adapters &amp; Integration Health</span>
+            </h3>
+            <p className="text-xs text-neutral-600">
+              Live telemetry and circuit-breaker monitoring for all 22 tax software adapters, cloud providers, and government gateways.
+            </p>
+          </div>
+        </div>
+        <IntegrationHealthPanel userRole="admin" />
       </div>
 
       {/* Role Access Tester (Administrator Verification Tool for all 29 Roles) */}

@@ -70,6 +70,13 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react';
+import { 
+  VerificationPanel,
+  ClassificationReview,
+  ExtractionReview,
+  DiscrepancyPanel,
+  AIResearchAssistant
+} from '../../taxguard';
 
 interface LifecycleRoleDashboardViewProps {
   role: DemoRole;
@@ -470,6 +477,11 @@ export const LifecycleRoleDashboardView: React.FC<LifecycleRoleDashboardViewProp
             ))}
           </div>
         </div>
+
+        {/* TaxGuard AI Knowledge-Based Verification & Fraud Detection */}
+        <div className="border border-zinc-200 bg-white p-5">
+          <VerificationPanel userRole="verification" />
+        </div>
       </div>
     );
   };
@@ -499,6 +511,18 @@ export const LifecycleRoleDashboardView: React.FC<LifecycleRoleDashboardViewProp
               {intakeDocs.filter(d => d.status === 'Routed').length}
             </div>
             <div className="text-xs text-zinc-500 mt-1">Indexed in workpaper folders</div>
+          </div>
+        </div>
+
+        {/* TaxGuard AI Intelligent Classification & OCR Extraction Triage */}
+        <div className="border border-zinc-200 bg-white p-5 space-y-6">
+          <div className="border-b border-zinc-200 pb-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-900">TaxGuard AI Automated Classification &amp; OCR Extraction</h3>
+            <p className="text-xs text-zinc-500 mt-0.5">High-confidence OCR, document boundary detection, and automatic tax schedule mapping.</p>
+          </div>
+          <div className="space-y-6">
+            <ClassificationReview userRole="documents" />
+            <ExtractionReview userRole="documents" />
           </div>
         </div>
 
@@ -1005,6 +1029,11 @@ export const LifecycleRoleDashboardView: React.FC<LifecycleRoleDashboardViewProp
             ))}
           </div>
         </div>
+
+        {/* TaxGuard AI Automated Discrepancy & Variance QC Engine */}
+        <div className="border border-zinc-200 bg-white p-5">
+          <DiscrepancyPanel userRole="quality-control" />
+        </div>
       </div>
     );
   };
@@ -1404,6 +1433,11 @@ export const LifecycleRoleDashboardView: React.FC<LifecycleRoleDashboardViewProp
             ))}
           </div>
         </div>
+
+        {/* TaxGuard AI Source-Grounded Legal & Appeals Defense Research */}
+        <div className="border border-zinc-200 bg-white p-5">
+          <AIResearchAssistant userRole="resolution" />
+        </div>
       </div>
     );
   };
@@ -1486,6 +1520,11 @@ export const LifecycleRoleDashboardView: React.FC<LifecycleRoleDashboardViewProp
               </div>
             ))}
           </div>
+        </div>
+
+        {/* TaxGuard AI IDR Defense & Statutory Code Citation Assistant */}
+        <div className="border border-zinc-200 bg-white p-5">
+          <AIResearchAssistant userRole="audit" />
         </div>
       </div>
     );

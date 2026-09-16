@@ -17,8 +17,17 @@ import {
   ArrowRight,
   Sparkles,
   Search,
-  Filter
+  Filter,
+  Layers,
+  BookOpen,
+  ShieldAlert
 } from 'lucide-react';
+import { 
+  ProfessionalReviewQueue,
+  ApprovalGate,
+  DiscrepancyPanel,
+  AIResearchAssistant
+} from '../../taxguard';
 
 interface ReviewerDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -30,6 +39,7 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
   const [selectedEngagement, setSelectedEngagement] = useState<DemoEngagement | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [reviewerTab, setReviewerTab] = useState<'certification' | 'approval_gate' | 'diagnostics' | 'research'>('certification');
 
   const refresh = () => {
     const allEngs = demoDataStore.getEngagements();
@@ -135,7 +145,62 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
         </div>
       </div>
 
-      {/* Review Queue Table */}
+      {/* Reviewer Sub-Navigation Tabs */}
+      <div className="border-b border-neutral-200 flex flex-wrap gap-1 text-xs">
+        {[
+          { id: 'certification', label: 'QC Review Queue & Certification', icon: Scale },
+          { id: 'approval_gate', label: 'Maker-Checker Approval Gate', icon: ShieldCheck },
+          { id: 'diagnostics', label: 'Variance & Discrepancy Check', icon: ShieldAlert },
+          { id: 'research', label: 'IRC / Statutory Defense Research', icon: BookOpen }
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setReviewerTab(tab.id as any)}
+              className={`px-3.5 py-2 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-[1px] ${
+                reviewerTab === tab.id
+                  ? 'border-black text-black font-bold bg-neutral-50'
+                  : 'border-transparent text-neutral-600 hover:text-black'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Sub-Tab 2: Maker-Checker Approval Gate */}
+      {reviewerTab === 'approval_gate' && (
+        <div className="space-y-6">
+          <div className="border border-neutral-300 p-5 bg-white">
+            <ApprovalGate userRole="reviewer" />
+          </div>
+          <div className="border border-neutral-300 p-5 bg-white">
+            <ProfessionalReviewQueue userRole="reviewer" />
+          </div>
+        </div>
+      )}
+
+      {/* Sub-Tab 3: Variance & Discrepancy Diagnostics */}
+      {reviewerTab === 'diagnostics' && (
+        <div className="border border-neutral-300 p-5 bg-white">
+          <DiscrepancyPanel userRole="reviewer" />
+        </div>
+      )}
+
+      {/* Sub-Tab 4: IRC / Statutory Defense Research */}
+      {reviewerTab === 'research' && (
+        <div className="border border-neutral-300 p-5 bg-white">
+          <AIResearchAssistant userRole="reviewer" />
+        </div>
+      )}
+
+      {/* Sub-Tab 1: Active Senior Review Queue & Selected Return Quality Gate */}
+      {reviewerTab === 'certification' && (
+        <>
+          {/* Review Queue Table */}
       <div className="border border-neutral-300 overflow-x-auto">
         <div className="p-3 bg-neutral-50 border-b border-neutral-300 text-xs font-bold uppercase tracking-wider text-black flex items-center justify-between">
           <span>Active Senior Review Queue</span>
@@ -317,6 +382,8 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
             </button>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -320,7 +320,7 @@ export const PortalDirectoryView: React.FC<PortalDirectoryViewProps> = ({
 
       {/* Main Directory Content */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full space-y-10">
-        {/* TaxGuard AI Operations Banner */}
+        {/* TaxGuard AI Integrated Architecture Banner */}
         <section className="bg-[#061A2F] text-white border border-[#1A365D] p-5 sm:p-6 rounded-xs shadow-md space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1A365D] pb-4">
             <div className="space-y-1">
@@ -329,73 +329,69 @@ export const PortalDirectoryView: React.FC<PortalDirectoryViewProps> = ({
                   TaxGuard AI Engine
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  Powered by Ophireum AI Technology
+                  Shared Intelligence &amp; Automation Layer
                 </span>
               </div>
               <h2 className="text-base font-bold uppercase tracking-wide text-[#F7F4ED]">
-                TaxGuard AI – Verified Tax and Accounting Operations
+                TaxGuard AI – Natively Integrated Across Practice Role Dashboards
               </h2>
               <p className="text-xs text-slate-300 max-w-2xl">
-                Integrated tax diagnostic engine, OCR confidence triage, maker-checker dual sign-off gates, watermarked draft workpapers, and source-grounded IRC research.
+                TaxGuard AI functions as an embedded intelligence and verification layer within each role workspace—powering real-time OCR extraction, maker-checker dual sign-off gates, draft workpapers, and source-grounded IRC research.
               </p>
             </div>
 
-            <button
-              onClick={() => onNavigate('#taxguard/dashboard')}
-              className="px-4 py-2 bg-[#C99A32] hover:bg-[#D7AC4A] text-[#061A2F] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors self-start sm:self-center shadow-xs flex items-center gap-1.5"
-            >
-              <span>Launch TaxGuard Console</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
+            <div className="px-3 py-1.5 bg-[#0A2544] border border-[#C99A32]/40 rounded-xs text-[11px] text-[#D7AC4A] font-mono self-start sm:self-center">
+              Role-Based Authorization Active
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
             <button
-              onClick={() => onNavigate('#taxguard/dashboard')}
+              onClick={() => onNavigate('#/operations/dashboard')}
               className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
             >
               <div className="font-bold text-[#E8C66A]">Operations</div>
-              <div className="text-[10px] text-slate-400">Queue &amp; Deadlines</div>
+              <div className="text-[10px] text-slate-400">Workflow &amp; Deadlines</div>
             </button>
 
             <button
-              onClick={() => onNavigate('#taxguard/documents')}
+              onClick={() => onNavigate('#/documents/dashboard')}
               className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
             >
-              <div className="font-bold text-[#E8C66A]">Vault &amp; Quarantine</div>
-              <div className="text-[10px] text-slate-400">MIME &amp; SHA-256</div>
+              <div className="font-bold text-[#E8C66A]">Document Specialist</div>
+              <div className="text-[10px] text-slate-400">Scanner &amp; Classification</div>
             </button>
 
             <button
-              onClick={() => onNavigate('#taxguard/extraction')}
+              onClick={() => onNavigate('#/data-entry/dashboard')}
               className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
             >
-              <div className="font-bold text-[#E8C66A]">OCR Extraction</div>
-              <div className="text-[10px] text-slate-400">Confidence Triage</div>
+              <div className="font-bold text-[#E8C66A]">Data Entry</div>
+              <div className="text-[10px] text-slate-400">OCR Confidence Triage</div>
             </button>
 
             <button
-              onClick={() => onNavigate('#taxguard/workpapers')}
+              onClick={() => onNavigate('#/accountant/dashboard')}
               className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
             >
-              <div className="font-bold text-[#E8C66A]">Workpapers</div>
-              <div className="text-[10px] text-slate-400">Watermarked Draft</div>
+              <div className="font-bold text-[#E8C66A]">Tax Preparer</div>
+              <div className="text-[10px] text-slate-400">Smart Forms &amp; Workpapers</div>
             </button>
 
             <button
-              onClick={() => onNavigate('#taxguard/review')}
+              onClick={() => onNavigate('#/reviewer/dashboard')}
               className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
             >
-              <div className="font-bold text-[#E8C66A]">Maker-Checker</div>
-              <div className="text-[10px] text-slate-400">Dual Sign-Off Gates</div>
+              <div className="font-bold text-[#E8C66A]">Senior Reviewer</div>
+              <div className="text-[10px] text-slate-400">Maker-Checker Sign-Off</div>
             </button>
 
             <button
-              onClick={() => onNavigate('#taxguard/research')}
+              onClick={() => onNavigate('#/compliance/dashboard')}
               className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
             >
-              <div className="font-bold text-[#E8C66A]">Tax Research</div>
-              <div className="text-[10px] text-slate-400">IRC / DOR Citations</div>
+              <div className="font-bold text-[#E8C66A]">Compliance</div>
+              <div className="text-[10px] text-slate-400">Audit Trail &amp; AI Safety</div>
             </button>
           </div>
         </section>

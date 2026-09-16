@@ -15,8 +15,20 @@ import {
   CheckCircle, 
   AlertCircle, 
   Calendar,
-  DollarSign
+  DollarSign,
+  Layers,
+  BookOpen,
+  FileCheck,
+  Search,
+  ShieldAlert
 } from 'lucide-react';
+import { 
+  SmartFormWorkspace,
+  WorkpaperEditor,
+  MissingItemsPanel,
+  DiscrepancyPanel,
+  AIResearchAssistant
+} from '../../taxguard';
 
 interface AccountantDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -27,6 +39,7 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
   const [workpapers, setWorkpapers] = useState<DemoTaxWorkpaper[]>([]);
   const [selectedEngId, setSelectedEngId] = useState<string>('eng_2025_summit');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<'workpapers' | 'smart_forms' | 'lead_dossier' | 'missing_items' | 'diagnostics' | 'research'>('workpapers');
 
   // New adjustment inputs
   const [newTitle, setNewTitle] = useState('');
@@ -149,54 +162,119 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
             </button>
           </div>
 
-          {/* Workpapers & Adjustments Table */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-black">
-              Book-to-Tax Workpapers &amp; Section 179 Depreciation Schedules
-            </h4>
-            <div className="border border-neutral-300 overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-mono uppercase text-neutral-600">
-                    <th className="p-2.5">Workpaper Title</th>
-                    <th className="p-2.5">Section / Form Line</th>
-                    <th className="p-2.5 text-right">Book Value</th>
-                    <th className="p-2.5 text-right">Tax Adjustment</th>
-                    <th className="p-2.5 text-right">Tax Value</th>
-                    <th className="p-2.5">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200">
-                  {activeWorkpapers.map((wp) => (
-                    <tr key={wp.id} className="hover:bg-neutral-50">
-                      <td className="p-2.5">
-                        <div className="font-bold text-black">{wp.title}</div>
-                        <div className="text-[11px] text-neutral-500 font-mono">{wp.notes}</div>
-                      </td>
-                      <td className="p-2.5 font-mono text-neutral-600">{wp.formLine}</td>
-                      <td className="p-2.5 font-mono text-right">${wp.bookAmount.toFixed(2)}</td>
-                      <td className="p-2.5 font-mono text-right text-neutral-700">
-                        {wp.taxAdjustment !== 0 ? (wp.taxAdjustment > 0 ? `+${wp.taxAdjustment.toFixed(2)}` : wp.taxAdjustment.toFixed(2)) : '$0.00'}
-                      </td>
-                      <td className="p-2.5 font-mono font-bold text-right text-black">${wp.taxAmount.toFixed(2)}</td>
-                      <td className="p-2.5">
-                        <span className="border border-neutral-300 px-1.5 py-0.5 text-[10px] font-mono">
-                          {wp.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {activeWorkpapers.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-4 text-center text-neutral-500 text-xs font-mono">
-                        No customized book-to-tax adjustments currently registered for this filing.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          {/* Preparer Sub-Navigation Tabs */}
+          <div className="border-b border-neutral-200 flex flex-wrap gap-1 text-xs">
+            {[
+              { id: 'workpapers', label: 'Book-to-Tax (M-1)', icon: FileSpreadsheet },
+              { id: 'smart_forms', label: 'Smart Forms & Field Mapping', icon: Layers },
+              { id: 'lead_dossier', label: 'Lead Workpaper Dossier', icon: FileCheck },
+              { id: 'missing_items', label: 'Missing Item Tracking', icon: AlertCircle },
+              { id: 'diagnostics', label: 'Discrepancy Diagnostics', icon: ShieldAlert },
+              { id: 'research', label: 'IRC / Statutory Research', icon: BookOpen }
+            ].map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setSubTab(tab.id as any)}
+                  className={`px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-[1px] ${
+                    subTab === tab.id
+                      ? 'border-black text-black font-bold bg-neutral-50'
+                      : 'border-transparent text-neutral-600 hover:text-black'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Sub-Tab 1: Workpapers & Adjustments Table */}
+          {subTab === 'workpapers' && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-black">
+                Book-to-Tax Workpapers &amp; Section 179 Depreciation Schedules
+              </h4>
+              <div className="border border-neutral-300 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-mono uppercase text-neutral-600">
+                      <th className="p-2.5">Workpaper Title</th>
+                      <th className="p-2.5">Section / Form Line</th>
+                      <th className="p-2.5 text-right">Book Value</th>
+                      <th className="p-2.5 text-right">Tax Adjustment</th>
+                      <th className="p-2.5 text-right">Tax Value</th>
+                      <th className="p-2.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200">
+                    {activeWorkpapers.map((wp) => (
+                      <tr key={wp.id} className="hover:bg-neutral-50">
+                        <td className="p-2.5">
+                          <div className="font-bold text-black">{wp.title}</div>
+                          <div className="text-[11px] text-neutral-500 font-mono">{wp.notes}</div>
+                        </td>
+                        <td className="p-2.5 font-mono text-neutral-600">{wp.formLine}</td>
+                        <td className="p-2.5 font-mono text-right">${wp.bookAmount.toFixed(2)}</td>
+                        <td className="p-2.5 font-mono text-right text-neutral-700">
+                          {wp.taxAdjustment !== 0 ? (wp.taxAdjustment > 0 ? `+${wp.taxAdjustment.toFixed(2)}` : wp.taxAdjustment.toFixed(2)) : '$0.00'}
+                        </td>
+                        <td className="p-2.5 font-mono font-bold text-right text-black">${wp.taxAmount.toFixed(2)}</td>
+                        <td className="p-2.5">
+                          <span className="border border-neutral-300 px-1.5 py-0.5 text-[10px] font-mono">
+                            {wp.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {activeWorkpapers.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-neutral-500 text-xs font-mono">
+                          No customized book-to-tax adjustments currently registered for this filing.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-Tab 2: Smart Forms & Field Mapping */}
+          {subTab === 'smart_forms' && (
+            <div className="pt-1">
+              <SmartFormWorkspace userRole="accountant" />
+            </div>
+          )}
+
+          {/* Sub-Tab 3: Lead Workpaper Dossier */}
+          {subTab === 'lead_dossier' && (
+            <div className="pt-1">
+              <WorkpaperEditor userRole="accountant" />
+            </div>
+          )}
+
+          {/* Sub-Tab 4: Missing Item Tracking */}
+          {subTab === 'missing_items' && (
+            <div className="pt-1">
+              <MissingItemsPanel userRole="accountant" />
+            </div>
+          )}
+
+          {/* Sub-Tab 5: Discrepancy Diagnostics */}
+          {subTab === 'diagnostics' && (
+            <div className="pt-1">
+              <DiscrepancyPanel userRole="accountant" />
+            </div>
+          )}
+
+          {/* Sub-Tab 6: IRC / Statutory Research */}
+          {subTab === 'research' && (
+            <div className="pt-1">
+              <AIResearchAssistant userRole="accountant" />
+            </div>
+          )}
         </div>
       )}
     </div>

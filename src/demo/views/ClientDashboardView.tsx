@@ -33,8 +33,15 @@ import {
   Plus,
   Eye,
   EyeOff,
-  Lock
+  Lock,
+  Camera
 } from 'lucide-react';
+import { 
+  DocumentScanner, 
+  DocumentUploadQueue, 
+  MissingItemsPanel, 
+  VerificationPanel 
+} from '../../taxguard';
 
 interface ClientDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -49,6 +56,9 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
 
   // Discretion & Privacy Mode (Phase 8 & 23)
   const [discretionMode, setDiscretionMode] = useState<boolean>(true);
+
+  // Live Camera Scanner State
+  const [showScanner, setShowScanner] = useState<boolean>(false);
 
   // Active tab within Client Portal
   const [activeTab, setActiveTab] = useState<'overview' | 'vault' | 'questionnaire' | 'ledger' | 'return_review' | 'billing' | 'notices' | 'archive'>('overview');
@@ -387,6 +397,32 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
       {/* TAB: SECURE DOCUMENT VAULT */}
       {activeTab === 'vault' && (
         <div className="space-y-6">
+          {/* Quick Action: Live Camera Scanner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#F7F4ED] border border-[#C99A32]/40 rounded-lg">
+            <div>
+              <div className="text-xs font-bold text-[#061A2F] uppercase tracking-wider flex items-center gap-2">
+                <Camera className="w-4 h-4 text-[#C99A32]" />
+                <span>TaxGuard AI Mobile Document Scanner</span>
+              </div>
+              <p className="text-xs text-[#667085] mt-0.5">
+                Capture receipts and tax records directly via your camera with automated edge alignment, contrast enhancement, and OCR extraction.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowScanner(!showScanner)}
+              className="px-4 py-2 bg-[#061A2F] hover:bg-[#031323] text-white text-xs font-bold uppercase tracking-wider rounded transition-colors"
+            >
+              {showScanner ? 'Hide Camera Scanner' : 'Launch Camera Scanner'}
+            </button>
+          </div>
+
+          {showScanner && (
+            <div className="p-4 border border-[#C99A32] bg-white rounded-lg">
+              <DocumentScanner userRole="client" onFinished={() => setShowScanner(false)} />
+            </div>
+          )}
+
           {/* Upload Form */}
           <div className="border border-[#D8DCE2] p-5 bg-white rounded-lg shadow-xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#061A2F] flex items-center gap-2">
@@ -502,12 +538,23 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
               </table>
             </div>
           </div>
+
+          {/* TaxGuard AI Real-Time Document Intake & Quarantine Status */}
+          <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs">
+            <DocumentUploadQueue userRole="client" />
+          </div>
         </div>
       )}
 
       {/* TAB: QUESTIONNAIRE & ORGANIZER */}
       {activeTab === 'questionnaire' && (
-        <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
+        <div className="space-y-6">
+          {/* Missing Document & Item Diagnostic Panel */}
+          <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs">
+            <MissingItemsPanel userRole="client" />
+          </div>
+
+          <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
           <div className="border-b border-[#D8DCE2] pb-3 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#061A2F]">
@@ -571,6 +618,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* TAB: LEDGER & EXPENSES */}
@@ -731,6 +779,11 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
                   Send Correction Request
                 </button>
               </form>
+            </div>
+
+            {/* TaxGuard AI Cryptographic Verification & Public Proofs */}
+            <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs">
+              <VerificationPanel userRole="client" />
             </div>
           </div>
         </div>
