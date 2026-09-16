@@ -23,6 +23,7 @@ import {
   Sparkles,
   ExternalLink,
   ShieldAlert,
+  ShieldCheck,
   ArrowRight,
   RotateCcw
 } from 'lucide-react';
@@ -338,6 +339,16 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                   className="pl-8 pr-3 py-1.5 text-xs border border-[#D8DCE2] bg-[#FBFAF7] text-[#1A2028] placeholder:text-[#667085] focus:outline-none focus:border-[#C99A32] rounded w-48 xl:w-64"
                 />
               </div>
+
+              {/* TaxGuard AI Operations Direct Link */}
+              <a
+                href="#taxguard/dashboard"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-[#C99A32]/50 bg-[#FAF9F5] hover:bg-[#F7F4ED] text-[#061A2F] text-xs font-bold rounded transition-colors"
+                title="TaxGuard AI Operations Engine (Powered by Ophireum AI Technology)"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C99A32]" />
+                <span>TaxGuard AI</span>
+              </a>
 
               {/* Notifications */}
               <div className="relative">

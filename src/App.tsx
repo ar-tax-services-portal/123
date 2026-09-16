@@ -47,6 +47,15 @@ const VirtualConsultationRoom = lazy(() => import('./components/consultation/Vir
 import { ShieldAlert } from 'lucide-react';
 import { DemoAppRouter } from './demo/DemoAppRouter';
 import { PublicV2Router } from './public-v2/PublicV2Router';
+import { TaxGuardApp } from './taxguard/TaxGuardApp';
+
+function isTaxGuardRouteUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hash = (window.location.hash || '').replace(/^#\/?/, '').replace(/^\/+/, '').toLowerCase();
+  const path = (window.location.pathname || '').replace(/^\/+/, '').toLowerCase();
+  const target = hash || path;
+  return target.startsWith('taxguard');
+}
 
 function isPublicV2RouteUrl(): boolean {
   if (typeof window === 'undefined') return false;
@@ -62,6 +71,7 @@ function isDemoRouteUrl(): boolean {
   const path = (window.location.pathname || '').replace(/^\/+/, '').toLowerCase();
   const target = hash || path;
 
+  if (target.startsWith('taxguard')) return false;
   if (target.startsWith('public-v2')) return false;
   if (target.startsWith('error/')) return true;
   if (target === 'portals' || target.startsWith('portals/')) return true;
@@ -75,11 +85,13 @@ const AppContent: React.FC = () => {
   const { currentPage, currentUser, setCurrentPage, pageParams } = useApp();
   const [isDemoRoute, setIsDemoRoute] = React.useState<boolean>(() => isDemoRouteUrl());
   const [isPublicV2Route, setIsPublicV2Route] = React.useState<boolean>(() => isPublicV2RouteUrl());
+  const [isTaxGuardRoute, setIsTaxGuardRoute] = React.useState<boolean>(() => isTaxGuardRouteUrl());
 
   useEffect(() => {
     const handleUrlChange = () => {
       setIsDemoRoute(isDemoRouteUrl());
       setIsPublicV2Route(isPublicV2RouteUrl());
+      setIsTaxGuardRoute(isTaxGuardRouteUrl());
     };
     window.addEventListener('hashchange', handleUrlChange);
     window.addEventListener('popstate', handleUrlChange);
@@ -91,8 +103,8 @@ const AppContent: React.FC = () => {
 
   // Router initialization diagnostic log
   useEffect(() => {
-    console.log(`[DIAGNOSTIC] Router initialization: active page = "${currentPage}", isDemoRoute = ${isDemoRoute}, isPublicV2Route = ${isPublicV2Route}, user = "${currentUser?.name || 'Guest'}"`);
-  }, [currentPage, isDemoRoute, isPublicV2Route, currentUser?.name]);
+    console.log(`[DIAGNOSTIC] Router initialization: active page = "${currentPage}", isTaxGuardRoute = ${isTaxGuardRoute}, isDemoRoute = ${isDemoRoute}, isPublicV2Route = ${isPublicV2Route}, user = "${currentUser?.name || 'Guest'}"`);
+  }, [currentPage, isTaxGuardRoute, isDemoRoute, isPublicV2Route, currentUser?.name]);
 
   // Synchronize navigation to demo portals
   useEffect(() => {
@@ -119,6 +131,12 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [currentPage]);
+
+  // Check if TaxGuard AI Operations Engine is active
+  const isTaxGuard = isTaxGuardRoute || isTaxGuardRouteUrl() || (currentPage as string) === 'taxguard';
+  if (isTaxGuard) {
+    return <TaxGuardApp onExit={() => { window.location.hash = '#/'; }} />;
+  }
 
   // Check if Public Page 2 is active
   const isPublicV2 = isPublicV2Route || isPublicV2RouteUrl() || currentPage === 'public_v2';

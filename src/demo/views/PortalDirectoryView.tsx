@@ -320,6 +320,86 @@ export const PortalDirectoryView: React.FC<PortalDirectoryViewProps> = ({
 
       {/* Main Directory Content */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full space-y-10">
+        {/* TaxGuard AI Operations Banner */}
+        <section className="bg-[#061A2F] text-white border border-[#1A365D] p-5 sm:p-6 rounded-xs shadow-md space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1A365D] pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 bg-[#0A2544] border border-[#C99A32] text-[#D7AC4A] text-[10px] font-bold uppercase rounded-xs font-mono">
+                  TaxGuard AI Engine
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Powered by Ophireum AI Technology
+                </span>
+              </div>
+              <h2 className="text-base font-bold uppercase tracking-wide text-[#F7F4ED]">
+                TaxGuard AI – Verified Tax and Accounting Operations
+              </h2>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Integrated tax diagnostic engine, OCR confidence triage, maker-checker dual sign-off gates, watermarked draft workpapers, and source-grounded IRC research.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate('#taxguard/dashboard')}
+              className="px-4 py-2 bg-[#C99A32] hover:bg-[#D7AC4A] text-[#061A2F] text-xs font-bold uppercase tracking-wider rounded-xs transition-colors self-start sm:self-center shadow-xs flex items-center gap-1.5"
+            >
+              <span>Launch TaxGuard Console</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+            <button
+              onClick={() => onNavigate('#taxguard/dashboard')}
+              className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
+            >
+              <div className="font-bold text-[#E8C66A]">Operations</div>
+              <div className="text-[10px] text-slate-400">Queue &amp; Deadlines</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('#taxguard/documents')}
+              className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
+            >
+              <div className="font-bold text-[#E8C66A]">Vault &amp; Quarantine</div>
+              <div className="text-[10px] text-slate-400">MIME &amp; SHA-256</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('#taxguard/extraction')}
+              className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
+            >
+              <div className="font-bold text-[#E8C66A]">OCR Extraction</div>
+              <div className="text-[10px] text-slate-400">Confidence Triage</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('#taxguard/workpapers')}
+              className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
+            >
+              <div className="font-bold text-[#E8C66A]">Workpapers</div>
+              <div className="text-[10px] text-slate-400">Watermarked Draft</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('#taxguard/review')}
+              className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
+            >
+              <div className="font-bold text-[#E8C66A]">Maker-Checker</div>
+              <div className="text-[10px] text-slate-400">Dual Sign-Off Gates</div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('#taxguard/research')}
+              className="p-2 bg-[#0A2544] hover:bg-[#1A365D] border border-[#1A365D] rounded-xs text-left transition-colors"
+            >
+              <div className="font-bold text-[#E8C66A]">Tax Research</div>
+              <div className="text-[10px] text-slate-400">IRC / DOR Citations</div>
+            </button>
+          </div>
+        </section>
+
         {filteredGroups.length === 0 ? (
           <div className="border border-neutral-300 p-12 text-center space-y-3">
             <p className="text-sm font-semibold text-neutral-800">
