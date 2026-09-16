@@ -27,7 +27,10 @@ import {
   WorkpaperEditor,
   MissingItemsPanel,
   DiscrepancyPanel,
-  AIResearchAssistant
+  AIResearchAssistant,
+  DraftReturnPreparer,
+  FixedAssetRegister,
+  EntityRelationshipGraph
 } from '../../taxguard';
 
 interface AccountantDashboardViewProps {
@@ -39,7 +42,7 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
   const [workpapers, setWorkpapers] = useState<DemoTaxWorkpaper[]>([]);
   const [selectedEngId, setSelectedEngId] = useState<string>('eng_2025_summit');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<'workpapers' | 'smart_forms' | 'lead_dossier' | 'missing_items' | 'diagnostics' | 'research'>('workpapers');
+  const [subTab, setSubTab] = useState<'workpapers' | 'draft_prep' | 'fixed_assets' | 'entities' | 'smart_forms' | 'lead_dossier' | 'missing_items' | 'diagnostics' | 'research'>('workpapers');
 
   // New adjustment inputs
   const [newTitle, setNewTitle] = useState('');
@@ -166,11 +169,14 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
           <div className="border-b border-neutral-200 flex flex-wrap gap-1 text-xs">
             {[
               { id: 'workpapers', label: 'Book-to-Tax (M-1)', icon: FileSpreadsheet },
-              { id: 'smart_forms', label: 'Smart Forms & Field Mapping', icon: Layers },
+              { id: 'draft_prep', label: 'Draft Return & Diagnostics', icon: Sparkles },
+              { id: 'fixed_assets', label: 'Form 4562 Fixed Assets', icon: Calendar },
+              { id: 'entities', label: 'Entity Graph & Basis', icon: Layers },
+              { id: 'smart_forms', label: 'Smart Forms', icon: Layers },
               { id: 'lead_dossier', label: 'Lead Workpaper Dossier', icon: FileCheck },
               { id: 'missing_items', label: 'Missing Item Tracking', icon: AlertCircle },
-              { id: 'diagnostics', label: 'Discrepancy Diagnostics', icon: ShieldAlert },
-              { id: 'research', label: 'IRC / Statutory Research', icon: BookOpen }
+              { id: 'diagnostics', label: 'Diagnostics', icon: ShieldAlert },
+              { id: 'research', label: 'IRC Research', icon: BookOpen }
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -238,6 +244,30 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* Sub-Tab: Draft Return Preparation & Diagnostics */}
+          {subTab === 'draft_prep' && (
+            <div className="pt-1">
+              <DraftReturnPreparer 
+                userRole="accountant" 
+                onCompleted={handleSubmitForReview} 
+              />
+            </div>
+          )}
+
+          {/* Sub-Tab: Form 4562 Fixed Assets & South Carolina Non-Conformity */}
+          {subTab === 'fixed_assets' && (
+            <div className="pt-1">
+              <FixedAssetRegister userRole="accountant" />
+            </div>
+          )}
+
+          {/* Sub-Tab: Entity Intelligence & Basis Mapping */}
+          {subTab === 'entities' && (
+            <div className="pt-1">
+              <EntityRelationshipGraph userRole="accountant" />
             </div>
           )}
 

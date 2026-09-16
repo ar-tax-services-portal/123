@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { DemoInvoice } from '../types';
 import { demoDataStore } from '../services/DemoDataService';
 import { SimulatedActionModal } from '../components/SimulatedActionModal';
-import { DollarSign, FileText, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { DollarSign, FileText, CheckCircle, Clock, Sparkles, Calendar, Coins } from 'lucide-react';
+import { EstimatedPaymentsCenter, AICreditUsageManager } from '../../taxguard';
 
 interface BillingDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -17,6 +18,7 @@ export const BillingDashboardView: React.FC<BillingDashboardViewProps> = ({ onOp
   const [invoices, setInvoices] = useState<DemoInvoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<DemoInvoice | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'invoices' | 'estimated_pmts' | 'ai_credits'>('invoices');
 
   const refresh = () => {
     setInvoices(demoDataStore.getInvoices());
@@ -54,8 +56,35 @@ export const BillingDashboardView: React.FC<BillingDashboardViewProps> = ({ onOp
         </div>
       </div>
 
-      {/* AR Aging Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+      {/* Tabs */}
+      <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
+        {[
+          { id: 'invoices', label: 'Practice Invoices & Collections', icon: DollarSign },
+          { id: 'estimated_pmts', label: 'Client Estimated Tax Vouchers (Safe-Harbor)', icon: Calendar },
+          { id: 'ai_credits', label: 'Firm AI Credit Metering & Usage', icon: Coins }
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-3.5 py-2 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-[1px] ${
+                activeTab === tab.id
+                  ? 'border-black text-black font-bold bg-neutral-50'
+                  : 'border-transparent text-neutral-600 hover:text-black'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'invoices' && (
+        <>
+          {/* AR Aging Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
         <div className="border border-neutral-200 p-4 bg-neutral-50 space-y-1">
           <span className="font-bold text-neutral-500 uppercase text-[10px]">Total Billed (Season)</span>
           <div className="font-mono text-xl font-bold text-black">${totalBilled.toLocaleString()}.00</div>
@@ -141,6 +170,22 @@ export const BillingDashboardView: React.FC<BillingDashboardViewProps> = ({ onOp
             setShowPaymentModal(false);
           }}
         />
+      )}
+        </>
+      )}
+
+      {/* Tab: Estimated Payments & Safe Harbor */}
+      {activeTab === 'estimated_pmts' && (
+        <div className="pt-1">
+          <EstimatedPaymentsCenter userRole="billing" />
+        </div>
+      )}
+
+      {/* Tab: AI Credit Usage & Metering */}
+      {activeTab === 'ai_credits' && (
+        <div className="pt-1">
+          <AICreditUsageManager userRole="billing" />
+        </div>
       )}
     </div>
   );

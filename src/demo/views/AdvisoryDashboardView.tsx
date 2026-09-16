@@ -4,14 +4,15 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles, Calculator, PieChart, ShieldCheck, CheckCircle } from 'lucide-react';
+import { Sparkles, Calculator, PieChart, ShieldCheck, CheckCircle, TrendingUp, Layers } from 'lucide-react';
+import { TaxPlanningScenarioModeler, EntityRelationshipGraph } from '../../taxguard';
 
 interface AdvisoryDashboardViewProps {
   onOpenAiAssistant: () => void;
 }
 
 export const AdvisoryDashboardView: React.FC<AdvisoryDashboardViewProps> = ({ onOpenAiAssistant }) => {
-  const [activeTab, setActiveTab] = useState<'compensation' | 'entity' | 'rd_credit' | 'roadmap'>('compensation');
+  const [activeTab, setActiveTab] = useState<'scenarios' | 'entity_graph' | 'compensation' | 'entity' | 'rd_credit' | 'roadmap'>('scenarios');
 
   // Interactive Reasonable Compensation calculation state
   const [netBusinessProfit, setNetBusinessProfit] = useState(250000);
@@ -46,10 +47,12 @@ export const AdvisoryDashboardView: React.FC<AdvisoryDashboardViewProps> = ({ on
       {/* Tabs */}
       <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
         {[
-          { id: 'compensation', label: 'S-Corp Reasonable Compensation & FICA Optimization' },
-          { id: 'entity', label: 'Entity Choice & Restructuring Matrix' },
-          { id: 'rd_credit', label: 'Section 41 R&D Credit Study Simulator' },
-          { id: 'roadmap', label: 'Client Strategic Action Plan' }
+          { id: 'scenarios', label: '21-Strategy Tax Planning & 5 Scenarios', icon: TrendingUp },
+          { id: 'entity_graph', label: 'Multi-Entity Flow & Basis Graph', icon: Layers },
+          { id: 'compensation', label: 'Reasonable Compensation Study', icon: Calculator },
+          { id: 'entity', label: 'Entity Choice & Restructuring', icon: PieChart },
+          { id: 'rd_credit', label: 'Section 41 R&D Study', icon: ShieldCheck },
+          { id: 'roadmap', label: 'Client Strategic Action Plan', icon: CheckCircle }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -64,6 +67,20 @@ export const AdvisoryDashboardView: React.FC<AdvisoryDashboardViewProps> = ({ on
           </button>
         ))}
       </div>
+
+      {/* Tab: 21-Strategy Tax Planning & 5 Scenarios */}
+      {activeTab === 'scenarios' && (
+        <div className="pt-1">
+          <TaxPlanningScenarioModeler userRole="advisory" />
+        </div>
+      )}
+
+      {/* Tab: Multi-Entity Flow & Basis Graph */}
+      {activeTab === 'entity_graph' && (
+        <div className="pt-1">
+          <EntityRelationshipGraph userRole="advisory" />
+        </div>
+      )}
 
       {/* Tab: Compensation */}
       {activeTab === 'compensation' && (

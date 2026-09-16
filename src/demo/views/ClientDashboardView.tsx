@@ -40,7 +40,10 @@ import {
   DocumentScanner, 
   DocumentUploadQueue, 
   MissingItemsPanel, 
-  VerificationPanel 
+  VerificationPanel,
+  EstimatedPaymentsCenter,
+  TaxGuardVoiceAssistant,
+  TaxPlanningScenarioModeler
 } from '../../taxguard';
 
 interface ClientDashboardViewProps {
@@ -61,7 +64,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
   const [showScanner, setShowScanner] = useState<boolean>(false);
 
   // Active tab within Client Portal
-  const [activeTab, setActiveTab] = useState<'overview' | 'vault' | 'questionnaire' | 'ledger' | 'return_review' | 'billing' | 'notices' | 'archive'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'vault' | 'questionnaire' | 'ledger' | 'return_review' | 'estimated_tax' | 'tax_planning' | 'voice_assistant' | 'billing' | 'notices' | 'archive'>('overview');
 
   // Modal State
   const [modalAction, setModalAction] = useState<SimulatedActionType | null>(null);
@@ -160,6 +163,9 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
             { id: 'questionnaire', label: 'Tax Organizer & Questionnaire' },
             { id: 'ledger', label: 'Income & Expense Records' },
             { id: 'return_review', label: 'Draft Return & Signature' },
+            { id: 'estimated_tax', label: 'Estimated Tax & Safe Harbor' },
+            { id: 'tax_planning', label: 'Tax Strategy Forecast' },
+            { id: 'voice_assistant', label: 'Voice Assistant (PTT)' },
             { id: 'billing', label: 'Fee Invoices & Payments' },
             { id: 'notices', label: 'Tax Notices & Transcripts' },
             { id: 'archive', label: 'Prior Year Archive' }
@@ -851,6 +857,27 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({ onOpen
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* TAB: ESTIMATED TAX & SAFE HARBOR */}
+      {activeTab === 'estimated_tax' && (
+        <div className="pt-1">
+          <EstimatedPaymentsCenter userRole="client" />
+        </div>
+      )}
+
+      {/* TAB: TAX PLANNING & SCENARIOS */}
+      {activeTab === 'tax_planning' && (
+        <div className="pt-1">
+          <TaxPlanningScenarioModeler userRole="client" />
+        </div>
+      )}
+
+      {/* TAB: VOICE ASSISTANT */}
+      {activeTab === 'voice_assistant' && (
+        <div className="pt-1">
+          <TaxGuardVoiceAssistant userRole="client" />
         </div>
       )}
 

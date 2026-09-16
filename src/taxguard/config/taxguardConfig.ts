@@ -4,6 +4,26 @@
  * A/R Tax Services, LLC Platform Configuration
  */
 
+export interface TaxGuardFeatureFlags {
+  AI_DOCUMENT_INTELLIGENCE_ENABLED: boolean;
+  AI_TAX_RESEARCH_ENABLED: boolean;
+  AI_PLANNING_ENABLED: boolean;
+  AI_RETURN_PREPARATION_ENABLED: boolean;
+  AI_RESOLUTION_ENABLED: boolean;
+  AI_VOICE_ENABLED: boolean;
+  DEMO_MODE_ENABLED: boolean;
+}
+
+export const TAXGUARD_FEATURE_FLAGS: TaxGuardFeatureFlags = {
+  AI_DOCUMENT_INTELLIGENCE_ENABLED: true,
+  AI_TAX_RESEARCH_ENABLED: true,
+  AI_PLANNING_ENABLED: true,
+  AI_RETURN_PREPARATION_ENABLED: true,
+  AI_RESOLUTION_ENABLED: true,
+  AI_VOICE_ENABLED: true,
+  DEMO_MODE_ENABLED: true
+};
+
 export interface TaxGuardFeatureConfig {
   enabled: boolean;
   moduleName: string;
@@ -17,6 +37,7 @@ export interface TaxGuardFeatureConfig {
   materialRiskApprovalRequired: boolean;
   makerCheckerEnforced: boolean;
   qrVerificationBaseUrl: string;
+  flags: TaxGuardFeatureFlags;
 }
 
 export const TAXGUARD_CONFIG: TaxGuardFeatureConfig = {
@@ -34,7 +55,8 @@ export const TAXGUARD_CONFIG: TaxGuardFeatureConfig = {
   defaultConfidenceThreshold: 0.85,
   materialRiskApprovalRequired: true,
   makerCheckerEnforced: true,
-  qrVerificationBaseUrl: typeof window !== 'undefined' ? window.location.origin : 'https://artaxservices.com'
+  qrVerificationBaseUrl: typeof window !== 'undefined' ? window.location.origin : 'https://artaxservices.com',
+  flags: TAXGUARD_FEATURE_FLAGS
 };
 
 export const TAXGUARD_ROLES = [

@@ -26,7 +26,9 @@ import {
   ProfessionalReviewQueue,
   ApprovalGate,
   DiscrepancyPanel,
-  AIResearchAssistant
+  AIResearchAssistant,
+  SideBySideReviewWorkspace,
+  BrandedDeliverablesGenerator
 } from '../../taxguard';
 
 interface ReviewerDashboardViewProps {
@@ -39,7 +41,7 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
   const [selectedEngagement, setSelectedEngagement] = useState<DemoEngagement | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [reviewerTab, setReviewerTab] = useState<'certification' | 'approval_gate' | 'diagnostics' | 'research'>('certification');
+  const [reviewerTab, setReviewerTab] = useState<'certification' | 'side_by_side' | 'deliverables' | 'approval_gate' | 'diagnostics' | 'research'>('certification');
 
   const refresh = () => {
     const allEngs = demoDataStore.getEngagements();
@@ -149,6 +151,8 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
       <div className="border-b border-neutral-200 flex flex-wrap gap-1 text-xs">
         {[
           { id: 'certification', label: 'QC Review Queue & Certification', icon: Scale },
+          { id: 'side_by_side', label: 'Side-by-Side OCR & Provenance', icon: Layers },
+          { id: 'deliverables', label: 'Branded Deliverables & Dossiers', icon: FileText },
           { id: 'approval_gate', label: 'Maker-Checker Approval Gate', icon: ShieldCheck },
           { id: 'diagnostics', label: 'Variance & Discrepancy Check', icon: ShieldAlert },
           { id: 'research', label: 'IRC / Statutory Defense Research', icon: BookOpen }
@@ -170,6 +174,20 @@ export const ReviewerDashboardView: React.FC<ReviewerDashboardViewProps> = ({ on
           );
         })}
       </div>
+
+      {/* Sub-Tab: Side-by-Side OCR & Provenance Review */}
+      {reviewerTab === 'side_by_side' && (
+        <div className="pt-1">
+          <SideBySideReviewWorkspace userRole="reviewer" />
+        </div>
+      )}
+
+      {/* Sub-Tab: Branded Deliverables & Workpaper Packages */}
+      {reviewerTab === 'deliverables' && (
+        <div className="pt-1">
+          <BrandedDeliverablesGenerator userRole="reviewer" />
+        </div>
+      )}
 
       {/* Sub-Tab 2: Maker-Checker Approval Gate */}
       {reviewerTab === 'approval_gate' && (

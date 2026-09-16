@@ -222,6 +222,37 @@ class DemoDataStore {
   }
 
   /**
+   * Submit prepared return package for Senior Reviewer / CPA certification.
+   */
+  public submitForSeniorReview(
+    id: string,
+    preparerName: string,
+    preparerId: string
+  ): { success: boolean; error?: string } {
+    const eng = this.engagements.find(e => e.id === id);
+    if (!eng) return { success: false, error: 'Engagement not found.' };
+
+    eng.approvalState = 'Pending Review';
+    eng.currentStage = 'Approve';
+    eng.currentStatus = 'Senior Review';
+    eng.assignedPreparerId = preparerId;
+    eng.lastActivity = `${preparerName} finalized draft calculations and submitted return package for Senior CPA Review.`;
+    eng.completionPercentage = Math.max(eng.completionPercentage, 65);
+
+    this.logAudit({
+      user: preparerName,
+      role: 'accountant',
+      action: 'Submitted Return for Senior Review',
+      record: `Engagement: ${eng.id} (${eng.formType})`,
+      result: 'Success (Simulated)',
+      reason: 'Draft return prepared, diagnostics passed, workpapers tied out.'
+    });
+
+    this.notify();
+    return { success: true };
+  }
+
+  /**
    * Maker-Checker Rule: Preparer cannot approve own return!
    */
   public approveEngagementByReviewer(

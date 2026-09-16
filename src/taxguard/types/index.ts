@@ -307,7 +307,7 @@ export interface TaxGuardAuditEntry {
   userEmail: string;
   userRole: string;
   action: string;
-  recordType: 'case' | 'document' | 'extraction' | 'workpaper' | 'approval' | 'verification' | 'governance' | 'auth';
+  recordType: 'case' | 'document' | 'extraction' | 'workpaper' | 'approval' | 'verification' | 'governance' | 'auth' | 'billing' | 'report' | 'engagement' | 'plan' | 'notice' | 'task';
   recordId: string;
   timestamp: string;
   beforeStateRef?: string;
@@ -315,7 +315,7 @@ export interface TaxGuardAuditEntry {
   ipAddress: string;
   correlationId: string;
   result: 'success' | 'denied' | 'error';
-  riskLevel: 'routine' | 'material' | 'high_risk';
+  riskLevel: 'routine' | 'material' | 'high_risk' | 'critical';
   details: string;
 }
 

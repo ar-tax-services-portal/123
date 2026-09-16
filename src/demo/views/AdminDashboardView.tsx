@@ -22,7 +22,7 @@ import {
   AlertCircle,
   FileCheck
 } from 'lucide-react';
-import { IntegrationHealthPanel } from '../../taxguard';
+import { IntegrationHealthPanel, UnifiedActionCenter, AICreditUsageManager, TaxGuardVoiceAssistant } from '../../taxguard';
 
 interface AdminDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -33,6 +33,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onOpenAiAssistant,
   onOpenIntegrations 
 }) => {
+  const [activeTab, setActiveTab] = useState<'tester' | 'actions' | 'credits' | 'voice'>('tester');
   const [resetNotice, setResetNotice] = useState(false);
   const [testerSearch, setTesterSearch] = useState('');
 
@@ -88,11 +89,36 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </div>
       </div>
 
-      {resetNotice && (
-        <div className="p-3 border border-black bg-neutral-50 text-xs font-bold text-black">
-          Demonstration data reset to pristine baseline. Reloading workspace...
-        </div>
-      )}
+      {/* Tabs */}
+      <div className="border-b border-neutral-300 flex flex-wrap gap-1 text-xs">
+        {[
+          { id: 'tester', label: 'Role Access Matrix & Sandbox Health' },
+          { id: 'actions', label: 'Practice Unified Action Center' },
+          { id: 'credits', label: 'AI Credit Metering & Usage' },
+          { id: 'voice', label: 'Voice Assistant Sandbox' }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-3.5 py-2 font-medium transition-colors border-b-2 -mb-[1px] ${
+              activeTab === tab.id
+                ? 'border-black text-black font-bold bg-neutral-50'
+                : 'border-transparent text-neutral-600 hover:text-black'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab 1: Tester & Sandbox Controls */}
+      {activeTab === 'tester' && (
+        <>
+          {resetNotice && (
+            <div className="p-3 border border-black bg-neutral-50 text-xs font-bold text-black">
+              Demonstration data reset to pristine baseline. Reloading workspace...
+            </div>
+          )}
 
       {/* Control Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -249,19 +275,42 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </table>
         </div>
 
-        {/* Security Rule Notice */}
-        <div className="p-4 border-t border-neutral-300 bg-neutral-50 text-[11px] text-neutral-600 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-black" />
-            <span>
-              <strong>Security Protocol Enforced:</strong> Tester opens login endpoints in isolated browser contexts. Never creates cross-role session bleeding.
-            </span>
-          </div>
-          <div className="font-mono text-[10px] text-neutral-500">
-            Demo Shared Credential: Required on Login
+          {/* Security Rule Notice */}
+          <div className="p-4 border-t border-neutral-300 bg-neutral-50 text-[11px] text-neutral-600 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-black" />
+              <span>
+                <strong>Security Protocol Enforced:</strong> Tester opens login endpoints in isolated browser contexts. Never creates cross-role session bleeding.
+              </span>
+            </div>
+            <div className="font-mono text-[10px] text-neutral-500">
+              Demo Shared Credential: Required on Login
+            </div>
           </div>
         </div>
-      </div>
+        </>
+      )}
+
+      {/* Tab: Unified Action Center */}
+      {activeTab === 'actions' && (
+        <div className="pt-1">
+          <UnifiedActionCenter userRole="admin" />
+        </div>
+      )}
+
+      {/* Tab: AI Credit Usage & Metering */}
+      {activeTab === 'credits' && (
+        <div className="pt-1">
+          <AICreditUsageManager userRole="admin" />
+        </div>
+      )}
+
+      {/* Tab: Voice Assistant Sandbox */}
+      {activeTab === 'voice' && (
+        <div className="pt-1">
+          <TaxGuardVoiceAssistant userRole="admin" />
+        </div>
+      )}
     </div>
   );
 };

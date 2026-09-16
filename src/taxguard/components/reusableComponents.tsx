@@ -26,6 +26,17 @@ import { TaxGuardResearchView } from '../views/TaxGuardResearchView';
 import { TaxGuardAuditLogView } from '../views/TaxGuardAuditLogView';
 import { TaxGuardIntegrationsView } from '../views/TaxGuardIntegrationsView';
 import { TaxGuardAdminSettingsView } from '../views/TaxGuardAdminSettingsView';
+import { EntityRelationshipGraph } from './EntityRelationshipGraph';
+import { FixedAssetRegister } from './FixedAssetRegister';
+import { SideBySideReviewWorkspace } from './SideBySideReviewWorkspace';
+import { DraftReturnPreparer } from './DraftReturnPreparer';
+import { TaxPlanningScenarioModeler } from './TaxPlanningScenarioModeler';
+import { EstimatedPaymentsCenter } from './EstimatedPaymentsCenter';
+import { TaxResolutionCenter } from './TaxResolutionCenter';
+import { TaxGuardVoiceAssistant } from './TaxGuardVoiceAssistant';
+import { AICreditUsageManager } from './AICreditUsageManager';
+import { UnifiedActionCenter } from './UnifiedActionCenter';
+import { BrandedDeliverablesGenerator } from './BrandedDeliverablesGenerator';
 
 export interface TaxGuardComponentProps {
   userRole: string;
@@ -196,3 +207,114 @@ export const AIGovernancePanel: React.FC<TaxGuardComponentProps> = ({ userRole, 
     <TaxGuardAdminSettingsView userRole={userRole} />
   </div>
 );
+
+/**
+ * 17. EntityIntelligenceGraphPanel
+ * Multi-entity relationship mapping, shareholder/partner basis, K-1 flows, and IRC § 7872 debt.
+ */
+export const EntityIntelligenceGraphPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <EntityRelationshipGraph userRole={userRole} />
+  </div>
+);
+
+/**
+ * 18. FixedAssetSchedulePanel
+ * Form 4562, Section 179, 60% Bonus depreciation, MACRS conventions, and SC Code § 12-6-40 addback.
+ */
+export const FixedAssetSchedulePanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <FixedAssetRegister userRole={userRole} />
+  </div>
+);
+
+/**
+ * 19. SideBySideReviewPanel
+ * Source document bounding box verification, prior-year delta, and approval invalidation gates.
+ */
+export const SideBySideReviewPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <SideBySideReviewWorkspace userRole={userRole} />
+  </div>
+);
+
+/**
+ * 20. DraftReturnPreparationPanel
+ * Proposes return fields, runs 18 diagnostics, builds lead workpapers, and queues for Senior Review.
+ */
+export const DraftReturnPreparationPanel: React.FC<TaxGuardComponentProps & { onCompleted?: () => void }> = ({ userRole, onCompleted, className }) => (
+  <div className={className}>
+    <DraftReturnPreparer userRole={userRole} onCompleted={onCompleted} />
+  </div>
+);
+
+/**
+ * 21. TaxPlanningModelerPanel
+ * 21 IRC strategies across 5 comparative scenarios with statutory disclaimers.
+ */
+export const TaxPlanningModelerPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <TaxPlanningScenarioModeler userRole={userRole} />
+  </div>
+);
+
+/**
+ * 22. EstimatedPaymentsPanel
+ * Form 1040-ES / SC1040ES quarterly schedule with IRC § 6654 safe-harbor analysis.
+ */
+export const EstimatedPaymentsPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <EstimatedPaymentsCenter userRole={userRole} />
+  </div>
+);
+
+/**
+ * 23. TaxResolutionDefensePanel
+ * Notice classification, Form 433-A OIC calculations, and First-Time Penalty Abatement.
+ */
+export const TaxResolutionDefensePanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <TaxResolutionCenter userRole={userRole} />
+  </div>
+);
+
+/**
+ * 24. VoiceInteractionPanel
+ * Push-to-talk microphone with tax terminology recognition and legal citations.
+ */
+export const VoiceInteractionPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <TaxGuardVoiceAssistant userRole={userRole} />
+  </div>
+);
+
+/**
+ * 25. AICreditManagerPanel
+ * Credit metering, pre-execution estimation, and failure refund safety.
+ */
+export const AICreditManagerPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <AICreditUsageManager userRole={userRole} />
+  </div>
+);
+
+/**
+ * 26. UnifiedActionCenterPanel
+ * Role-orchestrated action queue with deadline-risk scoring.
+ */
+export const UnifiedActionCenterPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <UnifiedActionCenter userRole={userRole} />
+  </div>
+);
+
+/**
+ * 27. BrandedDeliverablesPanel
+ * Formal PDFs, DOCX memos, Excel models, and slide decks with SHA-256 verification.
+ */
+export const BrandedDeliverablesPanel: React.FC<TaxGuardComponentProps> = ({ userRole, className }) => (
+  <div className={className}>
+    <BrandedDeliverablesGenerator userRole={userRole} />
+  </div>
+);
+
