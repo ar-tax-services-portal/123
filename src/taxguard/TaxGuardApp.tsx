@@ -19,6 +19,12 @@ import { TaxGuardReportsView } from './views/TaxGuardReportsView';
 import { TaxGuardAuditLogView } from './views/TaxGuardAuditLogView';
 import { TaxGuardIntegrationsView } from './views/TaxGuardIntegrationsView';
 import { TaxGuardAdminSettingsView } from './views/TaxGuardAdminSettingsView';
+import { TaxGuardCasesView } from './views/TaxGuardCasesView';
+import { TaxGuardScannerView } from './views/TaxGuardScannerView';
+import { TaxGuardClassificationView } from './views/TaxGuardClassificationView';
+import { TaxGuardFieldMappingView } from './views/TaxGuardFieldMappingView';
+import { TaxGuardSummariesView } from './views/TaxGuardSummariesView';
+import { TaxGuardEvidenceView } from './views/TaxGuardEvidenceView';
 
 interface TaxGuardAppProps {
   initialRole?: string;
@@ -100,14 +106,32 @@ export const TaxGuardApp: React.FC<TaxGuardAppProps> = ({
         {currentSubRoute === 'dashboard' && (
           <TaxGuardDashboardView userRole={activeRole} onNavigateSubRoute={handleNavigate} />
         )}
+        {currentSubRoute === 'cases' && (
+          <TaxGuardCasesView userRole={activeRole} />
+        )}
         {currentSubRoute === 'intake' && (
           <TaxGuardIntakeView userRole={activeRole} />
+        )}
+        {currentSubRoute === 'document-scanner' && (
+          <TaxGuardScannerView userRole={activeRole} onFinished={() => handleNavigate('documents')} />
         )}
         {currentSubRoute === 'documents' && (
           <TaxGuardDocumentsView userRole={activeRole} />
         )}
+        {currentSubRoute === 'classification' && (
+          <TaxGuardClassificationView userRole={activeRole} />
+        )}
         {currentSubRoute === 'extraction' && (
           <TaxGuardExtractionView userRole={activeRole} />
+        )}
+        {currentSubRoute === 'field-mapping' && (
+          <TaxGuardFieldMappingView userRole={activeRole} />
+        )}
+        {currentSubRoute === 'summaries' && (
+          <TaxGuardSummariesView userRole={activeRole} />
+        )}
+        {currentSubRoute === 'evidence' && (
+          <TaxGuardEvidenceView userRole={activeRole} />
         )}
         {currentSubRoute === 'missing-items' && (
           <TaxGuardMissingItemsView userRole={activeRole} />

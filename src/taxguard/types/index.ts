@@ -348,3 +348,177 @@ export interface AiGovernanceModelRecord {
   lastReviewDate: string;
   status: 'active' | 'disabled_by_cpa' | 'evaluation';
 }
+
+// Field Mapping Engine Types
+export interface TaxGuardFieldMapping {
+  id: string;
+  sourceDocId: string;
+  sourceDocName: string;
+  sourcePageNumber: number;
+  extractedFieldName: string;
+  extractedValue: string | number;
+  normalizedRecordKey: string;
+  accountingCategory: string;
+  workpaperField: string;
+  taxFormLine: string;
+  taxYear: number;
+  confidenceScore: number;
+  mappingRule: string;
+  ruleVersion: string;
+  reviewerDecision: 'proposed' | 'preparer_accepted' | 'reviewer_certified' | 'rejected';
+  isMaterial: boolean;
+  approvalStatus: 'pending_review' | 'preparer_approved' | 'reviewer_locked';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  correctionHistory: Array<{
+    previousDestination: string;
+    newDestination: string;
+    changedBy: string;
+    changedAt: string;
+    reason: string;
+  }>;
+}
+
+export interface TaxGuardSmartFormTemplate {
+  formId: string;
+  formName: string;
+  taxYear: number;
+  formType: TaxReturnFormType;
+  lines: Array<{
+    lineNumber: string;
+    lineDescription: string;
+    suggestedValue: string | number;
+    sourceCitation: string;
+    sourceDocId: string;
+    confidence: number;
+    isMaterial: boolean;
+    isMissingRequired: boolean;
+    hasSourceConflict: boolean;
+    conflictNotes?: string;
+    status: 'proposed' | 'preparer_confirmed' | 'reviewer_locked';
+    reviewedBy?: string;
+  }>;
+}
+
+// Document Summaries Types
+export interface TaxGuardDocumentSummary {
+  id: string;
+  documentId: string;
+  documentName: string;
+  documentCategory: DocumentCategory;
+  taxpayerName: string;
+  taxYear: number;
+  issuerOrPayer: string;
+  recipient: string;
+  importantDates: string[];
+  keyAmounts: Array<{ label: string; amount: number; formatted: string }>;
+  clientFriendlySummary: string;
+  professionalTechnicalSummary: string;
+  potentialTaxAccountingRelationships: string[];
+  missingPagesOrFields: string[];
+  detectedInconsistencies: string[];
+  questionsForClient: string[];
+  questionsForProfessionalReview: string[];
+  overallConfidence: number;
+  sourcePageReferences: string[];
+  statutoryNotice: string;
+  generatedAt: string;
+}
+
+// Document Scanner Types
+export interface ScannedDocumentPage {
+  id: string;
+  pageNumber: number;
+  previewDataUrl: string;
+  rotationDegrees: 0 | 90 | 180 | 270;
+  cropBounds?: { top: number; right: number; bottom: number; left: number };
+  filterMode: 'original' | 'high_contrast' | 'black_and_white' | 'brighten';
+  isBlankDetected: boolean;
+}
+
+export interface ControlledScanPackage {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  engagementId: string;
+  taxYear: number;
+  captureMethod: 'device_camera' | 'file_upload';
+  pageCount: number;
+  originalFileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  sha256Digest: string;
+  createdAt: string;
+  uploadedBy: string;
+  uploadedByRole: string;
+  securityState: MalwareScanStatus;
+  processingState: 'captured' | 'quarantined' | 'classification_queued' | 'ready_for_review';
+  pages: ScannedDocumentPage[];
+}
+
+// Document Classification Types
+export interface DocumentClassificationDetail {
+  id: string;
+  documentId: string;
+  documentName: string;
+  proposedCategory: DocumentCategory;
+  alternativeCategory: DocumentCategory;
+  confidenceScore: number;
+  explanation: string;
+  detectedTaxYear: number;
+  detectedTaxpayerOrEntity: string;
+  applicableEngagementId: string;
+  classificationModel: string;
+  modelVersion: string;
+  processedAt: string;
+  reviewStatus: 'proposed' | 'human_confirmed' | 'human_corrected';
+  confirmedCategory?: DocumentCategory;
+  reviewer?: string;
+  reviewerNotes?: string;
+  // Auto-sorting metadata
+  proposedClient: string;
+  proposedEntity: string;
+  proposedWorkflowDestination: string;
+  proposedRetentionCategory: 'Permanent Tax Records' | '7-Year Statutory' | 'Routine Supporting';
+  reviewPriority: 'Routine' | 'High-Variance' | 'Urgent Missing Item';
+  sensitivityLevel: 'Confidential Taxpayer Data (IRC § 7216)';
+}
+
+// Evidence Library Types
+export interface EvidenceLibraryItem {
+  id: string;
+  tenantId: string;
+  clientId: string;
+  clientName: string;
+  engagementId: string;
+  taxYear: number;
+  category: DocumentCategory;
+  documentId: string;
+  documentName: string;
+  pageNumber: number;
+  extractedFieldKey: string;
+  extractedValue: string | number;
+  provenanceTrail: {
+    uploadedAt: string;
+    sha256Hash: string;
+    extractedAt: string;
+    verifiedBy: string;
+    verifiedAt: string;
+    version: number;
+  };
+  workflowUsages: string[]; // e.g. ["Form 1040 Line 1z", "Schedule C Reconciliation", "M-1 Book Adjustment"]
+  retentionCategory: string;
+  legalHold: boolean;
+  status: 'active_approved' | 'superseded' | 'pending_verification';
+}
+
+// Case Management Tasks
+export interface CaseTask {
+  id: string;
+  title: string;
+  assignedTo: string;
+  dueDate: string;
+  completed: boolean;
+  dependencies?: string[];
+  isBlocker?: boolean;
+}

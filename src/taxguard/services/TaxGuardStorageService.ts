@@ -11,7 +11,15 @@ import {
   TaxGuardMissingItem,
   TaxGuardExpenseItem,
   DraftWorkpaper,
-  PublicVerificationRecord
+  PublicVerificationRecord,
+  TaxGuardFieldMapping,
+  TaxGuardSmartFormTemplate,
+  TaxGuardDocumentSummary,
+  DocumentClassificationDetail,
+  ControlledScanPackage,
+  EvidenceLibraryItem,
+  CaseTask,
+  DocumentCategory
 } from '../types';
 import { TaxGuardAuditService } from './TaxGuardAuditService';
 
@@ -437,6 +445,440 @@ const INITIAL_PUBLIC_VERIFICATIONS: Record<string, PublicVerificationRecord> = {
   }
 };
 
+const INITIAL_FIELD_MAPPINGS: TaxGuardFieldMapping[] = [
+  {
+    id: 'map_001',
+    sourceDocId: 'doc_2024_w2_01',
+    sourceDocName: '2024_Form_W2_HenzeConstruction.pdf',
+    sourcePageNumber: 1,
+    extractedFieldName: 'Box 1: Wages, tips, other compensation',
+    extractedValue: 84500.00,
+    normalizedRecordKey: 'wages_salaries_tips',
+    accountingCategory: 'Officer Wages & Compensation',
+    workpaperField: 'Workpaper WP-1040-W2 Line 1',
+    taxFormLine: 'Form 1040, Line 1z (Wages, salaries, tips)',
+    taxYear: 2024,
+    confidenceScore: 0.98,
+    mappingRule: 'RULE-W2-TO-1040-V1',
+    ruleVersion: '1.2.0',
+    reviewerDecision: 'preparer_accepted',
+    isMaterial: true,
+    approvalStatus: 'preparer_approved',
+    reviewedBy: 'Marcus Vance, EA',
+    reviewedAt: '2025-01-22T10:00:00Z',
+    correctionHistory: []
+  },
+  {
+    id: 'map_002',
+    sourceDocId: 'doc_2024_w2_01',
+    sourceDocName: '2024_Form_W2_HenzeConstruction.pdf',
+    sourcePageNumber: 1,
+    extractedFieldName: 'Box 2: Federal income tax withheld',
+    extractedValue: 12450.00,
+    normalizedRecordKey: 'federal_income_tax_withheld',
+    accountingCategory: 'Payroll Tax Withholdings',
+    workpaperField: 'Workpaper WP-1040-WH Line 1',
+    taxFormLine: 'Form 1040, Line 25a (Federal withholding from W-2)',
+    taxYear: 2024,
+    confidenceScore: 0.97,
+    mappingRule: 'RULE-W2-WH-1040-V1',
+    ruleVersion: '1.2.0',
+    reviewerDecision: 'preparer_accepted',
+    isMaterial: true,
+    approvalStatus: 'preparer_approved',
+    reviewedBy: 'Marcus Vance, EA',
+    reviewedAt: '2025-01-22T10:05:00Z',
+    correctionHistory: []
+  },
+  {
+    id: 'map_003',
+    sourceDocId: 'doc_2024_1099nec_01',
+    sourceDocName: '2024_Form_1099NEC_PalmettoCommercial.pdf',
+    sourcePageNumber: 1,
+    extractedFieldName: 'Box 1: Nonemployee compensation',
+    extractedValue: 42800.00,
+    normalizedRecordKey: 'nonemployee_compensation_gross',
+    accountingCategory: 'Contractor Gross Receipts',
+    workpaperField: 'Schedule C WP-SCH-C-REV Line 1',
+    taxFormLine: 'Schedule C, Part I, Line 1 (Gross receipts or sales)',
+    taxYear: 2024,
+    confidenceScore: 0.94,
+    mappingRule: 'RULE-1099NEC-TO-SCH-C-V1',
+    ruleVersion: '1.1.0',
+    reviewerDecision: 'proposed',
+    isMaterial: true,
+    approvalStatus: 'pending_review',
+    correctionHistory: []
+  },
+  {
+    id: 'map_004',
+    sourceDocId: 'doc_2024_receipts_deprec',
+    sourceDocName: '2024_Equipment_Invoices_HeavyDuty.pdf',
+    sourcePageNumber: 2,
+    extractedFieldName: 'Invoice Total: Bobcat Skid-Steer Loader',
+    extractedValue: 38500.00,
+    normalizedRecordKey: 'section_179_eligible_equipment',
+    accountingCategory: 'Heavy Machinery & Equipment (7-Year Property)',
+    workpaperField: 'Form 4562 WP-DEPR Part I Line 6',
+    taxFormLine: 'Form 4562, Part I, Line 6 / Schedule C Line 13',
+    taxYear: 2024,
+    confidenceScore: 0.91,
+    mappingRule: 'RULE-EQUIP-TO-4562-SEC179',
+    ruleVersion: '1.0.0',
+    reviewerDecision: 'proposed',
+    isMaterial: true,
+    approvalStatus: 'pending_review',
+    correctionHistory: []
+  }
+];
+
+const INITIAL_SMART_FORMS: TaxGuardSmartFormTemplate[] = [
+  {
+    formId: 'form_1040_2024',
+    formName: 'Form 1040 – U.S. Individual Income Tax Return',
+    taxYear: 2024,
+    formType: '1040',
+    lines: [
+      {
+        lineNumber: '1z',
+        lineDescription: 'Wages, salaries, tips, etc. from Form(s) W-2',
+        suggestedValue: 84500.00,
+        sourceCitation: 'Form W-2 Box 1 (Henze Construction, LLC)',
+        sourceDocId: 'doc_2024_w2_01',
+        confidence: 0.98,
+        isMaterial: true,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'preparer_confirmed',
+        reviewedBy: 'Marcus Vance, EA'
+      },
+      {
+        lineNumber: '2b',
+        lineDescription: 'Taxable interest',
+        suggestedValue: 1240.00,
+        sourceCitation: 'Form 1099-INT Box 1 (First Palmetto Bank)',
+        sourceDocId: 'doc_2024_1099int_01',
+        confidence: 0.96,
+        isMaterial: false,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'proposed'
+      },
+      {
+        lineNumber: '8',
+        lineDescription: 'Additional income & Schedule C net business income',
+        suggestedValue: 28420.00,
+        sourceCitation: 'Schedule C Line 31 (Net Profit Draft WP)',
+        sourceDocId: 'doc_2024_1099nec_01',
+        confidence: 0.89,
+        isMaterial: true,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'proposed'
+      },
+      {
+        lineNumber: '12',
+        lineDescription: 'Standard deduction or itemized deductions',
+        suggestedValue: 29200.00,
+        sourceCitation: '2024 MFJ Statutory Standard Deduction ($29,200)',
+        sourceDocId: 'statutory_table_2024',
+        confidence: 1.0,
+        isMaterial: true,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'preparer_confirmed',
+        reviewedBy: 'Marcus Vance, EA'
+      },
+      {
+        lineNumber: '25a',
+        lineDescription: 'Federal income tax withheld from Form(s) W-2',
+        suggestedValue: 12450.00,
+        sourceCitation: 'Form W-2 Box 2 (Federal withholding)',
+        sourceDocId: 'doc_2024_w2_01',
+        confidence: 0.97,
+        isMaterial: true,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'preparer_confirmed',
+        reviewedBy: 'Marcus Vance, EA'
+      }
+    ]
+  },
+  {
+    formId: 'form_sch_c_2024',
+    formName: 'Schedule C (Form 1040) – Profit or Loss From Business',
+    taxYear: 2024,
+    formType: '1040',
+    lines: [
+      {
+        lineNumber: '1',
+        lineDescription: 'Gross receipts or sales',
+        suggestedValue: 42800.00,
+        sourceCitation: 'Form 1099-NEC Box 1 (Palmetto Commercial Contractors)',
+        sourceDocId: 'doc_2024_1099nec_01',
+        confidence: 0.94,
+        isMaterial: true,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'proposed'
+      },
+      {
+        lineNumber: '8',
+        lineDescription: 'Advertising',
+        suggestedValue: 1850.00,
+        sourceCitation: 'Extracted Google Ads & Print Flyers Invoices',
+        sourceDocId: 'doc_2024_receipts_01',
+        confidence: 0.92,
+        isMaterial: false,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'proposed'
+      },
+      {
+        lineNumber: '9',
+        lineDescription: 'Car and truck expenses (Vehicle mileage substantiation)',
+        suggestedValue: 4200.00,
+        sourceCitation: '6,268 Business Miles @ 67¢/mile (IRS Std Mileage)',
+        sourceDocId: 'doc_2024_mileage_log',
+        confidence: 0.82,
+        isMaterial: true,
+        isMissingRequired: true,
+        hasSourceConflict: false,
+        conflictNotes: 'Awaiting client confirmation of contemporaneous odometer records',
+        status: 'proposed'
+      },
+      {
+        lineNumber: '13',
+        lineDescription: 'Depreciation and section 179 expense deduction',
+        suggestedValue: 38500.00,
+        sourceCitation: 'Form 4562 Line 12 Election (Skid-Steer Loader)',
+        sourceDocId: 'doc_2024_receipts_deprec',
+        confidence: 0.91,
+        isMaterial: true,
+        isMissingRequired: false,
+        hasSourceConflict: false,
+        status: 'proposed'
+      }
+    ]
+  }
+];
+
+const INITIAL_SUMMARIES: TaxGuardDocumentSummary[] = [
+  {
+    id: 'sum_001',
+    documentId: 'doc_2024_w2_01',
+    documentName: '2024_Form_W2_HenzeConstruction.pdf',
+    documentCategory: 'W-2',
+    taxpayerName: 'Daniel Henze',
+    taxYear: 2024,
+    issuerOrPayer: 'Henze Construction, LLC (EIN: 57-XXXX812)',
+    recipient: 'Daniel Henze (SSN: XXX-XX-4819)',
+    importantDates: ['Tax Year: 2024', 'Issued: 2025-01-15', 'Filing Deadline: 2025-04-15'],
+    keyAmounts: [
+      { label: 'Box 1: Taxable Wages', amount: 84500.00, formatted: '$84,500.00' },
+      { label: 'Box 2: Federal Withholding', amount: 12450.00, formatted: '$12,450.00' },
+      { label: 'Box 3: Social Security Wages', amount: 84500.00, formatted: '$84,500.00' },
+      { label: 'Box 17: SC State Tax Withheld', amount: 4620.00, formatted: '$4,620.00' }
+    ],
+    clientFriendlySummary: 'This Form W-2 reports your annual compensation of $84,500.00 from Henze Construction, LLC. A total of $12,450.00 was withheld for federal taxes and $4,620.00 was withheld for South Carolina state taxes. These withholdings directly count as prepayments toward your 2024 tax balance.',
+    professionalTechnicalSummary: 'Statutory Form W-2 verification complete. Box 1 taxable compensation reconciles with Box 3 and Box 5 OASDI/Medicare bases. Federal withholding at 14.7% effective rate aligns with annualized W-4 elections. South Carolina withholding corresponds to SC W-4 allowances on file.',
+    potentialTaxAccountingRelationships: [
+      'Maps to Form 1040 Line 1z (Wages, salaries, tips)',
+      'Maps to Form 1040 Line 25a (Federal tax withholding prepayment)',
+      'Maps to SC-1040 Line 14 (South Carolina withholding credit)'
+    ],
+    missingPagesOrFields: [],
+    detectedInconsistencies: [],
+    questionsForClient: [
+      'Did you have any retirement plan contributions (e.g. Simple IRA or 401(k)) not reported in Box 12?'
+    ],
+    questionsForProfessionalReview: [
+      'Confirm reasonable compensation threshold for S-Corp / LLC officer relative to prevailing Columbia, SC trade standards.'
+    ],
+    overallConfidence: 0.98,
+    sourcePageReferences: ['Page 1: Boxes 1-20'],
+    statutoryNotice: 'AI-generated summary – Requires verification before use in accounting records or tax filings.',
+    generatedAt: '2025-01-20T14:35:00Z'
+  },
+  {
+    id: 'sum_002',
+    documentId: 'doc_2024_1099nec_01',
+    documentName: '2024_Form_1099NEC_PalmettoCommercial.pdf',
+    documentCategory: '1099-NEC',
+    taxpayerName: 'Daniel Henze',
+    taxYear: 2024,
+    issuerOrPayer: 'Palmetto Commercial Contractors, LLC',
+    recipient: 'Daniel Henze (TIN: XXX-XX-4819)',
+    importantDates: ['Tax Year: 2024', 'Issued: 2025-01-18'],
+    keyAmounts: [
+      { label: 'Box 1: Nonemployee Compensation', amount: 42800.00, formatted: '$42,800.00' },
+      { label: 'Box 4: Federal Tax Withheld', amount: 0.00, formatted: '$0.00' }
+    ],
+    clientFriendlySummary: 'This 1099-NEC reflects $42,800.00 in payments for subcontracting services provided to Palmetto Commercial Contractors. No taxes were withheld from these checks, so this income is subject to federal income tax and self-employment tax on Schedule C.',
+    professionalTechnicalSummary: 'Form 1099-NEC nonemployee compensation reported in Box 1. Gross revenue subject to IRC § 1401 Self-Employment Tax and IRC § 162 ordinary/necessary business deduction offset on Schedule C. Zero backup withholding observed.',
+    potentialTaxAccountingRelationships: [
+      'Maps to Schedule C Part I Line 1 (Gross receipts)',
+      'Requires Schedule SE calculation for Self-Employment Contributions Act (SECA)'
+    ],
+    missingPagesOrFields: [],
+    detectedInconsistencies: [
+      'No federal withholding reported; client estimated tax payment vouchers should be checked for quarterly safe harbor compliance.'
+    ],
+    questionsForClient: [
+      'Do you have deductible mileage, subcontractor payments, or direct materials associated with this subcontract work?'
+    ],
+    questionsForProfessionalReview: [
+      'Check if 2024 Q1-Q4 estimated payments satisfied the 100% / 110% prior-year safe harbor rule under IRC § 6654.'
+    ],
+    overallConfidence: 0.94,
+    sourcePageReferences: ['Page 1: Box 1'],
+    statutoryNotice: 'AI-generated summary – Requires verification before use in accounting records or tax filings.',
+    generatedAt: '2025-01-20T15:10:00Z'
+  }
+];
+
+const INITIAL_CLASSIFICATIONS: DocumentClassificationDetail[] = [
+  {
+    id: 'cls_001',
+    documentId: 'doc_2024_w2_01',
+    documentName: '2024_Form_W2_HenzeConstruction.pdf',
+    proposedCategory: 'W-2',
+    alternativeCategory: '1099-NEC',
+    confidenceScore: 0.99,
+    explanation: 'Detected standard IRS Form W-2 layout, Box 1 Wage indicator, and federal employer identification number 57-XXXX812.',
+    detectedTaxYear: 2024,
+    detectedTaxpayerOrEntity: 'Daniel Henze / Henze Construction, LLC',
+    applicableEngagementId: 'case_2025_001',
+    classificationModel: 'ophireum-doc-classifier-v2.5',
+    modelVersion: '2.5.1',
+    processedAt: '2025-01-20T14:32:05Z',
+    reviewStatus: 'human_confirmed',
+    confirmedCategory: 'W-2',
+    reviewer: 'Marcus Vance, EA',
+    reviewerNotes: 'Confirmed against employer master file.',
+    proposedClient: 'Daniel Henze (Henze Construction, LLC)',
+    proposedEntity: 'Single-Member LLC',
+    proposedWorkflowDestination: 'Form 1040 Line 1z / WP-W2',
+    proposedRetentionCategory: 'Permanent Tax Records',
+    reviewPriority: 'Routine',
+    sensitivityLevel: 'Confidential Taxpayer Data (IRC § 7216)'
+  },
+  {
+    id: 'cls_002',
+    documentId: 'doc_2024_1099nec_01',
+    documentName: '2024_Form_1099NEC_PalmettoCommercial.pdf',
+    proposedCategory: '1099-NEC',
+    alternativeCategory: '1099-MISC',
+    confidenceScore: 0.94,
+    explanation: 'Detected Form 1099-NEC Box 1 Nonemployee Compensation and payer Palmetto Commercial Contractors, LLC.',
+    detectedTaxYear: 2024,
+    detectedTaxpayerOrEntity: 'Daniel Henze',
+    applicableEngagementId: 'case_2025_001',
+    classificationModel: 'ophireum-doc-classifier-v2.5',
+    modelVersion: '2.5.1',
+    processedAt: '2025-01-20T15:02:00Z',
+    reviewStatus: 'proposed',
+    proposedClient: 'Daniel Henze (Henze Construction, LLC)',
+    proposedEntity: 'Single-Member LLC',
+    proposedWorkflowDestination: 'Schedule C Line 1',
+    proposedRetentionCategory: '7-Year Statutory',
+    reviewPriority: 'Routine',
+    sensitivityLevel: 'Confidential Taxpayer Data (IRC § 7216)'
+  },
+  {
+    id: 'cls_003',
+    documentId: 'doc_2024_bank_stmt_12',
+    documentName: 'Dec2024_FirstPalmettoBank_Operating.pdf',
+    proposedCategory: 'Bank Statement',
+    alternativeCategory: 'Credit Card Statement',
+    confidenceScore: 0.96,
+    explanation: 'Detected checking account balance table, debits, credits, and First Palmetto Bank letterhead.',
+    detectedTaxYear: 2024,
+    detectedTaxpayerOrEntity: 'Henze Construction, LLC',
+    applicableEngagementId: 'case_2025_001',
+    classificationModel: 'ophireum-doc-classifier-v2.5',
+    modelVersion: '2.5.1',
+    processedAt: '2025-01-21T09:12:00Z',
+    reviewStatus: 'human_confirmed',
+    confirmedCategory: 'Bank Statement',
+    reviewer: 'Marcus Vance, EA',
+    proposedClient: 'Daniel Henze (Henze Construction, LLC)',
+    proposedEntity: 'Single-Member LLC',
+    proposedWorkflowDestination: 'Cash Reconciliation / Schedule L',
+    proposedRetentionCategory: '7-Year Statutory',
+    reviewPriority: 'Routine',
+    sensitivityLevel: 'Confidential Taxpayer Data (IRC § 7216)'
+  }
+];
+
+const INITIAL_EVIDENCE_ITEMS: EvidenceLibraryItem[] = [
+  {
+    id: 'evd_001',
+    tenantId: 'tenant_ar_tax_prod',
+    clientId: 'client_henze_001',
+    clientName: 'Daniel Henze',
+    engagementId: 'case_2025_001',
+    taxYear: 2024,
+    category: 'W-2',
+    documentId: 'doc_2024_w2_01',
+    documentName: '2024_Form_W2_HenzeConstruction.pdf',
+    pageNumber: 1,
+    extractedFieldKey: 'box_1_wages',
+    extractedValue: 84500.00,
+    provenanceTrail: {
+      uploadedAt: '2025-01-20T14:32:00Z',
+      sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      extractedAt: '2025-01-20T14:35:00Z',
+      verifiedBy: 'Marcus Vance, EA',
+      verifiedAt: '2025-01-22T10:00:00Z',
+      version: 1
+    },
+    workflowUsages: ['Form 1040 Line 1z', 'Workpaper WP-1040-W2'],
+    retentionCategory: 'Permanent Tax Records',
+    legalHold: false,
+    status: 'active_approved'
+  },
+  {
+    id: 'evd_002',
+    tenantId: 'tenant_ar_tax_prod',
+    clientId: 'client_henze_001',
+    clientName: 'Daniel Henze',
+    engagementId: 'case_2025_001',
+    taxYear: 2024,
+    category: '1099-NEC',
+    documentId: 'doc_2024_1099nec_01',
+    documentName: '2024_Form_1099NEC_PalmettoCommercial.pdf',
+    pageNumber: 1,
+    extractedFieldKey: 'box_1_nonemployee_comp',
+    extractedValue: 42800.00,
+    provenanceTrail: {
+      uploadedAt: '2025-01-20T15:00:00Z',
+      sha256Hash: '7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
+      extractedAt: '2025-01-20T15:05:00Z',
+      verifiedBy: 'Pending Review',
+      verifiedAt: '',
+      version: 1
+    },
+    workflowUsages: ['Schedule C Line 1'],
+    retentionCategory: '7-Year Statutory',
+    legalHold: false,
+    status: 'pending_verification'
+  }
+];
+
+const INITIAL_CASE_TASKS: Record<string, CaseTask[]> = {
+  case_2025_001: [
+    { id: 'task_001', title: 'Collect year-end equipment depreciation invoices', assignedTo: 'Marcus Vance, EA', dueDate: '2025-02-15', completed: true },
+    { id: 'task_002', title: 'Obtain written mileage log for 2024 Ford F-250', assignedTo: 'Daniel Henze', dueDate: '2025-02-28', completed: false, isBlocker: true },
+    { id: 'task_003', title: 'Perform Schedule C gross receipts reconciliation', assignedTo: 'Sarah Jenkins, CPA', dueDate: '2025-03-05', completed: false, dependencies: ['task_002'] },
+    { id: 'task_004', title: 'Senior CPA Quality Review & Section 179 Signoff', assignedTo: 'Desmond Hinds, Principal', dueDate: '2025-03-12', completed: false, dependencies: ['task_003'] }
+  ],
+  case_2025_002: [
+    { id: 'task_201', title: 'Verify South Carolina vs. North Carolina apportionment factor', assignedTo: 'Sarah Jenkins, CPA', dueDate: '2025-02-20', completed: true },
+    { id: 'task_202', title: 'Confirm officer compensation reasonableness vs. dividend distributions', assignedTo: 'Desmond Hinds, Principal', dueDate: '2025-02-25', completed: false }
+  ]
+};
+
 export class TaxGuardStorageService {
   private static cases: TaxGuardEngagementCase[] = INITIAL_CASES;
   private static documents: TaxGuardDocument[] = INITIAL_DOCUMENTS;
@@ -446,6 +888,13 @@ export class TaxGuardStorageService {
   private static expenses: TaxGuardExpenseItem[] = INITIAL_EXPENSES;
   private static workpapers: DraftWorkpaper[] = [INITIAL_WORKPAPER];
   private static verifications: Record<string, PublicVerificationRecord> = INITIAL_PUBLIC_VERIFICATIONS;
+  private static fieldMappings: TaxGuardFieldMapping[] = INITIAL_FIELD_MAPPINGS;
+  private static smartForms: TaxGuardSmartFormTemplate[] = INITIAL_SMART_FORMS;
+  private static summaries: TaxGuardDocumentSummary[] = INITIAL_SUMMARIES;
+  private static classifications: DocumentClassificationDetail[] = INITIAL_CLASSIFICATIONS;
+  private static scanPackages: ControlledScanPackage[] = [];
+  private static evidenceLibrary: EvidenceLibraryItem[] = INITIAL_EVIDENCE_ITEMS;
+  private static caseTasks: Record<string, CaseTask[]> = INITIAL_CASE_TASKS;
 
   // Multi-tenant & Role-based Case Retrieval
   public static getCases(role: string, currentClientId?: string): TaxGuardEngagementCase[] {
@@ -702,5 +1151,348 @@ export class TaxGuardStorageService {
       return null;
     }
     return this.verifications[cleanId];
+  }
+
+  // Field Mapping Engine Methods
+  public static getFieldMappings(role: string, currentClientId?: string): TaxGuardFieldMapping[] {
+    return this.fieldMappings;
+  }
+
+  public static updateFieldMapping(id: string, newDestination: string, reviewerName: string, reason: string): boolean {
+    const mapping = this.fieldMappings.find(m => m.id === id);
+    if (!mapping) return false;
+
+    const prevDestination = mapping.taxFormLine;
+    mapping.correctionHistory.push({
+      previousDestination: prevDestination,
+      newDestination,
+      changedBy: reviewerName,
+      changedAt: new Date().toISOString(),
+      reason
+    });
+
+    mapping.taxFormLine = newDestination;
+    mapping.reviewedBy = reviewerName;
+    mapping.reviewedAt = new Date().toISOString();
+    mapping.reviewerDecision = 'preparer_accepted';
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: reviewerName,
+      userEmail: 'staff@artaxservices.com',
+      userRole: 'preparer',
+      action: 'FIELD_MAPPING_UPDATED',
+      recordType: 'extraction',
+      recordId: id,
+      ipAddress: '10.0.4.18',
+      result: 'success',
+      riskLevel: mapping.isMaterial ? 'material' : 'routine',
+      details: `Field mapping updated from "${prevDestination}" to "${newDestination}". Reason: ${reason}`
+    });
+
+    return true;
+  }
+
+  public static approveFieldMapping(id: string, reviewerName: string, role: string): boolean {
+    const mapping = this.fieldMappings.find(m => m.id === id);
+    if (!mapping) return false;
+
+    if (role === 'cpa' || role === 'reviewer') {
+      mapping.approvalStatus = 'reviewer_locked';
+      mapping.reviewerDecision = 'reviewer_certified';
+    } else {
+      mapping.approvalStatus = 'preparer_approved';
+      mapping.reviewerDecision = 'preparer_accepted';
+    }
+    mapping.reviewedBy = reviewerName;
+    mapping.reviewedAt = new Date().toISOString();
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: reviewerName,
+      userEmail: 'staff@artaxservices.com',
+      userRole: role,
+      action: 'FIELD_MAPPING_APPROVED',
+      recordType: 'extraction',
+      recordId: id,
+      ipAddress: '10.0.4.18',
+      result: 'success',
+      riskLevel: mapping.isMaterial ? 'material' : 'routine',
+      details: `Field mapping certified by ${reviewerName} (${role}). Destination: ${mapping.taxFormLine}`
+    });
+
+    return true;
+  }
+
+  // Smart Form Filling
+  public static getSmartForms(): TaxGuardSmartFormTemplate[] {
+    return this.smartForms;
+  }
+
+  public static updateSmartFormField(formId: string, lineNumber: string, confirmedValue: string | number, reviewerName: string): boolean {
+    const form = this.smartForms.find(f => f.formId === formId);
+    if (!form) return false;
+    const line = form.lines.find(l => l.lineNumber === lineNumber);
+    if (!line) return false;
+
+    line.suggestedValue = confirmedValue;
+    line.status = 'reviewer_locked';
+    line.reviewedBy = reviewerName;
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: reviewerName,
+      userEmail: 'reviewer@artaxservices.com',
+      userRole: 'reviewer',
+      action: 'SMART_FORM_FIELD_LOCKED',
+      recordType: 'workpaper',
+      recordId: `${formId}_line_${lineNumber}`,
+      ipAddress: '10.0.4.15',
+      result: 'success',
+      riskLevel: line.isMaterial ? 'material' : 'routine',
+      details: `Form ${form.formName} line ${lineNumber} value locked as ${confirmedValue} by ${reviewerName}`
+    });
+
+    return true;
+  }
+
+  // Document Summaries
+  public static getSummaries(role: string, currentClientId?: string): TaxGuardDocumentSummary[] {
+    return this.summaries;
+  }
+
+  public static getSummaryByDocId(documentId: string): TaxGuardDocumentSummary | undefined {
+    return this.summaries.find(s => s.documentId === documentId);
+  }
+
+  // Document Classification
+  public static getClassifications(role: string, currentClientId?: string): DocumentClassificationDetail[] {
+    return this.classifications;
+  }
+
+  public static confirmClassification(id: string, category: DocumentCategory, reviewerName: string, notes: string): boolean {
+    const cls = this.classifications.find(c => c.id === id);
+    if (!cls) return false;
+
+    const prevCategory = cls.confirmedCategory || cls.proposedCategory;
+    cls.confirmedCategory = category;
+    cls.reviewStatus = category === cls.proposedCategory ? 'human_confirmed' : 'human_corrected';
+    cls.reviewer = reviewerName;
+    cls.reviewerNotes = notes;
+
+    // Synchronize underlying document category if present
+    const doc = this.documents.find(d => d.id === cls.documentId);
+    if (doc) {
+      doc.confirmedCategory = category;
+      doc.categoryConfirmedBy = reviewerName;
+      doc.reviewStatus = 'in_review';
+    }
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: reviewerName,
+      userEmail: 'staff@artaxservices.com',
+      userRole: 'preparer',
+      action: 'DOCUMENT_CLASSIFICATION_CONFIRMED',
+      recordType: 'document',
+      recordId: cls.documentId,
+      ipAddress: '10.0.4.12',
+      result: 'success',
+      riskLevel: 'routine',
+      details: `Classification for document "${cls.documentName}" set to ${category} (was ${prevCategory}). Notes: ${notes}`
+    });
+
+    return true;
+  }
+
+  // Document Scanner Package
+  public static saveScanPackage(pkg: ControlledScanPackage): ControlledScanPackage {
+    this.scanPackages.unshift(pkg);
+
+    // Create corresponding document in vault as well with quarantine status
+    this.addDocument({
+      tenantId: pkg.tenantId,
+      clientId: pkg.clientId,
+      clientName: 'Daniel Henze',
+      fileName: pkg.originalFileName,
+      fileSizeBytes: pkg.fileSizeBytes,
+      mimeType: pkg.mimeType,
+      sha256Hash: pkg.sha256Digest,
+      uploadedBy: pkg.uploadedBy,
+      uploadedByRole: pkg.uploadedByRole,
+      proposedCategory: 'Unclassified',
+      taxYear: pkg.taxYear,
+      malwareStatus: pkg.securityState,
+      malwareNotice: 'External antivirus provider (ClamAV / VirusTotal) is not configured in this environment. Scanned package is retained in quarantined processing boundary.',
+      isQuarantined: true,
+      reviewStatus: 'pending_classification'
+    });
+
+    TaxGuardAuditService.logEvent({
+      tenantId: pkg.tenantId,
+      userId: pkg.uploadedBy,
+      userEmail: 'client@artaxservices.com',
+      userRole: pkg.uploadedByRole,
+      action: 'CONTROLLED_SCAN_PACKAGE_COMMITTED',
+      recordType: 'document',
+      recordId: pkg.id,
+      ipAddress: '10.0.4.45',
+      result: 'success',
+      riskLevel: 'routine',
+      details: `Multi-page document package (${pkg.pageCount} pages) captured via ${pkg.captureMethod}. Package ID: ${pkg.id}`
+    });
+
+    return pkg;
+  }
+
+  public static getScanPackages(role: string, currentClientId?: string): ControlledScanPackage[] {
+    if (role === 'client' && currentClientId) {
+      return this.scanPackages.filter(p => p.clientId === currentClientId);
+    }
+    return this.scanPackages;
+  }
+
+  // Evidence Library
+  public static getEvidenceLibrary(role: string, currentClientId?: string, categoryFilter?: string): EvidenceLibraryItem[] {
+    let items = this.evidenceLibrary;
+    if (role === 'client' && currentClientId) {
+      items = items.filter(i => i.clientId === currentClientId);
+    }
+    if (categoryFilter && categoryFilter !== 'all') {
+      items = items.filter(i => i.category === categoryFilter);
+    }
+    return items;
+  }
+
+  // Case Management Actions
+  public static createCase(newCase: Omit<TaxGuardEngagementCase, 'id' | 'lockedFinalPackage' | 'makerCheckerSteps'>): TaxGuardEngagementCase {
+    const id = `case_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const fullCase: TaxGuardEngagementCase = {
+      ...newCase,
+      id,
+      lockedFinalPackage: false,
+      makerCheckerSteps: [
+        { stepNumber: 1, stepName: 'Client Intake Submission', description: 'Tax organizer and intake submitted', requiredRole: 'client', riskTier: 'informational', completed: true, completedBy: newCase.clientName, completedAt: new Date().toISOString().split('T')[0] },
+        { stepNumber: 2, stepName: 'Document Validation', description: 'Quarantine and MIME check', requiredRole: 'preparer', riskTier: 'routine', completed: false },
+        { stepNumber: 3, stepName: 'AI Extraction Review', description: 'Verify extracted fields and OCR confidence', requiredRole: 'preparer', riskTier: 'material', completed: false, requiresDualAuthorization: true },
+        { stepNumber: 4, stepName: 'Preparer Reconciliation', description: 'Reconciliation of forms and workpapers', requiredRole: 'preparer', riskTier: 'material', completed: false, requiresDualAuthorization: true },
+        { stepNumber: 5, stepName: 'Senior Reviewer Technical Check', description: 'Multi-jurisdictional check', requiredRole: 'reviewer', riskTier: 'high_risk', completed: false, requiresDualAuthorization: true },
+        { stepNumber: 6, stepName: 'CPA Final Quality Control', description: 'Quality control sign-off', requiredRole: 'cpa', riskTier: 'high_risk', completed: false, requiresDualAuthorization: true },
+        { stepNumber: 7, stepName: 'Client E-Signature Authorization', description: 'Form 8879 / 8453 client sign-off', requiredRole: 'client', riskTier: 'filing_critical', completed: false, requiresDualAuthorization: true },
+        { stepNumber: 8, stepName: 'Final Lock & SHA-256 Hashing', description: 'Mint cryptographic verification record', requiredRole: 'cpa', riskTier: 'filing_critical', completed: false, requiresDualAuthorization: true }
+      ]
+    };
+
+    this.cases.unshift(fullCase);
+
+    TaxGuardAuditService.logEvent({
+      tenantId: fullCase.tenantId,
+      userId: fullCase.assignedPreparer,
+      userEmail: 'staff@artaxservices.com',
+      userRole: 'preparer',
+      action: 'CASE_CREATED',
+      recordType: 'case',
+      recordId: id,
+      ipAddress: '10.0.4.10',
+      result: 'success',
+      riskLevel: 'routine',
+      details: `New engagement case created for "${fullCase.clientName}" (${fullCase.returnType}, TY${fullCase.taxYear})`
+    });
+
+    return fullCase;
+  }
+
+  public static updateCaseStatus(id: string, newStatus: TaxGuardEngagementCase['status'], userRole: string, notes?: string): boolean {
+    const c = this.cases.find(item => item.id === id);
+    if (!c) return false;
+
+    // Clients cannot change case status
+    if (userRole === 'client') return false;
+
+    const prevStatus = c.status;
+    c.status = newStatus;
+
+    TaxGuardAuditService.logEvent({
+      tenantId: c.tenantId,
+      userId: 'Authorized Staff',
+      userEmail: 'staff@artaxservices.com',
+      userRole,
+      action: 'CASE_STATUS_UPDATED',
+      recordType: 'case',
+      recordId: id,
+      ipAddress: '10.0.4.12',
+      result: 'success',
+      riskLevel: 'material',
+      details: `Case status changed from "${prevStatus}" to "${newStatus}". Notes: ${notes || 'None'}`
+    });
+
+    return true;
+  }
+
+  public static addCaseWorkflowAction(caseId: string, actionType: 'amendment' | 'audit_support' | 'notice_response' | 'business_closure', details: string, userRole: string): boolean {
+    const c = this.cases.find(item => item.id === caseId);
+    if (!c) return false;
+
+    TaxGuardAuditService.logEvent({
+      tenantId: c.tenantId,
+      userId: 'Workflow System',
+      userEmail: 'staff@artaxservices.com',
+      userRole,
+      action: `CASE_WORKFLOW_${actionType.toUpperCase()}`,
+      recordType: 'case',
+      recordId: caseId,
+      ipAddress: '10.0.4.14',
+      result: 'success',
+      riskLevel: 'material',
+      details: `Case workflow "${actionType}" initiated. Details: ${details}`
+    });
+
+    return true;
+  }
+
+  public static getCaseTasks(caseId: string): CaseTask[] {
+    return this.caseTasks[caseId] || [];
+  }
+
+  public static toggleCaseTask(caseId: string, taskId: string): boolean {
+    const tasks = this.caseTasks[caseId];
+    if (!tasks) return false;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return false;
+    task.completed = !task.completed;
+    return true;
+  }
+
+  // Safe Demo Data Reset
+  public static resetDemoData(): void {
+    this.cases = JSON.parse(JSON.stringify(INITIAL_CASES));
+    this.documents = JSON.parse(JSON.stringify(INITIAL_DOCUMENTS));
+    this.extractions = JSON.parse(JSON.stringify(INITIAL_EXTRACTIONS));
+    this.discrepancies = JSON.parse(JSON.stringify(INITIAL_DISCREPANCIES));
+    this.missingItems = JSON.parse(JSON.stringify(INITIAL_MISSING_ITEMS));
+    this.expenses = JSON.parse(JSON.stringify(INITIAL_EXPENSES));
+    this.workpapers = [JSON.parse(JSON.stringify(INITIAL_WORKPAPER))];
+    this.verifications = JSON.parse(JSON.stringify(INITIAL_PUBLIC_VERIFICATIONS));
+    this.fieldMappings = JSON.parse(JSON.stringify(INITIAL_FIELD_MAPPINGS));
+    this.smartForms = JSON.parse(JSON.stringify(INITIAL_SMART_FORMS));
+    this.summaries = JSON.parse(JSON.stringify(INITIAL_SUMMARIES));
+    this.classifications = JSON.parse(JSON.stringify(INITIAL_CLASSIFICATIONS));
+    this.scanPackages = [];
+    this.evidenceLibrary = JSON.parse(JSON.stringify(INITIAL_EVIDENCE_ITEMS));
+    this.caseTasks = JSON.parse(JSON.stringify(INITIAL_CASE_TASKS));
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: 'Administrator',
+      userEmail: 'admin@artaxservices.com',
+      userRole: 'admin',
+      action: 'DEMO_DATA_RESET',
+      recordType: 'governance',
+      recordId: 'system_reset',
+      ipAddress: '10.0.4.1',
+      result: 'success',
+      riskLevel: 'high_risk',
+      details: 'All demonstration in-memory collections restored to standard verified baseline.'
+    });
   }
 }

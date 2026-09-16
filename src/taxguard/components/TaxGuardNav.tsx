@@ -20,14 +20,25 @@ import {
   Cpu, 
   Settings,
   ArrowLeft,
-  Home
+  Home,
+  FolderKanban,
+  Camera,
+  GitMerge,
+  Sparkles,
+  Database
 } from 'lucide-react';
 
 export type TaxGuardSubRoute = 
   | 'dashboard'
+  | 'cases'
   | 'intake'
   | 'documents'
+  | 'document-scanner'
+  | 'classification'
   | 'extraction'
+  | 'field-mapping'
+  | 'summaries'
+  | 'evidence'
   | 'missing-items'
   | 'discrepancies'
   | 'workpapers'
@@ -53,19 +64,25 @@ export const TaxGuardNav: React.FC<TaxGuardNavProps> = ({
   onExitToPortal
 }) => {
   const navItems: Array<{ id: TaxGuardSubRoute; label: string; icon: React.ComponentType<{ className?: string }>; minRole?: string }> = [
-    { id: 'dashboard', label: 'Operations Console', icon: Layers },
-    { id: 'intake', label: 'AI Intake', icon: FileText },
-    { id: 'documents', label: 'Vault & Quarantine', icon: UploadCloud },
+    { id: 'dashboard', label: 'Console', icon: Layers },
+    { id: 'cases', label: 'Cases & Engagements', icon: FolderKanban },
+    { id: 'intake', label: 'Intake', icon: FileText },
+    { id: 'document-scanner', label: 'Scanner', icon: Camera },
+    { id: 'documents', label: 'Vault', icon: UploadCloud },
+    { id: 'classification', label: 'AI Classification', icon: Cpu },
     { id: 'extraction', label: 'OCR Extraction', icon: Cpu },
+    { id: 'field-mapping', label: 'Smart Forms & Mapping', icon: GitMerge },
+    { id: 'summaries', label: 'Doc Summaries', icon: Sparkles },
+    { id: 'evidence', label: 'Evidence Library', icon: Database },
     { id: 'missing-items', label: 'Missing Items', icon: ListChecks },
-    { id: 'discrepancies', label: 'Discrepancy Alerts', icon: AlertTriangle },
-    { id: 'workpapers', label: 'Draft Workpapers', icon: DollarSign },
+    { id: 'discrepancies', label: 'Discrepancies', icon: AlertTriangle },
+    { id: 'workpapers', label: 'Workpapers', icon: DollarSign },
     { id: 'review', label: 'Maker-Checker Review', icon: CheckCircle2 },
-    { id: 'research', label: 'Tax Research Assistant', icon: Search },
-    { id: 'reports', label: 'Verified Reports & Hash', icon: QrCode },
+    { id: 'research', label: 'Tax Research', icon: Search },
+    { id: 'reports', label: 'Reports & Hash', icon: QrCode },
     { id: 'audit-log', label: 'Audit Trail', icon: History },
-    { id: 'integrations', label: 'Integrations Registry', icon: Cpu },
-    { id: 'settings', label: 'AI Governance & Controls', icon: Settings, minRole: 'cpa' }
+    { id: 'integrations', label: 'Integrations', icon: Cpu },
+    { id: 'settings', label: 'Governance', icon: Settings, minRole: 'cpa' }
   ];
 
   return (
