@@ -62,7 +62,14 @@ import {
   RefreshCw,
   Coins,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Building2,
+  BookOpen,
+  Share2,
+  FileEdit,
+  Settings,
+  HelpCircle,
+  MessageSquare
 } from 'lucide-react';
 
 // Route Info Interface
@@ -236,14 +243,27 @@ export const DemoAppRouter: React.FC = () => {
   const navItemsByRole: Record<DemoRole, NavItem[]> = {
     client: [
       { id: 'overview', label: 'Overview & Status', icon: FileText },
+      { id: 'entities', label: 'Entity Profile & Org Chart', icon: Building2 },
       { id: 'vault', label: 'Document Vault', icon: UploadCloud },
       { id: 'questionnaire', label: 'Tax Organizer', icon: CheckCircle },
-      { id: 'ledger', label: 'Income & Expenses', icon: DollarSign },
-      { id: 'return_review', label: 'Return Review', icon: PenTool },
-      { id: 'billing', label: 'Fee Invoices', icon: CreditCard },
-      { id: 'notices', label: 'Tax Notices', icon: AlertCircle },
-      { id: 'advisory', label: 'Tax Advisory', icon: TrendingUp },
-      { id: 'archive', label: 'Prior Year Archive', icon: Folder }
+      { id: 'bookkeeping', label: 'Bookkeeping & Registers', icon: FileSpreadsheet },
+      { id: 'journal', label: 'General Journal & TB', icon: BookOpen },
+      { id: 'bank_feeds', label: 'Bank Feeds & Connections', icon: RefreshCw },
+      { id: 'accounting_sync', label: 'Cloud Accounting Sync', icon: Layers },
+      { id: 'reconciliation', label: 'Bank Reconciliation', icon: Scale },
+      { id: 'financial_reports', label: 'Financial Statements', icon: DollarSign },
+      { id: 'return_review', label: 'Return Review & 8879', icon: PenTool },
+      { id: 'readiness', label: 'Tax Readiness Center', icon: ShieldCheck },
+      { id: 'estimated_tax', label: 'Estimated Taxes & Safe Harbor', icon: Calculator },
+      { id: 'advisory', label: 'Tax Strategy & Scenarios', icon: TrendingUp },
+      { id: 'messages', label: 'Messages & Tasks', icon: MessageSquare },
+      { id: 'lender_package', label: 'Credit & Lender Package', icon: Share2 },
+      { id: 'amendments', label: 'Amendments & Closures', icon: FileEdit },
+      { id: 'billing', label: 'Fee Invoices & Payments', icon: CreditCard },
+      { id: 'notices', label: 'Tax Notices & Transcripts', icon: AlertCircle },
+      { id: 'archive', label: 'Prior Year Archive', icon: Archive },
+      { id: 'settings', label: 'Security & Consents', icon: Settings },
+      { id: 'support', label: 'Help & Knowledge Base', icon: HelpCircle }
     ],
     reviewer: [
       { id: 'queue', label: 'Review Queue', icon: Scale },

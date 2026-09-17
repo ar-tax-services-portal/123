@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentPage, setCurrentPage, currentRole } = useApp();
+  const { currentPage, setCurrentPage, currentRole, currentUser } = useApp();
   
   // Desktop dropdown states
   const [servicesOpen, setServicesOpen] = useState(false);
@@ -129,14 +129,18 @@ export const Navbar: React.FC = () => {
   };
 
   const handlePortalAction = () => {
-    if (currentRole === 'client') {
-      window.location.hash = '#/client/dashboard';
-    } else if (currentRole === 'accountant') {
-      window.location.hash = '#/accountant/dashboard';
-    } else if (currentRole === 'senior_reviewer') {
-      window.location.hash = '#/reviewer/dashboard';
-    } else if (currentRole === 'admin' || currentRole === 'super_admin') {
-      window.location.hash = '#/admin/dashboard';
+    if (currentUser && currentRole !== 'guest') {
+      if (currentRole === 'client') {
+        window.location.hash = '#/client/dashboard';
+      } else if (currentRole === 'accountant') {
+        window.location.hash = '#/accountant/dashboard';
+      } else if (currentRole === 'senior_reviewer') {
+        window.location.hash = '#/reviewer/dashboard';
+      } else if (currentRole === 'admin' || currentRole === 'super_admin') {
+        window.location.hash = '#/admin/dashboard';
+      } else {
+        window.location.hash = '#/client/dashboard';
+      }
     } else {
       window.location.hash = '#/client/login';
     }
@@ -144,19 +148,15 @@ export const Navbar: React.FC = () => {
   };
 
   const getPortalButtonLabel = () => {
-    if (currentRole === 'client') return 'Client Portal';
-    if (currentRole === 'accountant') return 'Staff Workspace';
-    if (currentRole === 'senior_reviewer') return 'Reviewer Workspace';
-    if (currentRole === 'admin' || currentRole === 'super_admin') return 'Admin Portal';
-    return 'Client Portal';
+    return currentUser && currentRole !== 'guest' ? 'Open Portal' : 'Client Portal';
   };
 
   const isMoreActive = ['pricing', 'resources', 'careers', 'contact', 'founder'].includes(currentPage);
 
   return (
-    <header className="w-full bg-[#06172C]/95 backdrop-blur-md border-b border-[#0B2748] relative z-40">
+    <div className="w-full bg-[#06172C]/95 backdrop-blur-md border-b border-[#0B2748] relative z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4 min-w-0">
+        <div className="flex items-center justify-between h-20 gap-2 xl:gap-4 min-w-0">
           
           {/* BRAND LOGO AREA */}
           <div className="flex-shrink-0 min-w-0 py-2">
@@ -170,7 +170,7 @@ export const Navbar: React.FC = () => {
           {/* DESKTOP PRIMARY NAVIGATION (1024px+) */}
           {/* Clean architecture: Home, About, Services ▼, Industries ▼, Tax Strategies ▼, More ▼ */}
           <nav 
-            className="hidden lg:flex items-center gap-1 xl:gap-2 min-w-0"
+            className="hidden lg:flex items-center gap-1 xl:gap-2 min-w-0 flex-1 justify-center"
             aria-label="Primary Site Navigation"
           >
             {/* 1. Home */}
@@ -296,8 +296,8 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 4. Industries ▼ */}
-            <div className="relative" ref={industriesRef}>
+            {/* 4. Industries ▼ (Visible on xl, accessible via More on lg) */}
+            <div className="hidden xl:block relative" ref={industriesRef}>
               <button
                 ref={industriesBtnRef}
                 type="button"
@@ -309,14 +309,14 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={industriesOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2.5 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   currentPage === 'industries' 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <span>Industries</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${industriesOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
+                <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${industriesOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
               </button>
 
               {industriesOpen && (
@@ -384,14 +384,14 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={taxStrategiesOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2.5 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   currentPage === 'tax_strategies' 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <span>Tax Strategies</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${taxStrategiesOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
+                <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${taxStrategiesOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
               </button>
 
               {taxStrategiesOpen && (
@@ -468,7 +468,33 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 6. More ▼ */}
+            {/* 6. Resources (Visible on xl, accessible via More on lg) */}
+            <button
+              type="button"
+              onClick={() => handleNavClick('resources')}
+              className={`hidden xl:block text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                currentPage === 'resources' 
+                  ? 'text-[#E2BD67] font-semibold' 
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Resources
+            </button>
+
+            {/* 7. Contact (Visible on xl, accessible via More on lg) */}
+            <button
+              type="button"
+              onClick={() => handleNavClick('contact')}
+              className={`hidden xl:block text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                currentPage === 'contact' 
+                  ? 'text-[#E2BD67] font-semibold' 
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Contact
+            </button>
+
+            {/* 8. More ▼ */}
             <div className="relative" ref={moreRef}>
               <button
                 ref={moreBtnRef}
@@ -481,14 +507,14 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={moreOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2.5 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   isMoreActive 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <span>More</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${moreOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
+                <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${moreOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
               </button>
 
               {moreOpen && (
@@ -496,6 +522,47 @@ export const Navbar: React.FC = () => {
                   role="menu"
                   className="absolute right-0 mt-2 w-72 rounded-xl bg-[#0B2748] border border-[#1E3A5F] shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 text-slate-100"
                 >
+                  {/* Shown in More only on lg screens where they aren't on top bar */}
+                  <div className="xl:hidden">
+                    <button
+                      role="menuitem"
+                      onClick={() => handleNavClick('industries')}
+                      className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'industries' ? 'bg-[#132E52]' : ''}`}
+                    >
+                      <Layers className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-xs font-semibold text-slate-100">Industries &amp; Sectors</div>
+                        <div className="text-[11px] text-slate-400">8 specialized commercial practice areas</div>
+                      </div>
+                    </button>
+
+                    <button
+                      role="menuitem"
+                      onClick={() => handleNavClick('resources')}
+                      className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'resources' ? 'bg-[#132E52]' : ''}`}
+                    >
+                      <HelpCircle className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-xs font-semibold text-slate-100">Resources &amp; FAQ</div>
+                        <div className="text-[11px] text-slate-400">Tax Deadlines, Checklists &amp; Guides</div>
+                      </div>
+                    </button>
+
+                    <button
+                      role="menuitem"
+                      onClick={() => handleNavClick('contact')}
+                      className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'contact' ? 'bg-[#132E52]' : ''}`}
+                    >
+                      <Building2 className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="text-xs font-semibold text-slate-100">Contact Us</div>
+                        <div className="text-[11px] text-slate-400">Columbia, SC Office &amp; Inquiries</div>
+                      </div>
+                    </button>
+
+                    <div className="h-px bg-[#1E3A5F]/70 my-1" />
+                  </div>
+
                   <button
                     role="menuitem"
                     onClick={() => handleNavClick('pricing')}
@@ -510,37 +577,13 @@ export const Navbar: React.FC = () => {
 
                   <button
                     role="menuitem"
-                    onClick={() => handleNavClick('resources')}
-                    className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'resources' ? 'bg-[#132E52]' : ''}`}
-                  >
-                    <HelpCircle className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs font-semibold text-slate-100">Resources &amp; FAQ</div>
-                      <div className="text-[11px] text-slate-400">IRS Tax Calendar, Checklists &amp; Guides</div>
-                    </div>
-                  </button>
-
-                  <button
-                    role="menuitem"
                     onClick={() => handleNavClick('careers')}
                     className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'careers' ? 'bg-[#132E52]' : ''}`}
                   >
                     <Briefcase className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold text-slate-100">Careers &amp; Recruitment</div>
+                      <div className="text-xs font-semibold text-slate-100">Careers &amp; Opportunities</div>
                       <div className="text-[11px] text-slate-400">Open Accounting &amp; Preparer Roles</div>
-                    </div>
-                  </button>
-
-                  <button
-                    role="menuitem"
-                    onClick={() => handleNavClick('contact')}
-                    className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'contact' ? 'bg-[#132E52]' : ''}`}
-                  >
-                    <Building2 className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs font-semibold text-slate-100">Contact Us</div>
-                      <div className="text-[11px] text-slate-400">Columbia, SC Office &amp; Inquiries</div>
                     </div>
                   </button>
 
@@ -557,38 +600,18 @@ export const Navbar: React.FC = () => {
                       <div className="text-[11px] text-slate-400">Founder &amp; Senior Managing Accountant</div>
                     </div>
                   </button>
-
-                  {/* Staff & Client Portals Directory inside More */}
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      window.location.hash = '#/portals';
-                      window.history.pushState(null, '', '/portals');
-                      setMoreOpen(false);
-                    }}
-                    className="w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5"
-                  >
-                    <Layers className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="text-xs font-semibold text-slate-100 flex items-center gap-1">
-                        <span>Portals Directory</span>
-                        <ArrowRight className="w-3 h-3 text-[#E2BD67]" />
-                      </div>
-                      <div className="text-[11px] text-slate-400">All 29 demonstration role workspaces</div>
-                    </div>
-                  </button>
                 </div>
               )}
             </div>
           </nav>
 
           {/* DESKTOP UTILITY ACTIONS (Placed separately on the right) */}
-          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
+          <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-shrink-0">
             {/* 1. Client Portal CTA */}
             <button
               type="button"
               onClick={handlePortalAction}
-              className="h-10 px-4 rounded-xl text-xs font-semibold text-slate-100 bg-[#0D2340] hover:bg-[#132E52] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-all flex items-center justify-center gap-2 whitespace-nowrap focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]"
+              className="h-10 px-3 xl:px-4 rounded-xl text-xs font-semibold text-slate-100 bg-[#0D2340] hover:bg-[#132E52] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]"
               aria-label={getPortalButtonLabel()}
             >
               <Lock className="w-3.5 h-3.5 text-[#C99A3D] flex-shrink-0" />
@@ -599,7 +622,7 @@ export const Navbar: React.FC = () => {
             <button
               type="button"
               onClick={() => handleNavClick('book_consultation')}
-              className="h-10 px-4.5 rounded-xl text-xs font-bold text-[#06172C] bg-gradient-to-r from-[#C99A3D] to-[#E2BD67] hover:brightness-105 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[#C99A3D]"
+              className="h-10 px-3.5 xl:px-4.5 rounded-xl text-xs font-bold text-[#06172C] bg-gradient-to-r from-[#C99A3D] to-[#E2BD67] hover:brightness-105 transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[#C99A3D]"
               aria-label="Book a Consultation"
             >
               <Calendar className="w-3.5 h-3.5 text-[#06172C] flex-shrink-0" />
@@ -615,10 +638,10 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={handlePortalAction}
               className="h-9 px-3 rounded-lg text-xs font-semibold text-slate-100 bg-[#0D2340] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-colors flex items-center gap-1.5 whitespace-nowrap"
-              aria-label="Client Portal"
+              aria-label={getPortalButtonLabel()}
             >
               <Lock className="w-3 h-3 text-[#C99A3D] flex-shrink-0" />
-              <span className="hidden sm:inline">Client Portal</span>
+              <span className="hidden sm:inline">{getPortalButtonLabel()}</span>
               <span className="sm:hidden">Portal</span>
             </button>
 
@@ -978,6 +1001,6 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       )}
-    </header>
+    </div>
   );
 };

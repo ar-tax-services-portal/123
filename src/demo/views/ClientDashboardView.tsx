@@ -64,6 +64,21 @@ import { ClientInvoicesSection } from './client/ClientInvoicesSection';
 import { ClientNoticesSection } from './client/ClientNoticesSection';
 import { ClientAdvisorySection } from './client/ClientAdvisorySection';
 import { ClientAssistantModal } from './client/ClientAssistantModal';
+import { ClientProfileEntitiesSection } from './client/ClientProfileEntitiesSection';
+import { ClientBookkeepingSection } from './client/ClientBookkeepingSection';
+import { ClientJournalLedgerSection } from './client/ClientJournalLedgerSection';
+import { ClientBankConnectionsSection } from './client/ClientBankConnectionsSection';
+import { ClientAccountingConnectionsSection } from './client/ClientAccountingConnectionsSection';
+import { ClientReconciliationSection } from './client/ClientReconciliationSection';
+import { ClientFinancialReportsSection } from './client/ClientFinancialReportsSection';
+import { ClientTaxReadinessSection } from './client/ClientTaxReadinessSection';
+import { ClientEstimatedTaxesSection } from './client/ClientEstimatedTaxesSection';
+import { ClientMessagesTasksSection } from './client/ClientMessagesTasksSection';
+import { ClientLenderPackageSection } from './client/ClientLenderPackageSection';
+import { ClientAmendmentsClosureSection } from './client/ClientAmendmentsClosureSection';
+import { ClientPriorArchiveSection } from './client/ClientPriorArchiveSection';
+import { ClientSettingsConsentSection } from './client/ClientSettingsConsentSection';
+import { ClientHelpSupportSection } from './client/ClientHelpSupportSection';
 
 interface ClientDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -201,16 +216,30 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         <div>
           <h2 className="text-base font-bold text-[#061A2F]">
             {currentTab === 'overview' && 'Client Overview & Active Filing Status'}
+            {currentTab === 'entities' && 'Entity Profiles, Org Chart & Beneficial Ownership'}
             {currentTab === 'vault' && 'Secure Document Vault & Records'}
             {currentTab === 'questionnaire' && 'Tax Organizer & Intake Questionnaire'}
+            {currentTab === 'bookkeeping' && 'Transaction Register & Bookkeeping Classification'}
+            {currentTab === 'journal' && 'General Journal, Trial Balance & Fixed Assets'}
+            {currentTab === 'bank_feeds' && 'Bank Feeds & Direct Aggregation Connections'}
+            {currentTab === 'accounting_sync' && 'Cloud Accounting Sync & COA Tax Mapping'}
+            {currentTab === 'reconciliation' && 'Bank & Credit Card Statement Reconciliation'}
+            {currentTab === 'financial_reports' && 'Financial Statements & Management Reports'}
             {currentTab === 'ledger' && 'Income & Expense Workpapers'}
             {currentTab === 'return_review' && 'Draft Return Review & Form 8879-S Authorization'}
+            {currentTab === 'readiness' && 'Tax Readiness & Statutory Compliance Scorecard'}
             {currentTab === 'estimated_tax' && 'Estimated Tax & Safe Harbor Vouchers'}
+            {currentTab === 'advisory' && 'Tax Advisory, Strategy & Scenario Forecast'}
             {currentTab === 'tax_planning' && 'Tax Strategy Forecast & Scenario Modeler'}
             {currentTab === 'voice_assistant' && 'TaxGuard Voice Assistant'}
+            {currentTab === 'messages' && 'Secure Messages, Inquiries & Actionable Tasks'}
+            {currentTab === 'lender_package' && 'Credit, Lender & Underwriting Package Portal'}
+            {currentTab === 'amendments' && 'Tax Return Amendments & Entity Dissolutions'}
             {currentTab === 'billing' && 'Fee Invoices & Payments'}
-            {currentTab === 'notices' && 'Tax Notices & Transcripts'}
-            {currentTab === 'archive' && 'Prior Year Tax Archive'}
+            {currentTab === 'notices' && 'Tax Notices, Audits & IRS Transcripts'}
+            {currentTab === 'archive' && 'Prior Year Tax Archive & Multi-Year History'}
+            {currentTab === 'settings' && 'Security, Consents & Authorized Representatives'}
+            {currentTab === 'support' && 'Client Support, Tax Knowledge Base & Contacts'}
           </h2>
           <p className="text-xs text-[#667085]">
             A/R Tax Services, LLC • Client Demonstration Portal
@@ -258,6 +287,14 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         )
       )}
 
+      {/* TAB: ENTITIES & OWNERSHIP */}
+      {currentTab === 'entities' && (
+        <ClientProfileEntitiesSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
       {/* TAB: SECURE DOCUMENT VAULT */}
       {currentTab === 'vault' && (
         <ClientVaultSection
@@ -277,6 +314,59 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         />
       )}
 
+      {/* TAB: BOOKKEEPING & REGISTERS */}
+      {currentTab === 'bookkeeping' && (
+        <ClientBookkeepingSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToVault={() => setTab('vault')}
+        />
+      )}
+
+      {/* TAB: GENERAL JOURNAL & TRIAL BALANCE */}
+      {currentTab === 'journal' && (
+        <ClientJournalLedgerSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToReports={() => setTab('financial_reports')}
+        />
+      )}
+
+      {/* TAB: BANK FEEDS & AGGREGATION */}
+      {currentTab === 'bank_feeds' && (
+        <ClientBankConnectionsSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToBookkeeping={() => setTab('bookkeeping')}
+        />
+      )}
+
+      {/* TAB: ACCOUNTING SYNC */}
+      {currentTab === 'accounting_sync' && (
+        <ClientAccountingConnectionsSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: RECONCILIATION */}
+      {currentTab === 'reconciliation' && (
+        <ClientReconciliationSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToVault={() => setTab('vault')}
+        />
+      )}
+
+      {/* TAB: FINANCIAL REPORTS */}
+      {currentTab === 'financial_reports' && (
+        <ClientFinancialReportsSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToLenderPackage={() => setTab('lender_package')}
+        />
+      )}
+
       {/* TAB: LEDGER & EXPENSES */}
       {currentTab === 'ledger' && (
         <ClientIncomeExpensesSection
@@ -292,6 +382,15 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
           returnService={returnService}
           clientId="cli_perotti"
           onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: TAX READINESS */}
+      {currentTab === 'readiness' && (
+        <ClientTaxReadinessSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToSignatures={() => setTab('return_review')}
         />
       )}
 
@@ -324,9 +423,37 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
 
       {/* TAB: ESTIMATED TAX & SAFE HARBOR */}
       {currentTab === 'estimated_tax' && (
-        <div className="pt-1">
-          <EstimatedPaymentsCenter userRole="client" />
-        </div>
+        <ClientEstimatedTaxesSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: SECURE MESSAGES & TASKS */}
+      {currentTab === 'messages' && (
+        <ClientMessagesTasksSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToVault={() => setTab('vault')}
+          onNavigateToOrganizer={() => setTab('questionnaire')}
+          onNavigateToSignatures={() => setTab('return_review')}
+        />
+      )}
+
+      {/* TAB: LENDER PACKAGE */}
+      {currentTab === 'lender_package' && (
+        <ClientLenderPackageSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: AMENDMENTS & CLOSURES */}
+      {currentTab === 'amendments' && (
+        <ClientAmendmentsClosureSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
       )}
 
       {/* TAB: VOICE ASSISTANT */}
@@ -338,43 +465,26 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
 
       {/* TAB: ARCHIVE */}
       {currentTab === 'archive' && (
-        <div className="border border-[#D8DCE2] bg-white rounded-lg p-5 shadow-xs space-y-4">
-          <div className="border-b border-[#D8DCE2] pb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#061A2F]">
-              Prior Year Tax Return Archive
-            </h3>
-            <p className="text-xs text-[#667085]">
-              Statutory 7-year retention vault for prior filed corporate returns.
-            </p>
-          </div>
+        <ClientPriorArchiveSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
 
-          <div className="space-y-2 text-xs">
-            <div className="border border-[#D8DCE2] p-3.5 rounded bg-[#FBFAF7] flex items-center justify-between">
-              <div>
-                <div className="font-bold text-[#061A2F]">Tax Year 2024 Form 1120-S Final Package</div>
-                <div className="text-[11px] font-mono text-[#667085]">Filed March 12, 2025 • IRS Accepted</div>
-              </div>
-              <button
-                onClick={() => alert('Demonstration archive downloaded.')}
-                className="px-3.5 py-1.5 border border-[#D8DCE2] rounded hover:border-[#061A2F] font-medium text-[#061A2F]"
-              >
-                Download Return
-              </button>
-            </div>
-            <div className="border border-[#D8DCE2] p-3.5 rounded bg-[#FBFAF7] flex items-center justify-between">
-              <div>
-                <div className="font-bold text-[#061A2F]">Tax Year 2023 Form 1120-S Final Package</div>
-                <div className="text-[11px] font-mono text-[#667085]">Filed March 14, 2024 • IRS Accepted</div>
-              </div>
-              <button
-                onClick={() => alert('Demonstration archive downloaded.')}
-                className="px-3.5 py-1.5 border border-[#D8DCE2] rounded hover:border-[#061A2F] font-medium text-[#061A2F]"
-              >
-                Download Return
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* TAB: SETTINGS & CONSENTS */}
+      {currentTab === 'settings' && (
+        <ClientSettingsConsentSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: HELP & SUPPORT */}
+      {currentTab === 'support' && (
+        <ClientHelpSupportSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
       )}
 
       {/* 4. Professional & Regulatory Disclaimers Notice (Phase 6, 8, 23) */}
