@@ -125,7 +125,7 @@ export class DemoClientDashboardAdapter implements IClientDashboardService {
       clientId: client?.id || 'cli_perotti',
       clientName: client?.name || 'Michael Perotti',
       activeEntity: client?.businessName || 'Perotti Capital Holdings LLC',
-      tinMasked: client?.einSSN ? `***-**-${client.einSSN.slice(-4)}` : '***-**-4890',
+      tinMasked: client?.einOrSsnMasked || '***-**-4890',
       activeEngagementId: engagement?.id || 'eng_2025_perotti_1120s',
       engagementName: `${engagement?.taxYear || 2025} Corporate Tax Filing (${engagement?.formType || 'Form 1120-S'})`,
       taxYear: engagement?.taxYear || 2025,

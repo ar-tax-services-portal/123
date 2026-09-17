@@ -52,9 +52,9 @@ import {
   DemoReturnReviewService,
   DemoInvoiceService,
   DemoNoticeService,
-  DemoAdvisoryService
+  DemoAdvisoryService,
+  ClientDashboardOverview
 } from '../services/clientDashboardServices';
-import { ClientDashboardOverview } from '../services/clientDashboardInterfaces';
 import { ClientOverviewSection } from './client/ClientOverviewSection';
 import { ClientVaultSection } from './client/ClientVaultSection';
 import { ClientOrganizerSection } from './client/ClientOrganizerSection';
