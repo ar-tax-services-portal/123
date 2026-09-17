@@ -200,23 +200,25 @@ export const BookConsultationPage: React.FC = () => {
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Appointment Date (Mon-Fri)</label>
+                  <label htmlFor="booking-date" className="block text-[11px] text-slate-400 mb-1">Appointment Date (Mon-Fri)</label>
                   <input
+                    id="booking-date"
                     type="date"
                     value={selectedDate}
                     min="2026-09-09"
                     max="2026-12-31"
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C6A15B]"
+                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Available Eastern Time (EST) Slot</label>
+                  <label htmlFor="booking-time" className="block text-[11px] text-slate-400 mb-1">Available Eastern Time (EST) Slot</label>
                   <select
+                    id="booking-time"
                     value={selectedTime}
                     onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#C6A15B]"
+                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                   >
                     {availableTimes.map((slot) => (
                       <option key={slot} value={slot}>{slot}</option>
@@ -238,52 +240,56 @@ export const BookConsultationPage: React.FC = () => {
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
+                  <label htmlFor="booking-name" className="block text-slate-300 font-semibold mb-1">Full Name *</label>
                   <input
+                    id="booking-name"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. John Doe"
-                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#C6A15B]"
+                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Email Address *</label>
+                  <label htmlFor="booking-email" className="block text-slate-300 font-semibold mb-1">Email Address *</label>
                   <input
+                    id="booking-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#C6A15B]"
+                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Phone Number *</label>
+                  <label htmlFor="booking-phone" className="block text-slate-300 font-semibold mb-1">Phone Number *</label>
                   <input
+                    id="booking-phone"
                     type="tel"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. 803-555-0123"
-                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#C6A15B]"
+                    className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-300 font-semibold mb-1">
+                <label htmlFor="booking-notes" className="block text-xs text-slate-300 font-semibold mb-1">
                   Briefly Explain Your Goals or Filing Needs (Optional)
                 </label>
                 <textarea
+                  id="booking-notes"
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="e.g., S-Corp election for 2026, W-2 plus rental property deductions, multi-state filing questions..."
-                  className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg p-3 text-xs text-white focus:outline-none focus:border-[#C6A15B]"
+                  className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                 />
               </div>
             </div>

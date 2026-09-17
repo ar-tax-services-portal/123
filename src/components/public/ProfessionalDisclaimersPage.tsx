@@ -66,6 +66,32 @@ export const ProfessionalDisclaimersPage: React.FC = () => {
             Links, integrations, or references to third-party platforms (e.g., Intuit QuickBooks, Xero, Stripe, banking APIs) do not constitute endorsements. The Firm is not responsible for the independent terms, uptime, or privacy policies of outside software vendors.
           </p>
         </section>
+
+        {/* Section 5: IRS Non-Affiliation & Professional Credentials */}
+        <section className="space-y-3 border-t border-[#1E3A5F] pt-6">
+          <h2 className="font-serif text-xl font-bold text-white">5. IRS Non-Affiliation & Regulatory Credentials</h2>
+          <p>
+            A/R Tax Services, LLC is not affiliated with, endorsed by, or sponsored by the Internal Revenue Service or any state department of revenue.
+          </p>
+          <div className="p-4 rounded-xl bg-[#07172B] border border-[#1E3A5F] space-y-1.5 text-xs text-slate-300">
+            <p>
+              <strong className="text-white">Professional Credential / License:</strong> [INSERT CPA LICENSE NUMBER, ENROLLED AGENT REGISTRATION, OR PTIN AS APPLICABLE]
+            </p>
+            <p>
+              <strong className="text-white">Firm Location:</strong> Columbia, South Carolina, USA • <a href="tel:678-205-9486" className="text-[#C6A15B]">678-205-9486</a>
+            </p>
+            <p>
+              <strong className="text-white">Client Financial Privacy:</strong> Review our{' '}
+              <button onClick={() => setCurrentPage('privacy')} className="text-[#C6A15B] underline hover:text-white">
+                GLBA-Compliant Privacy Policy
+              </button>{' '}
+              and{' '}
+              <button onClick={() => setCurrentPage('terms')} className="text-[#C6A15B] underline hover:text-white">
+                Terms of Service
+              </button>.
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );

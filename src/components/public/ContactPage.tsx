@@ -155,48 +155,52 @@ export const ContactPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Your Full Name *</label>
+                      <label htmlFor="contact-full-name" className="block text-slate-300 font-semibold mb-1">Your Full Name *</label>
                       <input
+                        id="contact-full-name"
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. Robert Williams"
-                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[#C6A15B]"
+                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Your Email *</label>
+                      <label htmlFor="contact-email" className="block text-slate-300 font-semibold mb-1">Your Email *</label>
                       <input
+                        id="contact-email"
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="rwilliams@example.com"
-                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[#C6A15B]"
+                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Phone Number (Optional)</label>
+                      <label htmlFor="contact-phone" className="block text-slate-300 font-semibold mb-1">Phone Number (Optional)</label>
                       <input
+                        id="contact-phone"
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="678-205-9486"
-                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[#C6A15B]"
+                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-300 font-semibold mb-1">Subject Matter *</label>
+                      <label htmlFor="contact-subject" className="block text-slate-300 font-semibold mb-1">Subject Matter *</label>
                       <select
+                        id="contact-subject"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
-                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[#C6A15B]"
+                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                       >
                         <option value="Individual Tax Strategy">Individual Tax Strategy (1040)</option>
                         <option value="Business Accounting & S-Corp">Business Accounting & Corporate Filing</option>
@@ -209,29 +213,31 @@ export const ContactPage: React.FC = () => {
                   </div>
 
                   <div className="text-xs">
-                    <label className="block text-slate-300 font-semibold mb-1">Your Message *</label>
+                    <label htmlFor="contact-message" className="block text-slate-300 font-semibold mb-1">Your Message *</label>
                     <textarea
+                      id="contact-message"
                       rows={4}
                       required
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Please explain how we can assist your tax or financial situation..."
-                      className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg p-3 text-white focus:outline-none focus:border-[#C6A15B]"
+                      className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                     />
                   </div>
 
                   {/* Attachment input (Drag-and-drop & Click supported) */}
                   <div className="text-xs">
-                    <label className="block text-slate-300 font-semibold mb-1">Attach Supporting File (Optional)</label>
+                    <label htmlFor="contact-attachment" className="block text-slate-300 font-semibold mb-1">Attach Supporting File (Optional)</label>
                     <div className="p-4 border-2 border-dashed border-[#1E3A5F] rounded-xl bg-[#07172B] text-center hover:border-[#C6A15B] transition-colors relative cursor-pointer">
                       <input
+                        id="contact-attachment"
                         type="file"
                         onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
                             setAttachedFile(e.target.files[0].name);
                           }
                         }}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full focus:outline-none focus:ring-2 focus:ring-[#C6A15B]"
                       />
                       <UploadCloud className="w-5 h-5 text-[#C6A15B] mx-auto mb-1" />
                       <span className="text-slate-300 font-medium block">

@@ -148,15 +148,15 @@ export const Navbar: React.FC = () => {
   };
 
   const getPortalButtonLabel = () => {
-    return currentUser && currentRole !== 'guest' ? 'Open Portal' : 'Client Portal';
+    return 'Client Portal';
   };
 
   const isMoreActive = ['pricing', 'resources', 'careers', 'contact', 'founder', 'industries'].includes(currentPage);
 
   return (
     <div className="w-full bg-[#06172C]/95 backdrop-blur-md border-b border-[#0B2748] relative z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-3 xl:gap-6 min-w-0">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-6 xl:px-8">
+        <div className="flex items-center justify-between h-20 gap-2 lg:gap-3 xl:gap-6 min-w-0">
           
           {/* BRAND LOGO AREA */}
           <div className="flex-shrink-0 min-w-0 py-2">
@@ -384,13 +384,15 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={taxStrategiesOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-1.5 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   currentPage === 'tax_strategies' 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
                 }`}
               >
-                <span>Tax Strategies</span>
+                <span>
+                  <span className="hidden xl:inline">Tax </span>Strategies
+                </span>
                 <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${taxStrategiesOpen ? 'rotate-180 text-[#E2BD67]' : 'text-slate-400'}`} />
               </button>
 
@@ -587,18 +589,20 @@ export const Navbar: React.FC = () => {
             <button
               type="button"
               onClick={handlePortalAction}
-              className="h-10 px-3 xl:px-4 rounded-xl text-xs font-semibold text-slate-100 bg-[#0D2340] hover:bg-[#132E52] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]"
-              aria-label={getPortalButtonLabel()}
+              className="h-9 xl:h-10 px-2.5 xl:px-4 rounded-xl text-xs font-semibold text-slate-100 bg-[#0D2340] hover:bg-[#132E52] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]"
+              aria-label="Client Portal"
             >
               <Lock className="w-3.5 h-3.5 text-[#C99A3D] flex-shrink-0" />
-              <span>{getPortalButtonLabel()}</span>
+              <span>
+                <span className="hidden xl:inline">Client </span>Portal
+              </span>
             </button>
 
             {/* 2. Book Consultation CTA */}
             <button
               type="button"
               onClick={() => handleNavClick('book_consultation')}
-              className="h-10 px-3.5 xl:px-4.5 rounded-xl text-xs font-bold text-[#06172C] bg-gradient-to-r from-[#C99A3D] to-[#E2BD67] hover:brightness-105 transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[#C99A3D]"
+              className="h-9 xl:h-10 px-3 xl:px-4.5 rounded-xl text-xs font-bold text-[#06172C] bg-gradient-to-r from-[#C99A3D] to-[#E2BD67] hover:brightness-105 transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[#C99A3D]"
               aria-label="Book a Consultation"
             >
               <Calendar className="w-3.5 h-3.5 text-[#06172C] flex-shrink-0" />
@@ -606,27 +610,26 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* TABLET / MOBILE QUICK ACTIONS (< 1024px) */}
-          {/* Strict requirement: Logo + Client Portal button + Menu ☰ */}
-          <div className="flex lg:hidden items-center gap-2.5 flex-shrink-0">
+          {/* TABLET / MOBILE QUICK ACTIONS (< 1024px, responsive down to 320px) */}
+          <div className="flex lg:hidden items-center gap-2 flex-shrink-0">
             {/* Client Portal Button */}
             <button
               type="button"
               onClick={handlePortalAction}
-              className="h-9 px-3 rounded-lg text-xs font-semibold text-slate-100 bg-[#0D2340] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-colors flex items-center gap-1.5 whitespace-nowrap"
-              aria-label={getPortalButtonLabel()}
+              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg text-[11px] sm:text-xs font-semibold text-slate-100 bg-[#0D2340] border border-[#1E3A5F] hover:border-[#C99A3D]/50 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              aria-label="Client Portal"
             >
               <Lock className="w-3 h-3 text-[#C99A3D] flex-shrink-0" />
-              <span className="hidden sm:inline">{getPortalButtonLabel()}</span>
-              <span className="sm:hidden">Portal</span>
+              <span className="hidden xs:inline">Client </span>
+              <span>Portal</span>
             </button>
 
-            {/* Hamburger Button (44x44px touch target) */}
+            {/* Hamburger Button (min 40-44px touch target) */}
             <button
               ref={hamburgerBtnRef}
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-200 hover:text-white bg-[#0D2340]/60 hover:bg-[#0B2748] border border-[#1E3A5F] transition-colors focus:outline-none focus:ring-2 focus:ring-[#C99A3D]"
+              className="w-10 h-10 sm:w-11 sm:h-11 min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-xl text-slate-200 hover:text-white bg-[#0D2340]/60 hover:bg-[#0B2748] border border-[#1E3A5F] transition-colors focus:outline-none focus:ring-2 focus:ring-[#C99A3D]"
               aria-label="Open Navigation Menu"
               aria-expanded={mobileMenuOpen}
             >

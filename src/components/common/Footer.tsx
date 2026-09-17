@@ -151,21 +151,10 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => { 
-                    window.location.hash = '#/portals'; 
-                    window.history.pushState(null, '', '/portals');
-                  }} 
-                  className="hover:text-white transition-colors flex items-center gap-1 font-semibold text-[#C6A15B]"
-                >
-                  Staff &amp; Client Portals (29 Roles) <ArrowRight className="w-3 h-3" />
-                </button>
-              </li>
-              <li>
-                <button 
                   onClick={() => { window.location.hash = '#/client/login'; }} 
-                  className="hover:text-white transition-colors flex items-center gap-1 text-slate-300"
+                  className="hover:text-white transition-colors flex items-center gap-1 text-slate-300 font-semibold text-[#C6A15B]"
                 >
-                  Client Portal Login <ArrowRight className="w-3 h-3" />
+                  Client Portal <ArrowRight className="w-3 h-3" />
                 </button>
               </li>
               <li>
@@ -173,7 +162,7 @@ export const Footer: React.FC = () => {
                   onClick={() => { window.location.hash = '#/accountant/login'; }} 
                   className="hover:text-white transition-colors flex items-center gap-1"
                 >
-                  Staff Workspace Login
+                  Staff Portal
                 </button>
               </li>
             </ul>
@@ -187,7 +176,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-xs text-slate-400">
               <li>
                 <button onClick={() => handleNav('privacy')} className="hover:text-white transition-colors">
-                  Privacy Policy (GDPR / CCPA)
+                  Privacy Policy (GLBA Notice)
                 </button>
               </li>
               <li>
@@ -215,41 +204,50 @@ export const Footer: React.FC = () => {
                   Cookie Preferences
                 </button>
               </li>
-              <li>
-                <button onClick={() => handleNav('not_found')} className="hover:text-white transition-colors text-slate-500">
-                  System Diagnostics (404 View)
-                </button>
-              </li>
             </ul>
           </div>
 
         </div>
 
-        {/* Professional Disclaimers Architecture */}
-        <div className="py-6 text-xs text-slate-400/90 leading-relaxed border-b border-[#1A365D] space-y-2">
+        {/* Professional Disclaimers & Statutory Regulatory Architecture */}
+        <div className="py-6 text-xs text-slate-300 leading-relaxed border-b border-[#1A365D] space-y-2.5">
           <p>
-            <strong className="text-[#E8C66A]">General Information Disclaimer:</strong> Information provided through this website is for general informational and educational purposes and should not, by itself, be considered individualized tax, legal, investment, or financial advice.
+            <strong className="text-[#E8C66A]">IRS Non-Affiliation:</strong> A/R Tax Services, LLC is not affiliated with, endorsed by, or sponsored by the Internal Revenue Service.
           </p>
           <p>
-            <strong className="text-[#E8C66A]">No Guarantee:</strong> Tax outcomes depend on individual facts, applicable law, documentation, and governmental interpretation. No particular tax result, refund, savings amount, audit outcome, or governmental determination is guaranteed.
+            <strong className="text-[#E8C66A]">Professional Credentials:</strong> [INSERT CPA LICENSE NUMBER, ENROLLED AGENT REGISTRATION, OR PTIN AS APPLICABLE]
           </p>
           <p>
-            <strong className="text-[#E8C66A]">No Government Affiliation:</strong> A/R Tax Services, LLC is an independent private business and is not affiliated with, endorsed by, or acting on behalf of the Internal Revenue Service (IRS) or any state taxing authority.
+            <strong className="text-[#E8C66A]">No Guarantee:</strong> Tax outcomes depend on individual taxpayer facts, applicable law, substantiating documentation, and governmental interpretation. No particular tax result, refund, savings amount, audit outcome, or governmental determination is guaranteed.
           </p>
           <p>
-            <strong className="text-[#E8C66A]">Professional Relationship:</strong> Use of the public website alone does not establish a professional engagement or client relationship. Professional engagements are established solely through a formal, mutually executed engagement agreement.
+            <strong className="text-[#E8C66A]">Financial Privacy (GLBA Notice):</strong> A/R Tax Services, LLC protects nonpublic personal financial information in accordance with the Gramm-Leach-Bliley Act (GLBA) and Internal Revenue Code Section 7216. Review our{' '}
+            <button onClick={() => handleNav('privacy')} className="text-[#E8C66A] underline hover:text-white focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]">
+              Privacy Policy
+            </button>{' '}
+            and{' '}
+            <button onClick={() => handleNav('terms')} className="text-[#E8C66A] underline hover:text-white focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D]">
+              Terms of Service
+            </button>.
+          </p>
+          <p>
+            <strong className="text-[#E8C66A]">Professional Engagement:</strong> Information provided on this public website is for educational and informational purposes only and does not constitute individualized legal, tax, or financial advisory. A professional engagement is established solely through a mutually executed, formal written engagement agreement.
           </p>
         </div>
 
         {/* Bottom copyright & attribution */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            © {new Date().getFullYear()} A/R Tax Services, LLC. All rights reserved. Columbia, South Carolina.
+            © {new Date().getFullYear()} A/R Tax Services, LLC. All rights reserved.
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span className="text-[#D7AC4A] font-medium">Founder: Desmond Hinds</span>
+          <div className="flex items-center gap-3 text-slate-400">
+            <button onClick={() => handleNav('privacy')} className="hover:text-[#E8C66A] transition-colors focus:outline-none focus-visible:underline">Privacy Policy</button>
             <span>•</span>
-            <span>Discreet U.S. Tax Advisory</span>
+            <button onClick={() => handleNav('terms')} className="hover:text-[#E8C66A] transition-colors focus:outline-none focus-visible:underline">Terms of Service</button>
+            <span>•</span>
+            <button onClick={() => handleNav('disclaimers')} className="hover:text-[#E8C66A] transition-colors focus:outline-none focus-visible:underline">Disclaimers</button>
+            <span>•</span>
+            <span>Columbia, SC</span>
           </div>
         </div>
       </div>

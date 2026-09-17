@@ -901,12 +901,13 @@ export const HomePage: React.FC = () => {
         <div className="relative rounded-3xl overflow-hidden border border-[#C99A3D]/50 shadow-2xl">
           
           {/* Executive Suite Background Image with Restrained Navy Overlay */}
-          <div className="absolute inset-0 z-0">
-            <picture className="w-full h-full block">
+          <div className="absolute inset-0 z-0" aria-hidden="true">
+            <picture className="w-full h-full block" aria-hidden="true">
               <source srcSet={BRAND_ASSETS.executiveConsultationSuiteWebp} type="image/webp" />
               <img
                 src={BRAND_ASSETS.executiveConsultationSuiteJpg}
-                alt="Sophisticated private corporate advisory office in Columbia, South Carolina"
+                alt=""
+                aria-hidden="true"
                 width={1600}
                 height={900}
                 loading="lazy"
