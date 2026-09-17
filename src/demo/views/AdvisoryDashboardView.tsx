@@ -9,10 +9,27 @@ import { TaxPlanningScenarioModeler, EntityRelationshipGraph } from '../../taxgu
 
 interface AdvisoryDashboardViewProps {
   onOpenAiAssistant: () => void;
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
 }
 
-export const AdvisoryDashboardView: React.FC<AdvisoryDashboardViewProps> = ({ onOpenAiAssistant }) => {
-  const [activeTab, setActiveTab] = useState<'scenarios' | 'entity_graph' | 'compensation' | 'entity' | 'rd_credit' | 'roadmap'>('scenarios');
+export const AdvisoryDashboardView: React.FC<AdvisoryDashboardViewProps> = ({ 
+  onOpenAiAssistant,
+  activeNavId,
+  onSelectNav
+}) => {
+  const validTabs = ['scenarios', 'entity_graph', 'compensation', 'entity', 'rd_credit', 'roadmap'];
+  const [activeTabState, setActiveTabState] = useState<'scenarios' | 'entity_graph' | 'compensation' | 'entity' | 'rd_credit' | 'roadmap'>('scenarios');
+  const activeTab = (activeNavId && validTabs.includes(activeNavId))
+    ? (activeNavId as 'scenarios' | 'entity_graph' | 'compensation' | 'entity' | 'rd_credit' | 'roadmap')
+    : activeTabState;
+
+  const handleSelectTab = (tabId: 'scenarios' | 'entity_graph' | 'compensation' | 'entity' | 'rd_credit' | 'roadmap') => {
+    setActiveTabState(tabId);
+    if (onSelectNav) {
+      onSelectNav(tabId);
+    }
+  };
 
   // Interactive Reasonable Compensation calculation state
   const [netBusinessProfit, setNetBusinessProfit] = useState(250000);
@@ -56,7 +73,7 @@ export const AdvisoryDashboardView: React.FC<AdvisoryDashboardViewProps> = ({ on
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleSelectTab(tab.id as any)}
             className={`px-3 py-2 border-b-2 font-medium transition-colors ${
               activeTab === tab.id
                 ? 'border-black text-black font-bold'

@@ -82,8 +82,16 @@ export async function testConnection(): Promise<boolean> {
     console.log('[Firestore] Live connection verified.');
     return true;
   } catch (error: any) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore offline notice. Verify network and project permissions.');
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorCode = error?.code;
+    if (
+      errorCode === 'unavailable' ||
+      errorMsg.includes('unavailable') ||
+      errorMsg.includes('the client is offline') ||
+      errorMsg.includes('Could not reach Cloud Firestore backend') ||
+      errorMsg.includes('Failed to get document')
+    ) {
+      console.warn('[Firestore] Operating in offline mode. Client will synchronize when connection is restored:', errorMsg);
       return false;
     }
     // Permission denied on test/connection is expected if default-deny is active; connection is working

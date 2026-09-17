@@ -27,13 +27,28 @@ import { IntegrationHealthPanel, UnifiedActionCenter, AICreditUsageManager, TaxG
 interface AdminDashboardViewProps {
   onOpenAiAssistant: () => void;
   onOpenIntegrations: () => void;
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ 
   onOpenAiAssistant,
-  onOpenIntegrations 
+  onOpenIntegrations,
+  activeNavId,
+  onSelectNav
 }) => {
-  const [activeTab, setActiveTab] = useState<'tester' | 'actions' | 'credits' | 'voice'>('tester');
+  const validTabs = ['tester', 'actions', 'credits', 'voice'];
+  const [activeTabState, setActiveTabState] = useState<'tester' | 'actions' | 'credits' | 'voice'>('tester');
+  const activeTab = (activeNavId && validTabs.includes(activeNavId))
+    ? (activeNavId as 'tester' | 'actions' | 'credits' | 'voice')
+    : activeTabState;
+
+  const handleSelectTab = (tabId: 'tester' | 'actions' | 'credits' | 'voice') => {
+    setActiveTabState(tabId);
+    if (onSelectNav) {
+      onSelectNav(tabId);
+    }
+  };
   const [resetNotice, setResetNotice] = useState(false);
   const [testerSearch, setTesterSearch] = useState('');
 
@@ -99,7 +114,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleSelectTab(tab.id as any)}
             className={`px-3.5 py-2 font-medium transition-colors border-b-2 -mb-[1px] ${
               activeTab === tab.id
                 ? 'border-black text-black font-bold bg-neutral-50'

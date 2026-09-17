@@ -86,7 +86,7 @@ describe('TaxGuard AI Role-Based Integration & Tenant Isolation', () => {
       expect(result.success).toBe(true);
       const updatedEng = demoDataStore.getEngagementById('eng_2025_summit');
       expect(updatedEng?.approvalState).toBe('Reviewer Approved');
-      expect(updatedEng?.currentStage).toBe('Obtain Approval');
+      expect(updatedEng?.currentStage).toBe('Approve');
     });
   });
 

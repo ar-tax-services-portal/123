@@ -12,13 +12,30 @@ import { EstimatedPaymentsCenter, AICreditUsageManager } from '../../taxguard';
 
 interface BillingDashboardViewProps {
   onOpenAiAssistant: () => void;
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
 }
 
-export const BillingDashboardView: React.FC<BillingDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const BillingDashboardView: React.FC<BillingDashboardViewProps> = ({ 
+  onOpenAiAssistant,
+  activeNavId,
+  onSelectNav
+}) => {
   const [invoices, setInvoices] = useState<DemoInvoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<DemoInvoice | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'invoices' | 'estimated_pmts' | 'ai_credits'>('invoices');
+  const validTabs = ['invoices', 'estimated_pmts', 'ai_credits'];
+  const [activeTabState, setActiveTabState] = useState<'invoices' | 'estimated_pmts' | 'ai_credits'>('invoices');
+  const activeTab = (activeNavId && validTabs.includes(activeNavId))
+    ? (activeNavId as 'invoices' | 'estimated_pmts' | 'ai_credits')
+    : activeTabState;
+
+  const handleSelectTab = (tabId: 'invoices' | 'estimated_pmts' | 'ai_credits') => {
+    setActiveTabState(tabId);
+    if (onSelectNav) {
+      onSelectNav(tabId);
+    }
+  };
 
   const refresh = () => {
     setInvoices(demoDataStore.getInvoices());
@@ -67,7 +84,7 @@ export const BillingDashboardView: React.FC<BillingDashboardViewProps> = ({ onOp
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => handleSelectTab(tab.id as any)}
               className={`px-3.5 py-2 font-medium transition-colors flex items-center gap-1.5 border-b-2 -mb-[1px] ${
                 activeTab === tab.id
                   ? 'border-black text-black font-bold bg-neutral-50'

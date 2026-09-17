@@ -59,7 +59,10 @@ import {
   Send,
   Archive,
   FileCheck,
-  RefreshCw
+  RefreshCw,
+  Coins,
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 
 // Route Info Interface
@@ -239,6 +242,7 @@ export const DemoAppRouter: React.FC = () => {
       { id: 'return_review', label: 'Return Review', icon: PenTool },
       { id: 'billing', label: 'Fee Invoices', icon: CreditCard },
       { id: 'notices', label: 'Tax Notices', icon: AlertCircle },
+      { id: 'advisory', label: 'Tax Advisory', icon: TrendingUp },
       { id: 'archive', label: 'Prior Year Archive', icon: Folder }
     ],
     reviewer: [
@@ -272,12 +276,15 @@ export const DemoAppRouter: React.FC = () => {
       { id: 'roadmap', label: 'Strategic Action Plan', icon: TrendingUp }
     ],
     billing: [
-      { id: 'invoices', label: 'Invoices & Retainers', icon: FileText },
-      { id: 'aging', label: 'A/R Aging Analysis', icon: DollarSign },
-      { id: 'payments', label: 'Payment Transactions', icon: Clock }
+      { id: 'invoices', label: 'Invoices & A/R Aging', icon: DollarSign },
+      { id: 'estimated_pmts', label: 'Estimated Tax Vouchers', icon: Calendar },
+      { id: 'ai_credits', label: 'AI Credit Metering', icon: Coins }
     ],
     compliance: [
-      { id: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+      { id: 'audit', label: 'Immutable Audit Trail', icon: ShieldCheck },
+      { id: 'resolution', label: 'Tax Resolution & Defense', icon: ShieldAlert },
+      { id: 'taxguard_audit', label: 'TaxGuard Audit Ledger', icon: Activity },
+      { id: 'ai_governance', label: 'AI Governance & Safety', icon: Lock },
       { id: 'irc7216', label: 'IRC § 7216 Consents', icon: FileText },
       { id: 'credentials', label: 'PTIN / EFIN Registry', icon: Key },
       { id: 'retention', label: 'Retention Schedule', icon: Folder }
@@ -293,10 +300,10 @@ export const DemoAppRouter: React.FC = () => {
       { id: 'proposals', label: 'Proposals & Retainers', icon: FileText }
     ],
     admin: [
-      { id: 'sessions', label: 'Role Sessions', icon: Lock },
-      { id: 'integrations', label: 'Integrations (22)', icon: Key },
-      { id: 'diagnostics', label: 'System Health', icon: Activity },
-      { id: 'reset', label: 'Reset Demo Data', icon: RotateCcw }
+      { id: 'tester', label: 'Role Access Matrix', icon: Lock },
+      { id: 'actions', label: 'Practice Action Center', icon: Activity },
+      { id: 'credits', label: 'AI Credit Metering', icon: Key },
+      { id: 'voice', label: 'Voice Assistant Sandbox', icon: Sparkles }
     ],
     executive: [
       { id: 'kpis', label: 'Practice Realization', icon: TrendingUp },
@@ -413,28 +420,90 @@ export const DemoAppRouter: React.FC = () => {
   const renderDashboardContent = () => {
     switch (role) {
       case 'client':
-        return <ClientDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <ClientDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'reviewer':
-        return <ReviewerDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <ReviewerDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'accountant':
-        return <AccountantDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <AccountantDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'bookkeeper':
-        return <BookkeeperDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <BookkeeperDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'payroll':
-        return <PayrollDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <PayrollDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'advisor':
-        return <AdvisoryDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <AdvisoryDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'billing':
-        return <BillingDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <BillingDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'compliance':
-        return <ComplianceDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <ComplianceDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'operations':
-        return <OperationsDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <OperationsDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'intake':
-        return <IntakeDashboardView onOpenAiAssistant={() => setAiAssistantOpen(true)} />;
+        return (
+          <IntakeDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
+            onOpenAiAssistant={() => setAiAssistantOpen(true)} 
+          />
+        );
       case 'admin':
         return (
           <AdminDashboardView 
+            activeNavId={activeNavId} 
+            onSelectNav={setActiveNavId} 
             onOpenAiAssistant={() => setAiAssistantOpen(true)} 
             onOpenIntegrations={() => setIntegrationsModalOpen(true)} 
           />

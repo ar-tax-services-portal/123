@@ -8,10 +8,26 @@ import { Sparkles, CheckCircle, FileText, DollarSign, Calendar } from 'lucide-re
 
 interface PayrollDashboardViewProps {
   onOpenAiAssistant: () => void;
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
 }
 
-export const PayrollDashboardView: React.FC<PayrollDashboardViewProps> = ({ onOpenAiAssistant }) => {
-  const [activeTab, setActiveTab] = useState<'registers' | 'form941' | 'liabilities' | 'yearend'>('registers');
+export const PayrollDashboardView: React.FC<PayrollDashboardViewProps> = ({ 
+  onOpenAiAssistant,
+  activeNavId,
+  onSelectNav
+}) => {
+  const [activeTabState, setActiveTabState] = useState<'registers' | 'form941' | 'liabilities' | 'yearend'>('registers');
+  const activeTab = (activeNavId && ['registers', 'form941', 'liabilities', 'yearend'].includes(activeNavId))
+    ? (activeNavId as 'registers' | 'form941' | 'liabilities' | 'yearend')
+    : activeTabState;
+
+  const handleSelectTab = (tabId: 'registers' | 'form941' | 'liabilities' | 'yearend') => {
+    setActiveTabState(tabId);
+    if (onSelectNav) {
+      onSelectNav(tabId);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -46,7 +62,7 @@ export const PayrollDashboardView: React.FC<PayrollDashboardViewProps> = ({ onOp
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleSelectTab(tab.id as any)}
             className={`px-3 py-2 border-b-2 font-medium transition-colors ${
               activeTab === tab.id
                 ? 'border-black text-black font-bold'

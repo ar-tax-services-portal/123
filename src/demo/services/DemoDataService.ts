@@ -88,8 +88,15 @@ import {
   INITIAL_DEMO_RENEWALS,
   INITIAL_DEMO_SUPPORT_TICKETS
 } from '../lifecycleMockData';
+import { resetClientDashboardData } from './clientDashboardAdapters';
 
 class DemoDataStore {
+  private readonly STORAGE_KEY = 'ar_tax_demo_datastore_v2';
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
   private clients: DemoClient[] = [...INITIAL_DEMO_CLIENTS];
   private engagements: DemoEngagement[] = [...INITIAL_DEMO_ENGAGEMENTS];
   private documents: DemoDocument[] = [...INITIAL_DEMO_DOCUMENTS];
@@ -138,7 +145,63 @@ class DemoDataStore {
     };
   }
 
+  private loadFromStorage(): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = window.localStorage.getItem(this.STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.clients) this.clients = parsed.clients;
+          if (parsed.engagements) this.engagements = parsed.engagements;
+          if (parsed.documents) this.documents = parsed.documents;
+          if (parsed.transactions) this.transactions = parsed.transactions;
+          if (parsed.reconciliations) this.reconciliations = parsed.reconciliations;
+          if (parsed.payroll) this.payroll = parsed.payroll;
+          if (parsed.workpapers) this.workpapers = parsed.workpapers;
+          if (parsed.advisoryCases) this.advisoryCases = parsed.advisoryCases;
+          if (parsed.invoices) this.invoices = parsed.invoices;
+          if (parsed.auditLogs) this.auditLogs = parsed.auditLogs;
+        }
+      } catch {
+        // ignore load errors
+      }
+    }
+  }
+
+  private saveToStorage(): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const state = {
+          clients: this.clients,
+          engagements: this.engagements,
+          documents: this.documents,
+          transactions: this.transactions,
+          reconciliations: this.reconciliations,
+          payroll: this.payroll,
+          workpapers: this.workpapers,
+          advisoryCases: this.advisoryCases,
+          invoices: this.invoices,
+          auditLogs: this.auditLogs
+        };
+        window.localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        // ignore save errors
+      }
+    }
+  }
+
+  private clearStorage(): void {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(this.STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   private notify(): void {
+    this.saveToStorage();
     this.listeners.forEach(cb => cb());
   }
 
@@ -280,7 +343,7 @@ class DemoDataStore {
     }
 
     eng.approvalState = 'Reviewer Approved';
-    eng.currentStage = 'Obtain Approval';
+    eng.currentStage = 'Approve';
     eng.currentStatus = 'Ready for Client Review';
     eng.lastActivity = `${reviewerName} certified workpapers and released return for client signature demonstration.`;
     eng.completionPercentage = 85;
@@ -1280,6 +1343,8 @@ class DemoDataStore {
 
   // --- Reset to Demo State ---
   public resetToDefault(actor: string): void {
+    this.clearStorage();
+    resetClientDashboardData();
     this.clients = [...INITIAL_DEMO_CLIENTS];
     this.engagements = [...INITIAL_DEMO_ENGAGEMENTS];
     this.documents = [...INITIAL_DEMO_DOCUMENTS];

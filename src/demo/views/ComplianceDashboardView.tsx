@@ -11,11 +11,28 @@ import { AuditEventViewer, AIGovernancePanel, TaxResolutionCenter } from '../../
 
 interface ComplianceDashboardViewProps {
   onOpenAiAssistant: () => void;
+  activeNavId?: string;
+  onSelectNav?: (id: string) => void;
 }
 
-export const ComplianceDashboardView: React.FC<ComplianceDashboardViewProps> = ({ onOpenAiAssistant }) => {
+export const ComplianceDashboardView: React.FC<ComplianceDashboardViewProps> = ({ 
+  onOpenAiAssistant,
+  activeNavId,
+  onSelectNav
+}) => {
   const [auditLogs, setAuditLogs] = useState<DemoAuditEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<'audit' | 'resolution' | 'taxguard_audit' | 'ai_governance' | 'irc7216' | 'credentials' | 'retention'>('audit');
+  const validTabs = ['audit', 'resolution', 'taxguard_audit', 'ai_governance', 'irc7216', 'credentials', 'retention'];
+  const [activeTabState, setActiveTabState] = useState<'audit' | 'resolution' | 'taxguard_audit' | 'ai_governance' | 'irc7216' | 'credentials' | 'retention'>('audit');
+  const activeTab = (activeNavId && validTabs.includes(activeNavId))
+    ? (activeNavId as 'audit' | 'resolution' | 'taxguard_audit' | 'ai_governance' | 'irc7216' | 'credentials' | 'retention')
+    : activeTabState;
+
+  const handleSelectTab = (tabId: 'audit' | 'resolution' | 'taxguard_audit' | 'ai_governance' | 'irc7216' | 'credentials' | 'retention') => {
+    setActiveTabState(tabId);
+    if (onSelectNav) {
+      onSelectNav(tabId);
+    }
+  };
 
   const refresh = () => {
     setAuditLogs(demoDataStore.getAuditLogs());
@@ -62,7 +79,7 @@ export const ComplianceDashboardView: React.FC<ComplianceDashboardViewProps> = (
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleSelectTab(tab.id as any)}
             className={`px-3 py-2 border-b-2 font-medium transition-colors ${
               activeTab === tab.id
                 ? 'border-black text-black font-bold'
