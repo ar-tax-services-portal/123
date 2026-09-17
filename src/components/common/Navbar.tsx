@@ -151,12 +151,12 @@ export const Navbar: React.FC = () => {
     return currentUser && currentRole !== 'guest' ? 'Open Portal' : 'Client Portal';
   };
 
-  const isMoreActive = ['pricing', 'resources', 'careers', 'contact', 'founder'].includes(currentPage);
+  const isMoreActive = ['pricing', 'resources', 'careers', 'contact', 'founder', 'industries'].includes(currentPage);
 
   return (
     <div className="w-full bg-[#06172C]/95 backdrop-blur-md border-b border-[#0B2748] relative z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-2 xl:gap-4 min-w-0">
+        <div className="flex items-center justify-between h-20 gap-3 xl:gap-6 min-w-0">
           
           {/* BRAND LOGO AREA */}
           <div className="flex-shrink-0 min-w-0 py-2">
@@ -168,16 +168,16 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* DESKTOP PRIMARY NAVIGATION (1024px+) */}
-          {/* Clean architecture: Home, About, Services ▼, Industries ▼, Tax Strategies ▼, More ▼ */}
+          {/* Clean architecture: Home, About, Services ▼, Industries ▼ (xl), Tax Strategies ▼, More ▼ */}
           <nav 
-            className="hidden lg:flex items-center gap-1 xl:gap-2 min-w-0 flex-1 justify-center"
+            className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 flex-shrink-0"
             aria-label="Primary Site Navigation"
           >
             {/* 1. Home */}
             <button
               type="button"
               onClick={() => handleNavClick('home')}
-              className={`text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2.5 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+              className={`text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                 currentPage === 'home' 
                   ? 'text-[#E2BD67] font-semibold' 
                   : 'text-slate-300 hover:text-white'
@@ -190,7 +190,7 @@ export const Navbar: React.FC = () => {
             <button
               type="button"
               onClick={() => handleNavClick('about')}
-              className={`text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2.5 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+              className={`text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                 currentPage === 'about' 
                   ? 'text-[#E2BD67] font-semibold' 
                   : 'text-slate-300 hover:text-white'
@@ -212,7 +212,7 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={servicesOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2.5 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   currentPage === 'services' 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
@@ -309,7 +309,7 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={industriesOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   currentPage === 'industries' 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
@@ -384,7 +384,7 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={taxStrategiesOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   currentPage === 'tax_strategies' 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
@@ -468,33 +468,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 6. Resources (Visible on xl, accessible via More on lg) */}
-            <button
-              type="button"
-              onClick={() => handleNavClick('resources')}
-              className={`hidden xl:block text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
-                currentPage === 'resources' 
-                  ? 'text-[#E2BD67] font-semibold' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Resources
-            </button>
-
-            {/* 7. Contact (Visible on xl, accessible via More on lg) */}
-            <button
-              type="button"
-              onClick={() => handleNavClick('contact')}
-              className={`hidden xl:block text-xs font-medium tracking-wider uppercase transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
-                currentPage === 'contact' 
-                  ? 'text-[#E2BD67] font-semibold' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Contact
-            </button>
-
-            {/* 8. More ▼ */}
+            {/* 6. More ▼ */}
             <div className="relative" ref={moreRef}>
               <button
                 ref={moreBtnRef}
@@ -507,7 +481,7 @@ export const Navbar: React.FC = () => {
                 }}
                 aria-expanded={moreOpen}
                 aria-haspopup="true"
-                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-3 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
+                className={`text-xs font-medium tracking-wider uppercase flex items-center gap-1 transition-colors whitespace-nowrap px-2 xl:px-2.5 py-2 rounded-md hover:bg-[#0B2748]/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#C99A3D] ${
                   isMoreActive 
                     ? 'text-[#E2BD67] font-semibold' 
                     : 'text-slate-300 hover:text-white'
@@ -522,7 +496,7 @@ export const Navbar: React.FC = () => {
                   role="menu"
                   className="absolute right-0 mt-2 w-72 rounded-xl bg-[#0B2748] border border-[#1E3A5F] shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 text-slate-100"
                 >
-                  {/* Shown in More only on lg screens where they aren't on top bar */}
+                  {/* Shown in More only on lg screens where Industries is not in top bar */}
                   <div className="xl:hidden">
                     <button
                       role="menuitem"
@@ -536,32 +510,34 @@ export const Navbar: React.FC = () => {
                       </div>
                     </button>
 
-                    <button
-                      role="menuitem"
-                      onClick={() => handleNavClick('resources')}
-                      className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'resources' ? 'bg-[#132E52]' : ''}`}
-                    >
-                      <HelpCircle className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <div className="text-xs font-semibold text-slate-100">Resources &amp; FAQ</div>
-                        <div className="text-[11px] text-slate-400">Tax Deadlines, Checklists &amp; Guides</div>
-                      </div>
-                    </button>
-
-                    <button
-                      role="menuitem"
-                      onClick={() => handleNavClick('contact')}
-                      className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'contact' ? 'bg-[#132E52]' : ''}`}
-                    >
-                      <Building2 className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
-                      <div>
-                        <div className="text-xs font-semibold text-slate-100">Contact Us</div>
-                        <div className="text-[11px] text-slate-400">Columbia, SC Office &amp; Inquiries</div>
-                      </div>
-                    </button>
-
                     <div className="h-px bg-[#1E3A5F]/70 my-1" />
                   </div>
+
+                  <button
+                    role="menuitem"
+                    onClick={() => handleNavClick('resources')}
+                    className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'resources' ? 'bg-[#132E52]' : ''}`}
+                  >
+                    <HelpCircle className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-xs font-semibold text-slate-100">Resources &amp; FAQ</div>
+                      <div className="text-[11px] text-slate-400">Tax Deadlines, Checklists &amp; Guides</div>
+                    </div>
+                  </button>
+
+                  <button
+                    role="menuitem"
+                    onClick={() => handleNavClick('contact')}
+                    className={`w-full text-left p-2.5 rounded-lg hover:bg-[#132E52] transition-colors flex items-start gap-2.5 ${currentPage === 'contact' ? 'bg-[#132E52]' : ''}`}
+                  >
+                    <Building2 className="w-4 h-4 text-[#C99A3D] mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-xs font-semibold text-slate-100">Contact Us</div>
+                      <div className="text-[11px] text-slate-400">Columbia, SC Office &amp; Inquiries</div>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-[#1E3A5F]/70 my-1" />
 
                   <button
                     role="menuitem"
