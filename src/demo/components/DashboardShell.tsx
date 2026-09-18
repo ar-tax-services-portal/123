@@ -27,7 +27,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   ArrowRight,
-  RotateCcw
+  RotateCcw,
+  Layers
 } from 'lucide-react';
 
 export interface NavItem {
@@ -117,6 +118,44 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
       });
     }
   }, [activeNavId, navGroups, role]);
+
+  const [navSearch, setNavSearch] = useState('');
+
+  const handleToggleAllGroups = () => {
+    if (!navGroups) return;
+    const allOpen = navGroups.every(g => openGroups[g.id]);
+    const next: Record<string, boolean> = {};
+    navGroups.forEach(g => {
+      next[g.id] = !allOpen;
+    });
+    setOpenGroups(next);
+  };
+
+  const flattenedNavList = React.useMemo(() => {
+    if (navGroups && navGroups.length > 0) {
+      return navGroups.flatMap(g => g.items);
+    }
+    return navItems || [];
+  }, [navGroups, navItems]);
+
+  const currentNavIndex = flattenedNavList.findIndex(i => i.id === activeNavId);
+  const prevItem = currentNavIndex > 0 ? flattenedNavList[currentNavIndex - 1] : null;
+  const nextItem = currentNavIndex >= 0 && currentNavIndex < flattenedNavList.length - 1 ? flattenedNavList[currentNavIndex + 1] : null;
+
+  const displayedNavGroups = React.useMemo(() => {
+    if (!navGroups) return [];
+    if (!navSearch.trim()) return navGroups;
+    const query = navSearch.toLowerCase().trim();
+    return navGroups
+      .map(g => ({
+        ...g,
+        items: g.items.filter(i => 
+          i.label.toLowerCase().includes(query) || 
+          g.label.toLowerCase().includes(query)
+        )
+      }))
+      .filter(g => g.items.length > 0);
+  }, [navGroups, navSearch]);
 
   const toggleGroup = (groupId: string) => {
     setOpenGroups(prev => {
@@ -255,11 +294,45 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             </button>
           </div>
 
+          {/* Navigation Filter & Quick Controls (Desktop Expanded) */}
+          {!sidebarCollapsed && navGroups && navGroups.length > 0 && (
+            <div className="px-3 pt-2.5 pb-2 border-b border-[#1A365D]/60 flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <Search className="w-3 h-3 text-slate-400 absolute left-2 top-2" />
+                <input
+                  type="text"
+                  placeholder="Filter pages..."
+                  value={navSearch}
+                  onChange={(e) => setNavSearch(e.target.value)}
+                  className="w-full bg-[#031323] border border-[#1A365D] text-slate-200 text-[11px] rounded pl-7 pr-6 py-1 placeholder:text-slate-500 focus:outline-none focus:border-[#C99A32]"
+                />
+                {navSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setNavSearch('')}
+                    className="absolute right-1.5 top-1.5 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleAllGroups}
+                className="p-1 text-slate-400 hover:text-[#E8C66A] rounded border border-[#1A365D] bg-[#031323]"
+                title="Expand / Collapse all categories"
+                aria-label="Expand or Collapse all categories"
+              >
+                <Layers className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Navigation Links (Grouped or Flat) */}
           <nav className="flex-1 p-2 space-y-2 overflow-y-auto" aria-label="Dashboard Navigation">
-            {navGroups && navGroups.length > 0 ? (
-              navGroups.map((group) => {
-                const isExpanded = openGroups[group.id] ?? false;
+            {displayedNavGroups && displayedNavGroups.length > 0 ? (
+              displayedNavGroups.map((group) => {
+                const isExpanded = navSearch.trim() ? true : (openGroups[group.id] ?? false);
                 const hasActiveItem = group.items.some(i => i.id === activeNavId);
                 return (
                   <div key={group.id} className="space-y-0.5">
@@ -267,21 +340,16 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleGroup(group.id)}
-                        className={`w-full flex items-center justify-between px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors rounded ${
+                        className={`w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors rounded ${
                           hasActiveItem ? 'text-[#E8C66A] font-bold' : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
                         <span className="truncate">{group.label}</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[9px] px-1 py-0.2 bg-[#031323] text-slate-400 rounded">
-                            {group.items.length}
-                          </span>
-                          {isExpanded ? (
-                            <ChevronDown className="w-3 h-3 text-slate-400" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-slate-400" />
-                          )}
-                        </div>
+                        {isExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        )}
                       </button>
                     ) : (
                       <div className="h-px bg-[#1A365D] my-1.5" title={group.label} />
@@ -418,19 +486,14 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                         <button
                           type="button"
                           onClick={() => toggleGroup(group.id)}
-                          className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 hover:text-white font-semibold"
+                          className="w-full flex items-center justify-between px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider text-slate-300 hover:text-white font-semibold"
                         >
                           <span>{group.label}</span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] px-1 py-0.2 bg-[#0A2544] text-[#D7AC4A] rounded">
-                              {group.items.length}
-                            </span>
-                            {isExpanded ? (
-                              <ChevronDown className="w-3 h-3 text-slate-400" />
-                            ) : (
-                              <ChevronRight className="w-3 h-3 text-slate-400" />
-                            )}
-                          </div>
+                          {isExpanded ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          )}
                         </button>
                         {isExpanded && (
                           <div className="space-y-0.5 pl-1">
@@ -666,6 +729,41 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
             )}
 
             {children}
+
+            {/* Clean Bottom Navigation (Previous / Next page) */}
+            {flattenedNavList.length > 1 && currentNavIndex >= 0 && (
+              <nav className="pt-6 mt-8 border-t border-[#D8DCE2] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs" aria-label="Page Pagination">
+                {prevItem ? (
+                  <button
+                    onClick={() => handleNavClick(prevItem.id)}
+                    className="w-full sm:w-auto flex items-center gap-2.5 px-4 py-2.5 border border-[#D8DCE2] bg-white hover:bg-[#F7F4ED] text-[#061A2F] rounded transition-colors group shadow-2xs cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-[#C99A32] group-hover:-translate-x-0.5 transition-transform shrink-0" />
+                    <div className="text-left">
+                      <div className="text-[10px] uppercase font-mono text-[#667085]">Previous Page</div>
+                      <div className="font-semibold text-[#061A2F] truncate max-w-[200px]">{prevItem.label}</div>
+                    </div>
+                  </button>
+                ) : <div />}
+
+                <div className="text-[11px] font-mono text-[#667085] hidden md:block">
+                  Page {currentNavIndex + 1} of {flattenedNavList.length}
+                </div>
+
+                {nextItem ? (
+                  <button
+                    onClick={() => handleNavClick(nextItem.id)}
+                    className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2.5 px-4 py-2.5 border border-[#061A2F] bg-[#061A2F] hover:bg-[#0A2544] text-white rounded transition-colors group shadow-2xs cursor-pointer ml-auto"
+                  >
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase font-mono text-[#E8C66A]">Next Page</div>
+                      <div className="font-semibold text-white truncate max-w-[200px]">{nextItem.label}</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#E8C66A] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </button>
+                ) : <div />}
+              </nav>
+            )}
           </main>
         </div>
 

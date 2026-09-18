@@ -219,8 +219,8 @@ export const AccountantReviewStatusSection: React.FC = () => {
               </h4>
 
               <div className="space-y-1.5 text-xs">
-                <div className="flex items-center justify-between p-2 bg-white border border-neutral-200 rounded">
-                  <span className="font-semibold text-neutral-800">1. Form Classification Approved</span>
+                <div className="flex items-center justify-between p-2.5 bg-white border border-neutral-200 rounded">
+                  <span className="font-semibold text-neutral-800">Form Classification Approved</span>
                   {selectedDoc.classificationApproved ? (
                     <span className="text-emerald-700 font-bold flex items-center gap-1 font-mono">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Verified
@@ -230,8 +230,8 @@ export const AccountantReviewStatusSection: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-2 bg-white border border-neutral-200 rounded">
-                  <span className="font-semibold text-neutral-800">2. Standard Filename Confirmed</span>
+                <div className="flex items-center justify-between p-2.5 bg-white border border-neutral-200 rounded">
+                  <span className="font-semibold text-neutral-800">Standard Filename Confirmed</span>
                   {selectedDoc.filenameApproved ? (
                     <span className="text-emerald-700 font-bold flex items-center gap-1 font-mono">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Verified
@@ -241,8 +241,8 @@ export const AccountantReviewStatusSection: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-2 bg-white border border-neutral-200 rounded">
-                  <span className="font-semibold text-neutral-800">3. Extracted Financial Numbers Tied Out</span>
+                <div className="flex items-center justify-between p-2.5 bg-white border border-neutral-200 rounded">
+                  <span className="font-semibold text-neutral-800">Extracted Financial Numbers Tied Out</span>
                   {selectedDoc.fieldsVerified ? (
                     <span className="text-emerald-700 font-bold flex items-center gap-1 font-mono">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Verified

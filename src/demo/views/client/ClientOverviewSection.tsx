@@ -234,7 +234,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <UploadCloud className="w-4 h-4 text-[#061A2F] group-hover:text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">1. Upload Document</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Upload Document</div>
             <div className="text-[11px] text-[#667085] mt-0.5">Add tax forms, K-1s, or receipts to Vault</div>
           </button>
 
@@ -246,7 +246,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <CheckCircle className="w-4 h-4 text-[#061A2F] group-hover:text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">2. Continue Organizer</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Continue Organizer</div>
             <div className="text-[11px] text-[#667085] mt-0.5">21 comprehensive tax questionnaires (75% done)</div>
           </button>
 
@@ -258,7 +258,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <DollarSign className="w-4 h-4 text-[#061A2F] group-hover:text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">3. Add Income Record</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Add Income Record</div>
             <div className="text-[11px] text-[#667085] mt-0.5">Log revenues, dividends, or pass-through</div>
           </button>
 
@@ -270,7 +270,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <DollarSign className="w-4 h-4 text-[#061A2F] group-hover:text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">4. Add Expense Entry</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Add Expense Entry</div>
             <div className="text-[11px] text-[#667085] mt-0.5">Log deductible expenses with AI suggestions</div>
           </button>
 
@@ -282,7 +282,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <FileText className="w-4 h-4 text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">5. Review Draft Return</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Review Draft Return</div>
             <div className="text-[11px] text-[#667085] mt-0.5">Inspect Form 1120-S figures and notes</div>
           </button>
 
@@ -294,7 +294,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <PenTool className="w-4 h-4 text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">6. Authorize Form 8879</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Authorize Form 8879</div>
             <div className="text-[11px] text-[#667085] mt-0.5">E-sign corporate e-file authorization</div>
           </button>
 
@@ -306,7 +306,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <CreditCard className="w-4 h-4 text-[#061A2F] group-hover:text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">7. View Fee Invoices</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">View Fee Invoices</div>
             <div className="text-[11px] text-[#667085] mt-0.5">Inspect itemized invoices and simulate payment</div>
           </button>
 
@@ -318,7 +318,7 @@ export const ClientOverviewSection: React.FC<ClientOverviewSectionProps> = ({
               <AlertCircle className="w-4 h-4 text-[#061A2F] group-hover:text-[#C99A32]" />
               <ChevronRight className="w-3.5 h-3.5 text-[#667085] group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <div className="text-xs font-bold text-[#061A2F] mt-2">8. Upload Tax Notice</div>
+            <div className="text-xs font-bold text-[#061A2F] mt-2">Upload Tax Notice</div>
             <div className="text-[11px] text-[#667085] mt-0.5">Upload IRS / SC DOR letter for CPA defense</div>
           </button>
         </div>

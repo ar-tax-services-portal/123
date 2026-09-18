@@ -55,7 +55,7 @@ import {
   DemoAdvisoryService,
   ClientDashboardOverview
 } from '../services/clientDashboardServices';
-import { normalizeClientTab } from '../config/clientNavGroups';
+import { normalizeClientTab, CLIENT_NAV_GROUPS } from '../config/clientNavGroups';
 import { ClientOverviewSection } from './client/ClientOverviewSection';
 import { ClientVaultSection } from './client/ClientVaultSection';
 import { ClientOrganizerSection } from './client/ClientOrganizerSection';
@@ -390,6 +390,34 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
             )}
           </button>
         </div>
+      </div>
+
+      {/* Category Quick Navigation Bar: Clean, effortless jump between primary sections */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs border-b border-[#D8DCE2]/60 pt-0.5">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-[#667085] font-semibold mr-1 shrink-0">
+          Section:
+        </span>
+        {CLIENT_NAV_GROUPS.map((group) => {
+          const isGroupActive = group.items.some(i => i.id === currentTab);
+          const firstItem = group.items[0];
+          return (
+            <button
+              key={group.id}
+              onClick={() => {
+                if (onSelectNav && firstItem) {
+                  onSelectNav(firstItem.id);
+                }
+              }}
+              className={`px-3 py-1 rounded text-xs whitespace-nowrap transition-all shrink-0 font-medium cursor-pointer ${
+                isGroupActive
+                  ? 'bg-[#061A2F] text-[#E8C66A] border border-[#C99A32]/40 font-bold shadow-2xs'
+                  : 'bg-white text-[#4A5568] border border-[#D8DCE2] hover:bg-[#F7F4ED] hover:text-[#061A2F]'
+              }`}
+            >
+              {group.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Multi-Year Notification Banner (Section 5) */}

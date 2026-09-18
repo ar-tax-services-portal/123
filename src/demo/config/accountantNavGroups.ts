@@ -33,19 +33,19 @@ export const ACCOUNTANT_NAV_GROUPS: NavGroup[] = [
     label: 'Main Practice Center',
     defaultExpanded: true,
     items: [
-      { id: 'dashboard', label: '1. Dashboard', icon: LayoutDashboard },
-      { id: 'clients', label: '2. Clients', icon: Users },
-      { id: 'tax_years', label: '3. Tax Years', icon: Calendar },
-      { id: 'document_center', label: '4. Document Center', icon: FolderOpen },
-      { id: 'workpapers', label: '5. Workpaper Center', icon: FileSpreadsheet },
-      { id: 'tax_prep', label: '6. Tax Preparation', icon: FileCheck2 },
-      { id: 'exceptions', label: '7. Exceptions', icon: AlertOctagon },
-      { id: 'missing_docs', label: '8. Missing Documents', icon: FileQuestion },
-      { id: 'prior_year', label: '9. Prior-Year Comparison', icon: GitCompare },
-      { id: 'pre_filing_review', label: '10. Pre-Filing Review', icon: ShieldCheck },
-      { id: 'filing_readiness', label: '11. Filing Readiness', icon: CheckCircle2 },
-      { id: 'reports', label: '12. Reports', icon: FileBarChart },
-      { id: 'audit_log', label: '13. Audit Log', icon: History }
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'clients', label: 'Clients', icon: Users },
+      { id: 'tax_years', label: 'Tax Years', icon: Calendar },
+      { id: 'document_center', label: 'Document Center', icon: FolderOpen },
+      { id: 'workpapers', label: 'Workpaper Center', icon: FileSpreadsheet },
+      { id: 'tax_prep', label: 'Tax Preparation', icon: FileCheck2 },
+      { id: 'exceptions', label: 'Exceptions', icon: AlertOctagon },
+      { id: 'missing_docs', label: 'Missing Documents', icon: FileQuestion },
+      { id: 'prior_year', label: 'Prior-Year Comparison', icon: GitCompare },
+      { id: 'pre_filing_review', label: 'Pre-Filing Review', icon: ShieldCheck },
+      { id: 'filing_readiness', label: 'Filing Readiness', icon: CheckCircle2 },
+      { id: 'reports', label: 'Reports', icon: FileBarChart },
+      { id: 'audit_log', label: 'Audit Log', icon: History }
     ]
   },
   {
@@ -53,13 +53,13 @@ export const ACCOUNTANT_NAV_GROUPS: NavGroup[] = [
     label: 'Administration',
     defaultExpanded: true,
     items: [
-      { id: 'team', label: '14. Team', icon: UserCheck },
-      { id: 'permissions', label: '15. Roles & Permissions', icon: KeyRound },
-      { id: 'ai_config', label: '16. AI Configuration', icon: Sparkles },
-      { id: 'doc_rules', label: '17. Document Rules', icon: FileCog },
-      { id: 'workflow_config', label: '18. Workflow Configuration', icon: Workflow },
-      { id: 'demo_env', label: '19. Demo Environment', icon: FlaskConical },
-      { id: 'settings', label: '20. System Settings', icon: Settings }
+      { id: 'team', label: 'Team', icon: UserCheck },
+      { id: 'permissions', label: 'Roles & Permissions', icon: KeyRound },
+      { id: 'ai_config', label: 'AI Configuration', icon: Sparkles },
+      { id: 'doc_rules', label: 'Document Rules', icon: FileCog },
+      { id: 'workflow_config', label: 'Workflow Configuration', icon: Workflow },
+      { id: 'demo_env', label: 'Demo Environment', icon: FlaskConical },
+      { id: 'settings', label: 'System Settings', icon: Settings }
     ]
   }
 ];
