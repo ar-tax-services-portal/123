@@ -374,6 +374,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
   const [filterImportance, setFilterImportance] = useState<string>('ALL');
   const [activeExplainId, setActiveExplainId] = useState<string | null>(null);
   const [explainText, setExplainText] = useState<string>('');
+  const [explainError, setExplainError] = useState<string | null>(null);
   const [auditNotice, setAuditNotice] = useState<string | null>(null);
 
   // Filtered items
@@ -415,6 +416,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
   const handleStatusChange = (id: string, newStatus: ChecklistResponse) => {
     if (newStatus === 'does_not_apply') {
       setActiveExplainId(id);
+      setExplainError(null);
       const target = items.find(i => i.id === id);
       setExplainText(target?.notApplicableReason || '');
       return;
@@ -433,7 +435,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
   const handleSaveNotApplicable = (id: string) => {
     if (!explainText.trim()) {
-      alert('A brief reason is required when marking an item as "Does Not Apply" for accountant review.');
+      setExplainError('A brief reason is required when marking an item as "Does Not Apply" for accountant review.');
       return;
     }
 
@@ -451,6 +453,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
     setActiveExplainId(null);
     setExplainText('');
+    setExplainError(null);
     setAuditNotice('Explanation recorded. Item flagged for accountant review & validation.');
     setTimeout(() => setAuditNotice(null), 4000);
   };
@@ -696,6 +699,11 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                     <Info className="w-4 h-4 text-[#0A2544]" />
                     <span>Explain Why "{item.formNumber}" Does Not Apply:</span>
                   </div>
+                  {explainError && (
+                    <div className="p-2 bg-red-50 border border-red-300 text-red-800 text-[11px] rounded">
+                      {explainError}
+                    </div>
+                  )}
                   <textarea
                     value={explainText}
                     onChange={(e) => setExplainText(e.target.value)}

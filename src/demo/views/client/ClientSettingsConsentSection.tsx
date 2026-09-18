@@ -21,17 +21,37 @@ import { demoDataStore } from '../../services/DemoDataService';
 interface ClientSettingsConsentSectionProps {
   clientId?: string;
   onOpenAssistant?: () => void;
+  defaultTab?: 'security' | 'consents' | 'notifications' | 'sessions';
 }
 
 export const ClientSettingsConsentSection: React.FC<ClientSettingsConsentSectionProps> = ({
   clientId = 'cli_perotti',
-  onOpenAssistant
+  onOpenAssistant,
+  defaultTab = 'security'
 }) => {
-  const [activeTab, setActiveTab] = useState<'security' | 'consents' | 'notifications' | 'sessions'>('security');
+  const [activeTab, setActiveTab] = useState<'security' | 'consents' | 'notifications' | 'sessions'>(defaultTab);
   const [mfaEnabled, setMfaEnabled] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  const handleExportAuditTrail = () => {
+    const auditData = {
+      client: clientId,
+      exportTimestamp: new Date().toISOString(),
+      mfaStatus: mfaEnabled ? 'Enforced' : 'Disabled',
+      registeredSessions: sessions,
+      activeConsents: consents
+    };
+    const blob = new Blob([JSON.stringify(auditData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Security_Audit_Trail_${clientId}_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    setActionNotice('Security and audit trail exported successfully.');
+    setTimeout(() => setActionNotice(null), 4000);
+  };
 
   // Active Consents
   const consents = [
@@ -125,8 +145,8 @@ export const ClientSettingsConsentSection: React.FC<ClientSettingsConsentSection
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => alert('Exporting full client security and immutable audit history (JSON/CSV).')}
-              className="px-3.5 py-2 border border-[#D8DCE2] hover:border-[#061A2F] rounded text-xs font-bold text-[#061A2F] flex items-center gap-1.5"
+              onClick={handleExportAuditTrail}
+              className="px-3.5 py-2 border border-[#D8DCE2] hover:border-[#061A2F] rounded text-xs font-bold text-[#061A2F] flex items-center gap-1.5 cursor-pointer hover:bg-neutral-50 transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export Audit Trail</span>
@@ -196,8 +216,11 @@ export const ClientSettingsConsentSection: React.FC<ClientSettingsConsentSection
                 </div>
               </div>
               <button
-                onClick={() => alert('Simulating MFA device rotation.')}
-                className="px-3 py-1.5 border border-[#D8DCE2] hover:border-[#061A2F] rounded text-xs font-medium text-[#061A2F]"
+                onClick={() => {
+                  setActionNotice('MFA rotation initiated: Scan refreshed QR code with your authenticator app.');
+                  setTimeout(() => setActionNotice(null), 4000);
+                }}
+                className="px-3 py-1.5 border border-[#D8DCE2] hover:border-[#061A2F] rounded text-xs font-medium text-[#061A2F] cursor-pointer hover:bg-white transition-colors"
               >
                 Reconfigure Key
               </button>
@@ -217,8 +240,11 @@ export const ClientSettingsConsentSection: React.FC<ClientSettingsConsentSection
                 </div>
               </div>
               <button
-                onClick={() => alert('Simulating phone number update.')}
-                className="px-3 py-1.5 border border-[#D8DCE2] hover:border-[#061A2F] rounded text-xs font-medium text-[#061A2F]"
+                onClick={() => {
+                  setActionNotice('Backup phone verification updated and SMS verification code dispatched.');
+                  setTimeout(() => setActionNotice(null), 4000);
+                }}
+                className="px-3 py-1.5 border border-[#D8DCE2] hover:border-[#061A2F] rounded text-xs font-medium text-[#061A2F] cursor-pointer hover:bg-white transition-colors"
               >
                 Update Phone
               </button>

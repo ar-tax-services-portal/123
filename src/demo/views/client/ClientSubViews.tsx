@@ -392,6 +392,37 @@ export const ClientFilingStatusView: React.FC = () => {
 
 /* 9. Appointments & Consultations */
 export const ClientAppointmentsView: React.FC = () => {
+  const [showModal, setShowModal] = useState(false);
+  const [topic, setTopic] = useState('CY2025 Final Return Review & Strategy Call');
+  const [preferredDate, setPreferredDate] = useState('2026-03-20');
+  const [preferredTime, setPreferredTime] = useState('14:00');
+  const [notes, setNotes] = useState('');
+  const [bookedAppointments, setBookedAppointments] = useState([
+    {
+      id: 'apt-01',
+      title: 'CY2025 Final Return Review & Strategy Call',
+      host: 'Desmond Hinds, CPA (Google Meet / Zoom)',
+      dateStr: 'March 8, 2026 • 2:00 PM EST',
+      status: 'Confirmed'
+    }
+  ]);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const handleBook = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newApt = {
+      id: `apt-${Date.now()}`,
+      title: topic,
+      host: 'Desmond Hinds, CPA & Senior Tax Strategist',
+      dateStr: `${preferredDate} • ${preferredTime} EST`,
+      status: 'Confirmed'
+    };
+    setBookedAppointments(prev => [newApt, ...prev]);
+    setShowModal(false);
+    setNotice(`Appointment reserved: "${topic}" on ${preferredDate} at ${preferredTime} EST. Calendar invite dispatched.`);
+    setTimeout(() => setNotice(null), 5000);
+  };
+
   return (
     <div className="space-y-6">
       <div className="p-6 bg-white border border-neutral-300 rounded-lg shadow-sm">
@@ -403,8 +434,8 @@ export const ClientAppointmentsView: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => alert('Simulated calendar booking interface launched for Desmond Hinds, CPA.')}
-            className="px-4 py-2 bg-[#061A2F] text-white rounded text-xs font-semibold hover:bg-[#0A2544] flex items-center gap-1.5"
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-[#061A2F] text-white rounded text-xs font-semibold hover:bg-[#0A2544] flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
             <Calendar className="w-4 h-4 text-[#D7AC4A]" />
             <span>Schedule New Call</span>
@@ -412,18 +443,115 @@ export const ClientAppointmentsView: React.FC = () => {
         </div>
       </div>
 
+      {notice && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg text-xs font-medium flex items-center gap-2 shadow-2xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
+
       <div className="p-4 bg-white border border-neutral-300 rounded-lg shadow-xs space-y-3">
-        <div className="p-3 border border-neutral-200 rounded flex items-center justify-between text-xs">
-          <div>
-            <span className="font-bold text-neutral-900">CY2025 Final Return Review & Strategy Call</span>
-            <div className="text-neutral-500 text-[11px] mt-0.5">With Desmond Hinds, CPA (Google Meet / Zoom)</div>
+        <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Scheduled Consultations</h3>
+        {bookedAppointments.map(apt => (
+          <div key={apt.id} className="p-3 border border-neutral-200 rounded flex items-center justify-between text-xs hover:border-neutral-300 transition-colors">
+            <div>
+              <span className="font-bold text-neutral-900">{apt.title}</span>
+              <div className="text-neutral-500 text-[11px] mt-0.5">With {apt.host}</div>
+            </div>
+            <div className="text-right font-mono">
+              <div className="font-bold text-neutral-900">{apt.dateStr}</div>
+              <span className="text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{apt.status}</span>
+            </div>
           </div>
-          <div className="text-right font-mono">
-            <div className="font-bold text-neutral-900">March 8, 2026 • 2:00 PM EST</div>
-            <span className="text-emerald-700 font-bold text-[10px]">Confirmed</span>
+        ))}
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-neutral-300 w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+              <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#C99A32]" />
+                <span>Schedule Consultation with Desmond Hinds, CPA</span>
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-neutral-400 hover:text-neutral-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleBook} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-neutral-800 mb-1">Consultation Topic</label>
+                <select
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded bg-white text-xs"
+                >
+                  <option value="CY2025 Final Return Review & Strategy Call">CY2025 Final Return Review & Strategy Call</option>
+                  <option value="CY2026 Forward Tax Planning & PTET Analysis">CY2026 Forward Tax Planning & PTET Analysis</option>
+                  <option value="IRS / State Notice Technical Response Review">IRS / State Notice Technical Response Review</option>
+                  <option value="Entity Restructuring & Capital Allocation Call">Entity Restructuring & Capital Allocation Call</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-neutral-800 mb-1">Target Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={preferredDate}
+                    onChange={(e) => setPreferredDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-neutral-800 mb-1">Preferred Time</label>
+                  <select
+                    value={preferredTime}
+                    onChange={(e) => setPreferredTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded text-xs bg-white"
+                  >
+                    <option value="10:00 AM">10:00 AM EST</option>
+                    <option value="11:30 AM">11:30 AM EST</option>
+                    <option value="02:00 PM">02:00 PM EST</option>
+                    <option value="04:30 PM">04:30 PM EST</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-neutral-800 mb-1">Specific Questions or Focus Areas</label>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="E.g. Review K-1 allocation and 1099-B wash sale carryovers..."
+                  className="w-full px-3 py-2 border border-neutral-300 rounded text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-3 py-1.5 border border-neutral-300 hover:bg-neutral-50 rounded text-neutral-700 font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-[#061A2F] hover:bg-[#0A2544] text-white rounded font-semibold transition-colors cursor-pointer"
+                >
+                  Confirm Reservation
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -486,6 +614,22 @@ export const ClientActivityHistoryView: React.FC = () => {
 
 /* 12. Contact Support */
 export const ClientContactSupportView: React.FC = () => {
+  const [message, setMessage] = useState('');
+  const [priority, setPriority] = useState('Normal');
+  const [dispatchedTicket, setDispatchedTicket] = useState<{ id: string; time: string; text: string } | null>(null);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+
+    setDispatchedTicket({
+      id: `TKT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text: message.trim()
+    });
+    setMessage('');
+  };
+
   return (
     <div className="space-y-6">
       <div className="p-6 bg-white border border-neutral-300 rounded-lg shadow-sm">
@@ -494,6 +638,18 @@ export const ClientContactSupportView: React.FC = () => {
           Connect directly with the A/R Tax Services operations desk, administrative team, or your lead CPA.
         </p>
       </div>
+
+      {dispatchedTicket && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-lg text-xs space-y-1">
+          <div className="font-bold text-emerald-900 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+            <span>Support Ticket Registered ({dispatchedTicket.id})</span>
+          </div>
+          <p className="text-emerald-800">
+            Your inquiry has been routed to the engagement coordinator desk at {dispatchedTicket.time}. A response will be posted in your Messages & Tasks tab.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
         <div className="p-5 bg-white border border-neutral-300 rounded-lg shadow-xs space-y-2">
@@ -509,18 +665,35 @@ export const ClientContactSupportView: React.FC = () => {
 
         <div className="p-5 bg-white border border-neutral-300 rounded-lg shadow-xs space-y-2">
           <h3 className="text-sm font-bold text-neutral-900">Submit Direct Message</h3>
-          <textarea
-            placeholder="Type your message to the engagement coordinator..."
-            className="w-full px-3 py-2 border border-neutral-300 rounded text-xs"
-            rows={3}
-          />
-          <button
-            onClick={() => alert('Message transmitted to the A/R Tax Services engagement desk.')}
-            className="px-4 py-2 bg-[#061A2F] text-white rounded text-xs font-semibold hover:bg-[#0A2544] flex items-center gap-1.5"
-          >
-            <Send className="w-3.5 h-3.5 text-[#D7AC4A]" />
-            <span>Send Message</span>
-          </button>
+          <form onSubmit={handleSendMessage} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] font-semibold text-neutral-700">Urgency:</label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className="px-2 py-1 border border-neutral-300 rounded text-xs bg-white"
+              >
+                <option value="Normal">Normal — Standard Inquiry</option>
+                <option value="Urgent">Urgent — Statutory Filing Deadline</option>
+                <option value="Audit">Priority — IRS Notice or Audit Examination</option>
+              </select>
+            </div>
+            <textarea
+              required
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type your message or technical question to the engagement coordinator..."
+              className="w-full px-3 py-2 border border-neutral-300 rounded text-xs"
+              rows={3}
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#061A2F] text-white rounded text-xs font-semibold hover:bg-[#0A2544] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <Send className="w-3.5 h-3.5 text-[#D7AC4A]" />
+              <span>Send Message</span>
+            </button>
+          </form>
         </div>
       </div>
     </div>

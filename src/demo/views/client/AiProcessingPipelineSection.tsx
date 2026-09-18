@@ -175,6 +175,7 @@ export const AiProcessingPipelineSection: React.FC = () => {
   const [correctionReason, setCorrectionReason] = useState('wrong_category');
   const [correctionNotes, setCorrectionNotes] = useState('');
   const [clientConfirmed, setClientConfirmed] = useState<Record<string, boolean>>({});
+  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
 
   const handleCopyJson = () => {
     navigator.clipboard.writeText(JSON.stringify(selectedResult, null, 2));
@@ -187,9 +188,10 @@ export const AiProcessingPipelineSection: React.FC = () => {
   };
 
   const handleSubmitCorrection = () => {
-    alert(`Correction request submitted for "${selectedResult.originalFilename}": ${correctionReason.toUpperCase()}. Notification dispatched to your assigned tax reviewer.`);
+    setFeedbackNotice(`Correction request submitted for "${selectedResult.originalFilename}": ${correctionReason.toUpperCase()}. Notification dispatched to your assigned tax reviewer.`);
     setCorrectionModalOpen(false);
     setCorrectionNotes('');
+    setTimeout(() => setFeedbackNotice(null), 5000);
   };
 
   const getConfidenceBadge = (score: number) => {
@@ -239,6 +241,13 @@ export const AiProcessingPipelineSection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {feedbackNotice && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg text-xs font-medium flex items-center gap-2 shadow-2xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{feedbackNotice}</span>
+        </div>
+      )}
 
       {/* Document Selector Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

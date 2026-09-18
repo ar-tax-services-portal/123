@@ -69,6 +69,7 @@ const INITIAL_CONTACTS: AuthorizedContact[] = [
 export const ClientContactsSection: React.FC = () => {
   const [contacts, setContacts] = useState<AuthorizedContact[]>(INITIAL_CONTACTS);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [newContact, setNewContact] = useState<Partial<AuthorizedContact>>({
     name: '',
     role: '',
@@ -81,23 +82,24 @@ export const ClientContactsSection: React.FC = () => {
   });
 
   const handleAdd = () => {
-    if (!newContact.name || !newContact.email) {
-      alert('Name and email are required.');
+    if (!newContact.name?.trim() || !newContact.email?.trim()) {
+      setModalError('Legal Name and Email address are required fields.');
       return;
     }
     const created: AuthorizedContact = {
       id: `ct-${Date.now()}`,
-      name: newContact.name,
-      role: newContact.role || 'Authorized Agent',
-      relationship: newContact.relationship || 'Representative',
-      email: newContact.email,
-      phone: newContact.phone || '(555) 000-0000',
+      name: newContact.name.trim(),
+      role: newContact.role?.trim() || 'Authorized Agent',
+      relationship: newContact.relationship?.trim() || 'Representative',
+      email: newContact.email.trim(),
+      phone: newContact.phone?.trim() || '(555) 000-0000',
       hasSigningAuthority: !!newContact.hasSigningAuthority,
       hasPoa2848: !!newContact.hasPoa2848,
       accessLevel: (newContact.accessLevel as any) || 'Read Only'
     };
     setContacts(prev => [...prev, created]);
     setIsAddModalOpen(false);
+    setModalError(null);
     setNewContact({
       name: '',
       role: '',
@@ -204,6 +206,12 @@ export const ClientContactsSection: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-lg border border-neutral-300 shadow-2xl max-w-md w-full p-6 space-y-4">
             <h3 className="text-base font-bold text-neutral-900">Add Authorized Representative</h3>
+
+            {modalError && (
+              <div className="p-2.5 bg-red-50 border border-red-300 text-red-800 rounded text-xs">
+                {modalError}
+              </div>
+            )}
 
             <div className="space-y-3 text-xs">
               <div>

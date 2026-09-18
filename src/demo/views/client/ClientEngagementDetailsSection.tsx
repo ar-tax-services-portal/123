@@ -17,6 +17,28 @@ import {
 } from 'lucide-react';
 
 export const ClientEngagementDetailsSection: React.FC = () => {
+  const [downloadNotice, setDownloadNotice] = React.useState<string | null>(null);
+
+  const handleDownloadAgreement = () => {
+    const content = `A/R TAX SERVICES, LLC — MASTER TAX ENGAGEMENT AGREEMENT
+Client: Desmond Hinds / Perotti Holdings & Advisory LLC
+Lead Practitioner: Desmond Hinds, CPA (PTIN: P01928472)
+Firm: A/R Tax Services, LLC
+Date Executed: December 12, 2025
+Scope of Services: Preparation and electronic filing of Form 1040, Form 1120-S, multi-state withholding, and quarterly safe-harbor tax calculations.
+Standard of Practice: Treasury Department Circular No. 230 and AICPA Statements on Standards for Tax Services.
+Status: EXECUTED & COUNTERSIGNED`;
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Signed_Engagement_Agreement_AR_Tax_Services_CY2025.txt`;
+    a.click();
+    setDownloadNotice('Signed Engagement Agreement downloaded successfully.');
+    setTimeout(() => setDownloadNotice(null), 4000);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -33,14 +55,21 @@ export const ClientEngagementDetailsSection: React.FC = () => {
           </div>
 
           <button
-            onClick={() => alert('Simulated download of signed engagement agreement PDF.')}
-            className="px-4 py-2 bg-[#061A2F] text-white hover:bg-[#0A2544] text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs"
+            onClick={handleDownloadAgreement}
+            className="px-4 py-2 bg-[#061A2F] text-white hover:bg-[#0A2544] text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
             <Download className="w-4 h-4 text-[#D7AC4A]" />
             <span>Download Signed Agreement</span>
           </button>
         </div>
       </div>
+
+      {downloadNotice && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg text-xs font-medium flex items-center gap-2 shadow-2xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          <span>{downloadNotice}</span>
+        </div>
+      )}
 
       {/* Engagement Summary Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">

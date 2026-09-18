@@ -46,6 +46,7 @@ const PACKAGE_COMPONENTS = [
 export const TaxPackageSection: React.FC<TaxPackageSectionProps> = ({ selectedYear }) => {
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
   const [activePreviewIndex, setActivePreviewIndex] = useState<number>(1); // Form 1040
+  const [showSpecimenModal, setShowSpecimenModal] = useState<boolean>(false);
 
   const handleDownloadZip = () => {
     setDownloadSuccess(`Generated 15-component ZIP archive: "2025_TaxPackage_DesmondHinds_A_R_Tax.zip" (14.2 MB). Download initiated.`);
@@ -235,8 +236,8 @@ export const TaxPackageSection: React.FC<TaxPackageSectionProps> = ({ selectedYe
                   Reviewer: Desmond Hinds, CPA
                 </span>
                 <button
-                  onClick={() => alert(`Opening simulated PDF preview for "${PACKAGE_COMPONENTS[activePreviewIndex].name}".`)}
-                  className="px-3 py-1.5 bg-[#061A2F] text-white font-semibold rounded text-xs hover:bg-[#0A2544] transition-colors"
+                  onClick={() => setShowSpecimenModal(true)}
+                  className="px-3 py-1.5 bg-[#061A2F] text-white font-semibold rounded text-xs hover:bg-[#0A2544] transition-colors cursor-pointer shadow-xs"
                 >
                   View Full PDF Specimen
                 </button>
@@ -245,6 +246,72 @@ export const TaxPackageSection: React.FC<TaxPackageSectionProps> = ({ selectedYe
           </div>
         </div>
       </div>
+
+      {showSpecimenModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl border border-neutral-300 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-[#061A2F] text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-[#E8C66A] tracking-wider block">Authorized PDF Specimen</span>
+                <h3 className="text-sm font-bold">{PACKAGE_COMPONENTS[activePreviewIndex].name}</h3>
+              </div>
+              <button
+                onClick={() => setShowSpecimenModal(false)}
+                className="text-neutral-400 hover:text-white text-base font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs font-mono bg-neutral-50 flex-1">
+              <div className="p-4 bg-white border border-neutral-200 rounded shadow-xs relative">
+                <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none select-none text-4xl font-bold font-sans rotate-[-25deg]">
+                  DEMO DRAFT SPECIMEN
+                </div>
+                <div className="border-b border-neutral-200 pb-3 mb-3 flex justify-between items-center text-neutral-900">
+                  <span className="font-bold">A/R TAX SERVICES, LLC • COMPLIANCE ARCHIVE</span>
+                  <span className="text-[10px] text-neutral-500">FORM REV 2026</span>
+                </div>
+                <div className="space-y-2 text-neutral-700">
+                  <div className="flex justify-between">
+                    <span>Taxpayer Entity:</span>
+                    <span className="font-bold text-neutral-900">Perotti Holdings & Advisory LLC</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax Year:</span>
+                    <span className="font-bold text-neutral-900">{selectedYear}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Lead Preparer:</span>
+                    <span className="font-bold text-neutral-900">Desmond Hinds, CPA (PTIN: P01928472)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Document Checksum:</span>
+                    <span className="text-emerald-700 font-bold">SHA-256 (b8e4f1...982a)</span>
+                  </div>
+                  <div className="p-3 bg-neutral-100 rounded text-[11px] text-neutral-600 mt-3 font-sans">
+                    This authorized electronic specimen is generated dynamically from verified workpapers. In accordance with Treasury Circular 230 and IRS e-file guidelines, this draft reflects preliminary taxpayer positions prior to Form 8879 execution.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-white border-t border-neutral-200 flex items-center justify-between text-xs">
+              <span className="text-neutral-500 font-sans">Status: Document Verified</span>
+              <button
+                onClick={() => {
+                  setShowSpecimenModal(false);
+                  setDownloadSuccess(`Simulated download complete for "${PACKAGE_COMPONENTS[activePreviewIndex].name}".`);
+                  setTimeout(() => setDownloadSuccess(null), 4000);
+                }}
+                className="px-4 py-1.5 bg-[#061A2F] text-white rounded font-semibold hover:bg-[#0A2544] transition-colors cursor-pointer"
+              >
+                Download PDF Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

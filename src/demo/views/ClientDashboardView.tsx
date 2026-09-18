@@ -540,6 +540,33 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         />
       )}
 
+      {/* TAB: TAX ORGANIZER (21-SECTION DRAFT & SUBMISSION ENGINE) */}
+      {currentTab === 'organizer' && (
+        <ClientOrganizerSection
+          organizerService={organizerService}
+          clientId="cli_perotti"
+          onNavigateToVault={() => setTab('vault')}
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: PREFERENCES & NOTIFICATION DELEGATION */}
+      {currentTab === 'preferences' && (
+        <ClientSettingsConsentSection
+          clientId="cli_perotti"
+          defaultTab="notifications"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
+      {/* TAB: INTEGRATION CENTER */}
+      {currentTab === 'integrations_center' && (
+        <ClientAccountingConnectionsSection
+          clientId="cli_perotti"
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
       {/* TAB: CUSTOMERS & AR */}
       {currentTab === 'customers_ar' && (
         <ClientCustomersArView />
@@ -643,13 +670,18 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         />
       )}
 
-      {/* TAB: LEDGER & EXPENSES */}
-      {currentTab === 'ledger' && (
+      {/* TAB: INCOME & EXPENSES */}
+      {currentTab === 'income_expenses' && (
         <ClientIncomeExpensesSection
           incomeExpenseService={incomeExpenseService}
           clientId="cli_perotti"
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
+      )}
+
+      {/* TAB: GENERAL LEDGER */}
+      {currentTab === 'ledger' && (
+        <ClientLedgerView />
       )}
 
       {/* TAB: RETURN REVIEW & SIGNATURE */}

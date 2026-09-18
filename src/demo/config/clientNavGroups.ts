@@ -231,8 +231,11 @@ export function normalizeClientTab(rawTab?: string | null): string {
     receivables: 'customers_ar',
     payables: 'vendors_ap',
     filing_acks: 'filing_status',
-    organizer: 'questionnaire',
-    tax_planning: 'advisory'
+    tax_planning: 'advisory',
+    util_ai: 'voice_assistant',
+    util_integrations: 'integrations_center',
+    util_profile: 'entities',
+    util_signout: 'settings'
   };
   const resolved = aliasMap[rawTab] || rawTab;
   return VALID_CLIENT_TABS.has(resolved) ? resolved : 'overview';
