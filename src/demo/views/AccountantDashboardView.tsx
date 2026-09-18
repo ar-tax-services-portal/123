@@ -18,6 +18,7 @@ import { MissingDocumentCenter } from './accountant/MissingDocumentCenter';
 import { PriorYearComparisonView } from './accountant/PriorYearComparisonView';
 import { PreFilingQcView } from './accountant/PreFilingQcView';
 import { FinalApprovalFilingView } from './accountant/FinalApprovalFilingView';
+import { FilingOperationsView } from './accountant/FilingOperationsView';
 import { ReportsExportCenter } from './accountant/ReportsExportCenter';
 import { AccountantAuditLogView } from './accountant/AccountantAuditLogView';
 import { AccountantAdminViews } from './accountant/AccountantAdminViews';
@@ -72,6 +73,8 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
   const selectedTaxYear = accountantCenterService.getSelectedTaxYear();
   const allClients = accountantCenterService.getAllClients();
   const availableYears = [2026, 2025, 2024, 2023];
+
+  const [filingSubView, setFilingSubView] = useState<'operations' | 'approval'>('operations');
 
   const currentTab = activeNavId === 'default' || !activeNavId ? 'dashboard' : activeNavId;
 
@@ -256,12 +259,46 @@ export const AccountantDashboardView: React.FC<AccountantDashboardViewProps> = (
         />
       )}
 
-      {/* 11. Filing Readiness */}
-      {currentTab === 'filing_readiness' && (
-        <FinalApprovalFilingView 
-          isDark={isDark} 
-          onNavigateToQc={() => onSelectNav('pre_filing_review')} 
-        />
+      {/* 11. Filing Readiness & Operations */}
+      {(currentTab === 'filing_readiness' || currentTab === 'filing_operations') && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b pb-2 border-neutral-200 dark:border-neutral-800 text-xs font-mono">
+            <button
+              onClick={() => setFilingSubView('operations')}
+              className={`px-3 py-1.5 rounded font-bold transition-all ${
+                filingSubView === 'operations'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              Filing Operations &amp; Transmission Queue
+            </button>
+            <button
+              onClick={() => setFilingSubView('approval')}
+              className={`px-3 py-1.5 rounded font-bold transition-all ${
+                filingSubView === 'approval'
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              Final Return Approval &amp; Attestation
+            </button>
+          </div>
+
+          {filingSubView === 'operations' ? (
+            <FilingOperationsView 
+              isDark={isDark} 
+              onNavigateToQc={() => onSelectNav('pre_filing_review')}
+              onNavigateToPrep={() => onSelectNav('tax_prep')}
+              onNavigateToAudit={() => onSelectNav('audit_log')}
+            />
+          ) : (
+            <FinalApprovalFilingView 
+              isDark={isDark} 
+              onNavigateToQc={() => onSelectNav('pre_filing_review')} 
+            />
+          )}
+        </div>
       )}
 
       {/* 12. Reports */}

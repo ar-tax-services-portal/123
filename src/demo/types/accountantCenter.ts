@@ -395,17 +395,31 @@ export interface ReturnTraceabilityRecord {
 }
 
 export interface PreFilingGate {
-  id: string;
-  label: string;
-  name?: string;
+  id: string; // alias for gateId
+  gateId?: string;
   gateNumber?: number;
+  label: string; // alias for name
+  name?: string;
   description?: string;
+  category: 'Profile' | 'Documents' | 'Reconciliation' | 'Exceptions' | 'QC' | 'Signoff' | 'Verification' | 'Accounting' | 'Diagnostics' | 'Quality Control' | 'Client Authorization' | 'Filing Release' | string;
+  isRequired?: boolean;
   isCleared?: boolean;
-  status: 'VERIFIED' | 'CONFIRMED' | 'REVIEWED' | 'RECONCILED' | 'RESOLVED' | 'COMPLETED' | 'APPROVED' | 'PENDING' | 'BLOCKED' | string;
-  isBlocking: boolean;
+  isBlocking: boolean; // alias for !isCleared
   blockReason?: string;
   blockingReason?: string;
-  category: 'Profile' | 'Documents' | 'Reconciliation' | 'Exceptions' | 'QC' | 'Signoff' | string;
+  blockingItems?: string[];
+  requiredEvidence?: string[];
+  responsibleRole?: string;
+  clearedBy?: string;
+  clearedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reopenedAt?: string;
+  reopenReason?: string;
+  ruleVersion?: string;
+  taxYear?: number;
+  lastEvaluatedAt?: string;
+  status: 'VERIFIED' | 'CONFIRMED' | 'REVIEWED' | 'RECONCILED' | 'RESOLVED' | 'COMPLETED' | 'APPROVED' | 'PENDING' | 'BLOCKED' | 'Not Evaluated' | 'Awaiting Client' | 'Awaiting Preparer' | 'Awaiting Reviewer' | 'Ready for Review' | 'Cleared' | 'Reopened' | 'Superseded' | 'Not Applicable with Approval' | string;
 }
 
 export interface DemoFilingRecord {
@@ -427,4 +441,21 @@ export interface DemoFilingRecord {
   mefTransmissionHash: string;
   transmissionHash?: string;
   auditTrailId: string;
+
+  // Extended properties
+  packageVersion?: string;
+  jurisdictions?: string[];
+  preparer?: string;
+  reviewer?: string;
+  clientApprovalStatus?: string;
+  form8879Status?: string;
+  gateStatus?: string;
+  releaseStatus?: string;
+  duplicateSubmissionStatus?: string;
+  simulationStatus?: string;
+  latestAcknowledgement?: any;
+  idempotencyKey?: string;
 }
+
+export * from './preFilingGateRegistry';
+

@@ -35,6 +35,8 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
   const [attestationSupporting, setAttestationSupporting] = useState(false);
   const [attestationQc, setAttestationQc] = useState(false);
   const [attestationFirmProcedures, setAttestationFirmProcedures] = useState(false);
+  const [reviewerSigner, setReviewerSigner] = useState('Elena Rostova, CPA');
+  const [approvalError, setApprovalError] = useState<string | null>(null);
 
   const client = accountantCenterService.getSelectedClient();
   const taxYear = accountantCenterService.getSelectedTaxYear();
@@ -51,20 +53,27 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
     attestationFirmProcedures;
 
   const handleCommitApproval = () => {
+    setApprovalError(null);
     if (!canApproveForFiling) {
-      alert('Mandatory Hard-Stop Gates are currently blocking sign-off. Please clear all gates in Pre-Filing QC.');
+      setApprovalError('Mandatory Hard-Stop Gates are currently blocking sign-off. Please resolve all blocked gates in Pre-Filing QC.');
       return;
     }
     if (!allAttestationsChecked) {
-      alert('You must check all 6 statutory and firm attestation boxes to record approval.');
+      setApprovalError('You must check all 6 statutory and firm attestation boxes to record approval.');
       return;
     }
 
-    accountantCenterService.commitFinalApproval('Marcus Vance, EA');
+    const result = accountantCenterService.signFinalAccountantApproval(reviewerSigner);
+    if (!result.success) {
+      setApprovalError(`Maker-Checker Authorization Block: ${result.message}`);
+    }
   };
 
   const handleSimulateFiling = () => {
-    accountantCenterService.simulateEfiling();
+    const result = accountantCenterService.simulateEFiling();
+    if (!result.success) {
+      setApprovalError(`Simulation Blocked: ${result.message}`);
+    }
   };
 
   const handleSimulateStatus = (status: 'Accepted' | 'Rejected' | 'Resubmitted') => {
@@ -264,11 +273,55 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
             </label>
           </div>
 
-          <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex justify-end">
+          {approvalError && (
+            <div className="p-3.5 border border-red-400 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200 rounded-lg text-xs font-mono font-bold flex items-start gap-2">
+              <AlertOctagon className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">{approvalError}</div>
+              <button onClick={() => setApprovalError(null)} className="text-[10px] underline">Dismiss</button>
+            </div>
+          )}
+
+          {/* Section 7: Maker-Checker Reviewer Sign-Off Selector */}
+          <div className="p-4 border rounded-lg bg-neutral-50 dark:bg-neutral-800/40 space-y-3">
+            <div className="text-xs font-bold uppercase font-mono text-neutral-700 dark:text-neutral-300">
+              Maker-Checker Authorization &bull; Independent Reviewer Sign-Off
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div className="p-2.5 border rounded bg-white dark:bg-neutral-900">
+                <span className="text-[10px] text-neutral-500 uppercase block">Responsible Preparer</span>
+                <span className="font-bold text-neutral-900 dark:text-white">{client.assignedPreparer || 'Marcus Vance, EA'}</span>
+                <span className="text-[10px] text-neutral-400 block mt-0.5">(Cannot review or release own work)</span>
+              </div>
+              <div className="p-2.5 border rounded bg-white dark:bg-neutral-900">
+                <span className="text-[10px] text-neutral-500 uppercase block">Independent Signer</span>
+                <select
+                  value={reviewerSigner}
+                  onChange={(e) => {
+                    setReviewerSigner(e.target.value);
+                    setApprovalError(null);
+                  }}
+                  className="w-full mt-1 p-1.5 border rounded text-xs bg-neutral-50 dark:bg-neutral-800 font-bold"
+                >
+                  <option value="Elena Rostova, CPA">Elena Rostova, CPA (Independent Reviewer)</option>
+                  <option value="Marcus Vance, EA">Marcus Vance, EA (Responsible Preparer - Test Block)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {!canApproveForFiling && onNavigateToQc && (
+              <button
+                onClick={onNavigateToQc}
+                className="text-xs font-mono font-bold text-red-600 dark:text-red-400 underline flex items-center gap-1"
+              >
+                <span>{blockingReasons.length} gates blocking approval. Click to view Pre-Filing QC &rarr;</span>
+              </button>
+            )}
             <button
               onClick={handleCommitApproval}
               disabled={!canApproveForFiling || !allAttestationsChecked}
-              className={`px-6 py-2.5 rounded text-xs font-bold uppercase flex items-center gap-2 shadow transition-all ${
+              className={`ml-auto px-6 py-2.5 rounded text-xs font-bold uppercase flex items-center gap-2 shadow transition-all ${
                 canApproveForFiling && allAttestationsChecked
                   ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:opacity-90'
                   : 'bg-neutral-300 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500 cursor-not-allowed'
@@ -283,7 +336,7 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
         /* SECTION 32 & 33: DEMO FILING WORKFLOW & POST-FILING RECORD */
         <div className="space-y-6">
           {/* Approved Banner */}
-          <div className="p-4 border border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg flex items-center justify-between">
+          <div className="p-4 border border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               <div>
@@ -291,20 +344,27 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
                   Return Certified &amp; Approved for Filing — Demo
                 </div>
                 <div className="text-xs text-emerald-800 dark:text-emerald-300 font-mono">
-                  Signer: {finalApproval.approvedBy} &bull; Timestamp: {new Date(finalApproval.approvalTimestamp!).toLocaleString()}
+                  Reviewer Signer: {finalApproval.approvedBy} &bull; Timestamp: {new Date(finalApproval.approvalTimestamp!).toLocaleString()}
                 </div>
               </div>
             </div>
 
-            {filingRecord.status === 'Ready for Filing — Demo' && (
+            {filingRecord.status.includes('Ready') && (
               <button
                 onClick={handleSimulateFiling}
-                className="px-4 py-2 bg-emerald-700 text-white rounded text-xs font-bold uppercase hover:bg-emerald-800 flex items-center gap-1.5 shadow"
+                title="Execute simulated electronic transmission with idempotency lock."
+                className="px-5 py-2.5 bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 rounded text-xs font-bold uppercase hover:opacity-90 flex items-center gap-2 shadow"
               >
                 <Send className="w-4 h-4" />
-                <span>Simulate E-Filing</span>
+                <span>Run Demo Filing Simulation</span>
               </button>
             )}
+          </div>
+
+          {/* SIMULATED ACKNOWLEDGEMENT BANNER (Mandatory Section 13) */}
+          <div className="p-3.5 border-2 border-neutral-400 bg-neutral-100 dark:bg-neutral-800/80 text-neutral-900 dark:text-neutral-100 rounded-lg text-xs font-mono font-bold flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>SIMULATED ACKNOWLEDGEMENT — NO GOVERNMENT AGENCY WAS CONTACTED.</span>
           </div>
 
           {/* SECTION 33: POST-FILING RECORD */}
@@ -319,8 +379,8 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
                 </h3>
               </div>
               <span className={`px-3 py-1 rounded text-xs font-mono font-bold ${
-                filingRecord.status.includes('Accepted') ? 'bg-emerald-100 text-emerald-900' :
-                filingRecord.status.includes('Rejected') ? 'bg-red-100 text-red-900' :
+                filingRecord.status.includes('Accepted') || filingRecord.status.includes('ACCEPTED') ? 'bg-emerald-100 text-emerald-900' :
+                filingRecord.status.includes('Rejected') || filingRecord.status.includes('REJECTED') ? 'bg-red-100 text-red-900' :
                 'bg-blue-100 text-blue-900'
               }`}>
                 {filingRecord.status}
@@ -350,8 +410,9 @@ export const FinalApprovalFilingView: React.FC<FinalApprovalFilingViewProps> = (
 
             <div className="p-3 border rounded border-neutral-200 dark:border-neutral-800 text-xs font-mono space-y-1.5 bg-neutral-50/50 dark:bg-neutral-800/20">
               <div><strong>Transmission Hash:</strong> {filingRecord.transmissionHash}</div>
-              <div><strong>Firm EFIN:</strong> 574892 &bull; <strong>Preparer PTIN:</strong> P01849201 (Marcus Vance, EA)</div>
+              <div><strong>Firm EFIN:</strong> 574892 &bull; <strong>Preparer PTIN:</strong> P01849201 ({client.assignedPreparer || 'Marcus Vance, EA'})</div>
               <div><strong>Audit Trail Reference:</strong> {filingRecord.auditTrailId}</div>
+              <div><strong>Electronic Postmark:</strong> 2026-04-14T23:59:58Z (Simulated Modernized e-File)</div>
               {filingRecord.rejectionReason && (
                 <div className="text-red-600 font-bold">
                   Simulated Rejection Reason: {filingRecord.rejectionReason}

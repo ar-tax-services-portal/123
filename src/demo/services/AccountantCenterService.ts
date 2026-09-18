@@ -23,6 +23,11 @@ import {
   ExceptionDisposition
 } from '../types/accountantCenter';
 import { demoDataStore } from './DemoDataService';
+import { DemoRole } from '../types';
+import {
+  preFilingGateRegistryService,
+  ClientProfileContext
+} from './preFilingGateRegistryService';
 
 export interface AccountantClientSummary {
   id: string;
@@ -771,160 +776,47 @@ class AccountantCenterService {
 
   public evaluateHardStopGates(): { gates: PreFilingGate[]; canApproveForFiling: boolean; blockingReasons: string[] } {
     const client = this.getSelectedClient();
-    const blockingReasons: string[] = [];
-
-    // 1. Client Profile
-    const profileGate: PreFilingGate = {
-      id: 'gate-profile',
-      label: 'Client Profile & Identity Verification',
-      status: 'VERIFIED',
-      isBlocking: false,
-      category: 'Profile'
-    };
-
-    // 2. Tax Year
-    const yearGate: PreFilingGate = {
-      id: 'gate-year',
-      label: 'Tax Year & Filing Cycle Confirmed',
-      status: 'CONFIRMED',
-      isBlocking: false,
-      category: 'Profile'
-    };
-
-    // 3. Documents
+    
+    // Calculate actual review/document item counts
     const pendingDocs = this.documents.filter(d => d.clientId === client.id && d.taxYear === this.selectedTaxYear && d.reviewStatus !== 'Approved' && d.reviewStatus !== 'Rejected');
-    const docsGate: PreFilingGate = {
-      id: 'gate-docs',
-      label: 'Source Documents Ingested & Reviewed',
-      status: pendingDocs.length === 0 ? 'REVIEWED' : 'BLOCKED',
-      isBlocking: pendingDocs.length > 0,
-      blockReason: pendingDocs.length > 0 ? `${pendingDocs.length} documents remain pending accountant review` : undefined,
-      category: 'Documents'
-    };
-    if (docsGate.isBlocking) blockingReasons.push(docsGate.blockReason!);
-
-    // 4. Income Reconciled
-    const unverifiedIncome = this.incomeItems.filter(i => i.taxYear === this.selectedTaxYear && i.verificationStatus === 'Pending');
-    const incomeGate: PreFilingGate = {
-      id: 'gate-income',
-      label: 'Income Workpapers Reconciled',
-      status: unverifiedIncome.length === 0 ? 'RECONCILED' : 'BLOCKED',
-      isBlocking: unverifiedIncome.length > 0,
-      blockReason: unverifiedIncome.length > 0 ? `${unverifiedIncome.length} income workpaper lines require verification` : undefined,
-      category: 'Reconciliation'
-    };
-    if (incomeGate.isBlocking) blockingReasons.push(incomeGate.blockReason!);
-
-    // 5. Payments Reconciled
-    const unverifiedPayments = this.paymentItems.filter(p => p.taxYear === this.selectedTaxYear && !p.accountantVerified);
-    const paymentsGate: PreFilingGate = {
-      id: 'gate-payments',
-      label: 'Tax Payments & Withholding Verified',
-      status: unverifiedPayments.length === 0 ? 'RECONCILED' : 'BLOCKED',
-      isBlocking: unverifiedPayments.length > 0,
-      blockReason: unverifiedPayments.length > 0 ? `${unverifiedPayments.length} tax payments pending accountant verification` : undefined,
-      category: 'Reconciliation'
-    };
-    if (paymentsGate.isBlocking) blockingReasons.push(paymentsGate.blockReason!);
-
-    // 6. Foreign Information Hard Stop (Mandatory Rule)
-    const foreignExceptions = this.exceptions.filter(e => e.clientId === client.id && e.category === 'Foreign Information Indicator' && e.disposition === 'OPEN');
-    const foreignGate: PreFilingGate = {
-      id: 'gate-foreign',
-      label: 'Foreign Information & Accounts Review',
-      status: foreignExceptions.length === 0 ? 'REVIEWED' : 'BLOCKED',
-      isBlocking: foreignExceptions.length > 0,
-      blockReason: foreignExceptions.length > 0 ? 'FOREIGN INFORMATION — Accountant Review Required before filing' : undefined,
-      category: 'Exceptions'
-    };
-    if (foreignGate.isBlocking) blockingReasons.push(foreignGate.blockReason!);
-
-    // 7. AI Exceptions
-    const openExceptions = this.exceptions.filter(e => e.clientId === client.id && e.taxYear === this.selectedTaxYear && e.disposition === 'OPEN');
-    const exceptionsGate: PreFilingGate = {
-      id: 'gate-exceptions',
-      label: 'AI Exceptions Cleared & Disposed',
-      status: openExceptions.length === 0 ? 'RESOLVED' : 'BLOCKED',
-      isBlocking: openExceptions.length > 0,
-      blockReason: openExceptions.length > 0 ? `${openExceptions.length} AI exceptions remain un-disposed` : undefined,
-      category: 'Exceptions'
-    };
-    if (exceptionsGate.isBlocking) blockingReasons.push(exceptionsGate.blockReason!);
-
-    // 8. Missing Documents
     const blockingMissing = this.missingDocuments.filter(m => m.clientId === client.id && m.taxYear === this.selectedTaxYear && m.accountantStatus !== 'Resolved');
-    const missingGate: PreFilingGate = {
-      id: 'gate-missing',
-      label: 'Missing Required Documents Resolved',
-      status: blockingMissing.length === 0 ? 'RESOLVED' : 'BLOCKED',
-      isBlocking: blockingMissing.length > 0,
-      blockReason: blockingMissing.length > 0 ? `${blockingMissing.length} required documents pending receipt or waiver` : undefined,
-      category: 'Documents'
-    };
-    if (missingGate.isBlocking) blockingReasons.push(missingGate.blockReason!);
-
-    // 9. Prior Year Compared
+    const unverifiedIncome = this.incomeItems.filter(i => i.taxYear === this.selectedTaxYear && i.verificationStatus === 'Pending');
+    const unverifiedPayments = this.paymentItems.filter(p => p.taxYear === this.selectedTaxYear && !p.accountantVerified);
+    const foreignExceptions = this.exceptions.filter(e => e.clientId === client.id && e.category === 'Foreign Information Indicator' && e.disposition === 'OPEN');
+    const openExceptions = this.exceptions.filter(e => e.clientId === client.id && e.taxYear === this.selectedTaxYear && e.disposition === 'OPEN');
     const openPrior = this.priorYearItems.filter(p => p.clientId === client.id && p.requiresReview);
-    const priorGate: PreFilingGate = {
-      id: 'gate-prior',
-      label: 'Prior-Year Discrepancies Reconciled',
-      status: openPrior.length === 0 ? 'RESOLVED' : 'BLOCKED',
-      isBlocking: openPrior.length > 0,
-      blockReason: openPrior.length > 0 ? `${openPrior.length} prior-year changes require accountant review` : undefined,
-      category: 'QC'
-    };
-    if (priorGate.isBlocking) blockingReasons.push(priorGate.blockReason!);
-
-    // 10. QC Review (at least 15 of 17 stages checked)
     const uncheckedQc = this.qcChecklist.filter(q => !q.checked);
-    const qcGate: PreFilingGate = {
-      id: 'gate-qc',
-      label: '17-Stage Pre-Filing Quality Control Check',
-      status: uncheckedQc.length === 0 ? 'COMPLETED' : 'BLOCKED',
-      isBlocking: uncheckedQc.length > 0,
-      blockReason: uncheckedQc.length > 0 ? `${uncheckedQc.length} QC stages remain unchecked` : undefined,
-      category: 'QC'
+
+    const profile: ClientProfileContext = {
+      clientId: client.id,
+      clientName: client.name,
+      entityType: client.entityType,
+      taxYear: this.selectedTaxYear,
+      filingStatus: client.filingStatus,
+      jurisdictions: ['IRS (Federal)', 'South Carolina Department of Revenue (SC1040)'],
+      identityVerified: true,
+      preparer: client.assignedPreparer || 'Marcus Vance, EA',
+      reviewer: client.assignedReviewer || 'Elena Rostova, CPA',
+      hasForeignInfo: client.hasForeignInfo,
+      returnVersion: preFilingGateRegistryService.getReturnVersion(client.id, this.selectedTaxYear)
     };
-    if (qcGate.isBlocking) blockingReasons.push(qcGate.blockReason!);
 
-    // 11. Final Accountant Approval
-    const finalGate: PreFilingGate = {
-      id: 'gate-final-signoff',
-      label: 'Final Accountant Approval & Practice Attestation',
-      status: this.finalApproval.isApproved ? 'APPROVED' : 'BLOCKED',
-      isBlocking: !this.finalApproval.isApproved,
-      blockReason: !this.finalApproval.isApproved ? 'Final accountant approval attestation not yet signed' : undefined,
-      category: 'Signoff'
-    };
-    if (finalGate.isBlocking) blockingReasons.push(finalGate.blockReason!);
-
-    const allGates: PreFilingGate[] = [
-      profileGate,
-      yearGate,
-      docsGate,
-      incomeGate,
-      paymentsGate,
-      foreignGate,
-      exceptionsGate,
-      missingGate,
-      priorGate,
-      qcGate,
-      finalGate
-    ].map((g, idx) => ({
-      ...g,
-      gateNumber: idx + 1,
-      name: g.label,
-      description: g.label,
-      isCleared: !g.isBlocking,
-      blockingReason: g.blockReason
-    }));
-
-    const canApprove = blockingReasons.length === 0;
+    const evalResult = preFilingGateRegistryService.evaluateGates(profile, {
+      pendingDocsCount: pendingDocs.length,
+      missingDocsCount: blockingMissing.length,
+      unverifiedIncomeCount: unverifiedIncome.length,
+      unverifiedPaymentsCount: unverifiedPayments.length,
+      openExceptionsCount: openExceptions.length,
+      foreignExceptionsCount: foreignExceptions.length,
+      openPriorYearCount: openPrior.length,
+      uncheckedQcCount: uncheckedQc.length,
+      finalAccountantApprovalSigned: this.finalApproval.isApproved
+    });
 
     return {
-      gates: allGates,
-      canApproveForFiling: canApprove,
-      blockingReasons
+      gates: evalResult.gates,
+      canApproveForFiling: evalResult.canApproveForFiling,
+      blockingReasons: evalResult.blockingReasons
     };
   }
 
@@ -939,15 +831,34 @@ class AccountantCenterService {
     this.notify();
   }
 
-  public signFinalAccountantApproval(accountantName: string = 'Marcus Vance, EA'): { success: boolean; message: string } {
-    // Check if prerequisite gates are clear (ignoring the final signoff itself)
+  public signFinalAccountantApproval(accountantName: string = 'Elena Rostova, CPA'): { success: boolean; message: string } {
+    const client = this.getSelectedClient();
+
+    // Section 7 MAKER-CHECKER ENFORCEMENT:
+    // A preparer cannot independently review and release their own material work
+    if (accountantName.trim().toLowerCase() === (client.assignedPreparer || '').trim().toLowerCase()) {
+      demoDataStore.logAudit({
+        user: accountantName,
+        role: 'accountant' as DemoRole,
+        action: 'Independent QC Review Sign-off Prohibited (Maker-Checker Conflict)',
+        record: `Client: ${client.name} (TY${this.selectedTaxYear})`,
+        result: 'Warning (Simulated)',
+        reason: 'Preparer cannot independently act as quality-control reviewer for their own prepared return.'
+      });
+      return {
+        success: false,
+        message: `Maker-Checker Policy Violation: ${accountantName} is listed as the return Preparer. An independent reviewer (e.g. ${client.assignedReviewer || 'Elena Rostova, CPA'}) must conduct and sign the quality-control approval.`
+      };
+    }
+
+    // Check if prerequisite gates are clear (Gates 1-5 for accountant review clearance)
     const { gates } = this.evaluateHardStopGates();
-    const prereqFailures = gates.filter(g => g.id !== 'gate-final-signoff' && g.isBlocking);
+    const prereqFailures = gates.filter(g => (g.gateNumber || 1) <= 4 && !g.isCleared);
 
     if (prereqFailures.length > 0) {
       return {
         success: false,
-        message: `Cannot approve for filing: ${prereqFailures[0].blockReason || 'Prerequisite hard-stops remain unresolved.'}`
+        message: `Cannot approve for filing: ${prereqFailures[0].blockingReason || 'Prerequisite hard-stops remain unresolved.'}`
       };
     }
 
@@ -969,74 +880,96 @@ class AccountantCenterService {
     this.finalApproval.approvedAt = new Date().toISOString();
     this.finalApproval.approvalTimestamp = this.finalApproval.approvedAt;
 
+    // Record Maker-Checker Log
+    preFilingGateRegistryService.recordMakerChecker({
+      id: `MC-APP-${Date.now()}`,
+      maker: client.assignedPreparer || 'Marcus Vance, EA',
+      checker: accountantName,
+      role: 'Reviewer (CPA)',
+      action: 'Independent Quality-Control Sign-off',
+      decision: 'Approved',
+      reason: '17-Stage QC Checklist, workpapers, source manifests, and return diagnostics verified.',
+      beforeState: 'Awaiting Reviewer',
+      afterState: 'Reviewer Approved',
+      timestamp: new Date().toISOString(),
+      returnVersion: preFilingGateRegistryService.getReturnVersion(client.id, this.selectedTaxYear),
+      gateAffected: 'Gate 5 — Independent Quality-Control Review'
+    });
+
     // Update client status
-    const client = this.getSelectedClient();
     client.workflowStatus = 'READY FOR FILING — DEMO';
 
     demoDataStore.logAudit({
       user: accountantName,
       role: 'accountant',
-      action: 'Final Accountant Approval Signed',
+      action: 'Independent QC Approval Signed (Maker-Checker Verified)',
       record: `Client: ${client.name} (TY${this.selectedTaxYear})`,
       result: 'Success (Simulated)',
-      reason: 'All prerequisite quality control gates cleared. Attestation signed for demonstration filing.'
+      reason: 'All prerequisite quality control gates cleared. Independent reviewer attestation certified.'
     });
 
     this.notify();
-    return { success: true, message: 'Filing readiness certified. Demo e-filing pipeline unlocked.' };
+    return { success: true, message: 'Filing readiness certified. Independent QC review complete.' };
   }
+
 
   // --- Demo E-Filing Simulation ---
   public getFilingRecords(): DemoFilingRecord[] {
     return this.filingRecords;
   }
 
-  public simulateEFiling(): { success: boolean; submissionId: string; message: string } {
-    if (!this.finalApproval.isApproved) {
+  public simulateEFiling(idempotencyKey?: string): { success: boolean; submissionId: string; message: string } {
+    const client = this.getSelectedClient();
+    const key = idempotencyKey || `SIM-${client.id}-${this.selectedTaxYear}-${Date.now()}`;
+
+    // Execute through Authoritative Pre-Filing Gate Registry Service
+    const simResult = preFilingGateRegistryService.runDemoFilingSimulation(
+      client.id,
+      this.selectedTaxYear,
+      key,
+      this.finalApproval.approvedBy || 'Elena Rostova, CPA'
+    );
+
+    if (!simResult.success) {
       return {
         success: false,
         submissionId: '',
-        message: 'E-filing locked: Final accountant approval must be obtained first.'
+        message: simResult.message
       };
     }
 
-    const client = this.getSelectedClient();
-    const submissionId = `DEMO-${this.selectedTaxYear}-000${Math.floor(100 + Math.random() * 900)}`;
-    const newRecord: DemoFilingRecord = {
-      submissionId,
-      clientId: client.id,
-      clientName: client.name,
-      taxYear: this.selectedTaxYear,
-      returnType: client.entityType.includes('S-Corp') ? 'Form 1120-S (S-Corporation)' : 'Form 1040 (Individual)',
-      filingDateTime: new Date().toISOString(),
-      filingMethod: 'Electronic Transmission (MEF XML Demo)',
-      efileProvider: 'Demo E-File Service (Sandbox)',
-      status: 'FILED — DEMO',
-      accountantSigner: this.finalApproval.approvedBy || 'Marcus Vance, EA',
-      authorizationRecordId: `AUTH-${Date.now()}`,
-      mefTransmissionHash: `SHA256:${Math.random().toString(36).substring(2, 15).toUpperCase()}`,
-      auditTrailId: `AUDIT-FILING-${Date.now()}`
-    };
-
-    this.filingRecords.unshift(newRecord);
-    client.workflowStatus = 'FILED — DEMO';
-
-    demoDataStore.logAudit({
-      user: this.finalApproval.approvedBy || 'Marcus Vance, EA',
-      role: 'accountant',
-      action: 'Simulated Demo E-Filing Dispatched',
-      record: `Submission ID: ${submissionId}`,
-      result: 'Success (Simulated)',
-      reason: 'Generated Modernized e-File XML envelope and simulated IRS gateway transmission.'
-    });
+    // Sync state
+    const simRecord = simResult.record!;
+    this.filingRecords.unshift(simRecord as any);
+    client.workflowStatus = simRecord.status as any;
 
     this.notify();
     return {
       success: true,
-      submissionId,
-      message: `Simulated filing submitted successfully. Submission ID: ${submissionId}`
+      submissionId: simRecord.submissionId,
+      message: simResult.message
     };
   }
+
+  // Alias for backward-compatibility with UI callers
+  public simulateEfiling(idempotencyKey?: string) {
+    return this.simulateEFiling(idempotencyKey);
+  }
+
+  public notifyMaterialChange(changeType: string, description: string, author: string = 'Marcus Vance, EA'): void {
+    const client = this.getSelectedClient();
+    preFilingGateRegistryService.notifyMaterialChange(
+      client.id,
+      this.selectedTaxYear,
+      changeType,
+      description,
+      author
+    );
+    this.finalApproval.isApproved = false;
+    client.workflowStatus = 'IN PREPARATION — DEMO';
+    this.notify();
+  }
+
 
   public simulateAcceptance(submissionId: string): void {
     const rec = this.filingRecords.find(r => r.submissionId === submissionId);
@@ -1178,10 +1111,6 @@ class AccountantCenterService {
     this.notify();
   }
 
-  public simulateEfiling(): void {
-    this.simulateEFiling();
-  }
-
   public updateFilingStatus(status: 'Accepted' | 'Rejected' | 'Resubmitted', reason?: string): void {
     const current = this.getFilingRecord();
     if (!current) return;
@@ -1228,7 +1157,7 @@ class AccountantCenterService {
     };
   }
 
-  private notify(): void {
+  public notify(): void {
     this.listeners.forEach(l => l());
   }
 
