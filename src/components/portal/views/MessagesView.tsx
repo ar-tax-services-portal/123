@@ -169,7 +169,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-[#06172C] border border-[#C99A3D]/50 p-0.5 overflow-hidden flex-shrink-0">
                 <img
-                  src="/images/desmond-hinds-founder-portrait.jpg"
+                  src="/images/Desmond-CEO-PROFILE.png"
                   alt="Desmond Hinds"
                   className="w-full h-full object-cover object-top rounded-lg"
                   onError={(e) => {

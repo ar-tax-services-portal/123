@@ -745,6 +745,7 @@ export interface DemoAuditEvent {
   reason?: string;
   previousValue?: string;
   newValue?: string;
+  sessionId?: string;
 }
 
 export interface IntegrationRegistryItem {

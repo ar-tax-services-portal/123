@@ -373,7 +373,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[#06172C] border border-[#C99A3D]/50 p-1 flex-shrink-0 overflow-hidden shadow">
                 <img
-                  src="/images/desmond-hinds-founder-portrait.jpg"
+                  src="/images/Desmond-CEO-PROFILE.png"
                   alt="Desmond Hinds"
                   className="w-full h-full object-cover object-top rounded-xl"
                   onError={(e) => {

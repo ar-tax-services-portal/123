@@ -55,6 +55,7 @@ import {
   DemoAdvisoryService,
   ClientDashboardOverview
 } from '../services/clientDashboardServices';
+import { normalizeClientTab } from '../config/clientNavGroups';
 import { ClientOverviewSection } from './client/ClientOverviewSection';
 import { ClientVaultSection } from './client/ClientVaultSection';
 import { ClientOrganizerSection } from './client/ClientOrganizerSection';
@@ -79,6 +80,29 @@ import { ClientAmendmentsClosureSection } from './client/ClientAmendmentsClosure
 import { ClientPriorArchiveSection } from './client/ClientPriorArchiveSection';
 import { ClientSettingsConsentSection } from './client/ClientSettingsConsentSection';
 import { ClientHelpSupportSection } from './client/ClientHelpSupportSection';
+import { PersonalizedChecklistSection } from './client/PersonalizedChecklistSection';
+import { UploadScanCenterSection } from './client/UploadScanCenterSection';
+import { AiProcessingPipelineSection } from './client/AiProcessingPipelineSection';
+import { MissingDocumentsSection } from './client/MissingDocumentsSection';
+import { AccountantReviewStatusSection } from './client/AccountantReviewStatusSection';
+import { TaxPackageSection } from './client/TaxPackageSection';
+import { ClientQuestionnaireSection } from './client/ClientQuestionnaireSection';
+import { ClientContactsSection } from './client/ClientContactsSection';
+import { ClientEngagementDetailsSection } from './client/ClientEngagementDetailsSection';
+import {
+  ClientDocumentRequestsView,
+  ClientImportHistoryView,
+  ClientCustomersArView,
+  ClientVendorsApView,
+  ClientLedgerView,
+  ClientTrialBalanceView,
+  ClientPeriodCloseView,
+  ClientFilingStatusView,
+  ClientAppointmentsView,
+  ClientNotificationsView,
+  ClientActivityHistoryView,
+  ClientContactSupportView
+} from './client/ClientSubViews';
 
 interface ClientDashboardViewProps {
   onOpenAiAssistant: () => void;
@@ -100,13 +124,74 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
   // Discretion & Privacy Mode (Phase 8 & 23)
   const [discretionMode, setDiscretionMode] = useState<boolean>(true);
 
+  // Tax Year Selection (Section 5 & 7 safeguards)
+  const [selectedTaxYear, setSelectedTaxYear] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('artax_selected_tax_year');
+      if (saved) return parseInt(saved, 10);
+    }
+    return 2025;
+  });
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [pendingTaxYear, setPendingTaxYear] = useState<number | null>(null);
+  const [showUnsavedModal, setShowUnsavedModal] = useState<boolean>(false);
+
+  const handleSelectTaxYear = (year: number) => {
+    setSelectedTaxYear(year);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('artax_selected_tax_year', year.toString());
+    }
+  };
+
+  const handleInitiateTaxYearChange = (newYear: number) => {
+    if (newYear === selectedTaxYear) return;
+    if (hasUnsavedChanges) {
+      setPendingTaxYear(newYear);
+      setShowUnsavedModal(true);
+    } else {
+      handleSelectTaxYear(newYear);
+    }
+  };
+
+  const handleConfirmSwitchDiscard = () => {
+    if (pendingTaxYear !== null) {
+      handleSelectTaxYear(pendingTaxYear);
+      setHasUnsavedChanges(false);
+      setPendingTaxYear(null);
+    }
+    setShowUnsavedModal(false);
+  };
+
+  const handleConfirmSwitchSave = () => {
+    if (pendingTaxYear !== null) {
+      // Simulate draft auto-save
+      handleSelectTaxYear(pendingTaxYear);
+      setHasUnsavedChanges(false);
+      setPendingTaxYear(null);
+    }
+    setShowUnsavedModal(false);
+  };
+
+  const handleCancelSwitch = () => {
+    setPendingTaxYear(null);
+    setShowUnsavedModal(false);
+  };
+
   // Live Camera Scanner State
   const [showScanner, setShowScanner] = useState<boolean>(false);
 
   // Active tab within Client Portal - drives or synchronizes with left sidebar
   const [internalTab, setInternalTab] = useState<string>('overview');
-  const currentTab = activeNavId || internalTab;
-  const setTab = onSelectNav || setInternalTab;
+  const currentTab = normalizeClientTab(activeNavId || internalTab);
+  const setTab = (targetTab: string) => {
+    const normalized = normalizeClientTab(targetTab);
+    if (onSelectNav) {
+      onSelectNav(normalized);
+    } else {
+      setInternalTab(normalized);
+    }
+  };
 
   // Modal State
   const [modalAction, setModalAction] = useState<SimulatedActionType | null>(null);
@@ -211,26 +296,41 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 1. Portal Workspace Header & Discretion Mode Switch */}
+      {/* 1. Portal Workspace Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D8DCE2] pb-3">
         <div>
           <h2 className="text-base font-bold text-[#061A2F]">
             {currentTab === 'overview' && 'Client Overview & Active Filing Status'}
             {currentTab === 'entities' && 'Entity Profiles, Org Chart & Beneficial Ownership'}
+            {currentTab === 'contacts' && 'Authorized Representatives & Form 2848 Power of Attorney'}
+            {currentTab === 'engagement' && 'Active Engagement Scope & Service Agreement'}
+            {currentTab === 'checklist' && 'Personalized Document Intake Checklist'}
             {currentTab === 'vault' && 'Secure Document Vault & Records'}
-            {currentTab === 'questionnaire' && 'Tax Organizer & Intake Questionnaire'}
+            {currentTab === 'upload_center' && 'Upload & Multi-Page Scanning Center'}
+            {currentTab === 'ai_pipeline' && 'AI Document Processing Pipeline & Extraction'}
+            {currentTab === 'missing_docs' && 'Missing Documents & Potential Issues'}
+            {currentTab === 'review_status' && 'Accountant Review Status & Verification Milestones'}
+            {currentTab === 'tax_package' && 'Demonstration Tax Preparation Package'}
+            {currentTab === 'requests' && 'Formal Accountant Document Requests'}
+            {currentTab === 'questionnaire' && 'Dynamic Client Onboarding Questionnaire'}
             {currentTab === 'bookkeeping' && 'Transaction Register & Bookkeeping Classification'}
-            {currentTab === 'journal' && 'General Journal, Trial Balance & Fixed Assets'}
+            {currentTab === 'customers_ar' && 'Customers & Accounts Receivable Ledger'}
+            {currentTab === 'vendors_ap' && 'Vendors & Accounts Payable Ledger'}
+            {currentTab === 'journal' && 'General Journal & Chart of Accounts'}
+            {currentTab === 'trial_balance' && 'Adjusted Trial Balance Workpapers'}
+            {currentTab === 'period_close' && 'Financial Period Close & Accounting Lock'}
             {currentTab === 'bank_feeds' && 'Bank Feeds & Direct Aggregation Connections'}
             {currentTab === 'accounting_sync' && 'Cloud Accounting Sync & COA Tax Mapping'}
             {currentTab === 'reconciliation' && 'Bank & Credit Card Statement Reconciliation'}
             {currentTab === 'financial_reports' && 'Financial Statements & Management Reports'}
             {currentTab === 'ledger' && 'Income & Expense Workpapers'}
-            {currentTab === 'return_review' && 'Draft Return Review & Form 8879-S Authorization'}
+            {currentTab === 'return_review' && 'Draft Return Review & Form 8879 Authorization'}
+            {currentTab === 'filing_status' && 'Electronic Filing Status & IRS MEF Confirmations'}
             {currentTab === 'readiness' && 'Tax Readiness & Statutory Compliance Scorecard'}
             {currentTab === 'estimated_tax' && 'Estimated Tax & Safe Harbor Vouchers'}
             {currentTab === 'advisory' && 'Tax Advisory, Strategy & Scenario Forecast'}
             {currentTab === 'tax_planning' && 'Tax Strategy Forecast & Scenario Modeler'}
+            {currentTab === 'appointments' && 'Consultations & Strategy Appointments'}
             {currentTab === 'voice_assistant' && 'TaxGuard Voice Assistant'}
             {currentTab === 'messages' && 'Secure Messages, Inquiries & Actionable Tasks'}
             {currentTab === 'lender_package' && 'Credit, Lender & Underwriting Package Portal'}
@@ -238,7 +338,11 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
             {currentTab === 'billing' && 'Fee Invoices & Payments'}
             {currentTab === 'notices' && 'Tax Notices, Audits & IRS Transcripts'}
             {currentTab === 'archive' && 'Prior Year Tax Archive & Multi-Year History'}
-            {currentTab === 'settings' && 'Security, Consents & Authorized Representatives'}
+            {currentTab === 'import_history' && 'Data Import & Transmission History'}
+            {currentTab === 'settings' && 'Security, Consents & Preferences'}
+            {currentTab === 'notifications' && 'Notifications & Action Center'}
+            {currentTab === 'activity_history' && 'Audit Log & Activity History'}
+            {currentTab === 'contact_support' && 'Dedicated Practice Support'}
             {currentTab === 'support' && 'Client Support, Tax Knowledge Base & Contacts'}
           </h2>
           <p className="text-xs text-[#667085]">
@@ -246,29 +350,65 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
           </p>
         </div>
 
-        {/* UHNW Privacy / Discretion Mode Toggle */}
-        <button
-          onClick={() => setDiscretionMode(!discretionMode)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium border transition-colors cursor-pointer ${
-            discretionMode
-              ? 'bg-[#F7F4ED] border-[#C99A32]/60 text-[#061A2F]'
-              : 'bg-white border-[#D8DCE2] text-[#667085] hover:text-[#061A2F]'
-          }`}
-          title="Toggle sensitive balance and identifier masking for high-net-worth privacy"
-        >
-          {discretionMode ? (
-            <>
-              <EyeOff className="w-3.5 h-3.5 text-[#C99A32]" />
-              <span className="font-semibold text-[11px]">Discretion Mode: Active</span>
-            </>
-          ) : (
-            <>
-              <Eye className="w-3.5 h-3.5 text-[#667085]" />
-              <span className="text-[11px]">Discretion Mode: Revealed</span>
-            </>
-          )}
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Header Tax Year Selector (Section 5 & 7 safeguards) */}
+          <div className="flex items-center gap-1.5 bg-white border border-[#061A2F]/20 rounded px-2.5 py-1 shadow-2xs">
+            <span className="text-[11px] font-bold text-[#061A2F] font-mono">Tax Year:</span>
+            <select
+              id="header-tax-year-selector"
+              value={selectedTaxYear}
+              onChange={(e) => handleInitiateTaxYearChange(parseInt(e.target.value, 10))}
+              className="bg-transparent text-xs font-bold font-mono text-[#061A2F] cursor-pointer outline-hidden"
+            >
+              <option value={2026}>2026 (Upcoming / Planning)</option>
+              <option value={2025}>2025 (Current Filing Season)</option>
+              <option value={2024}>2024 (Prior Year Filing / Reference)</option>
+              <option value={2023}>2023 (Historical Reference)</option>
+            </select>
+          </div>
+
+          {/* UHNW Privacy / Discretion Mode Toggle */}
+          <button
+            onClick={() => setDiscretionMode(!discretionMode)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium border transition-colors cursor-pointer ${
+              discretionMode
+                ? 'bg-[#F7F4ED] border-[#C99A32]/60 text-[#061A2F]'
+                : 'bg-white border-[#D8DCE2] text-[#667085] hover:text-[#061A2F]'
+            }`}
+            title="Toggle sensitive balance and identifier masking for high-net-worth privacy"
+          >
+            {discretionMode ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5 text-[#C99A32]" />
+                <span className="font-semibold text-[11px]">Discretion Mode: Active</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5 text-[#667085]" />
+                <span className="text-[11px]">Discretion Mode: Revealed</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Multi-Year Notification Banner (Section 5) */}
+      {selectedTaxYear !== 2025 && (
+        <div className="p-3 bg-neutral-100 border border-neutral-300 rounded-lg text-xs text-neutral-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span>
+              Viewing <strong>Tax Year {selectedTaxYear}</strong>. Records and documents are displayed in read-only / reference mode.
+            </span>
+          </div>
+          <button
+            onClick={() => handleSelectTaxYear(2025)}
+            className="text-[11px] font-bold text-[#061A2F] underline hover:no-underline font-mono"
+          >
+            Switch to Current Filing Season (CY2025)
+          </button>
+        </div>
+      )}
 
       {/* 2. TAB WORKSPACE SECTIONS */}
 
@@ -295,6 +435,26 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         />
       )}
 
+      {/* TAB: CONTACTS & REPRESENTATIVES */}
+      {currentTab === 'contacts' && (
+        <ClientContactsSection />
+      )}
+
+      {/* TAB: ENGAGEMENT DETAILS */}
+      {currentTab === 'engagement' && (
+        <ClientEngagementDetailsSection />
+      )}
+
+      {/* TAB: PERSONALIZED CHECKLIST */}
+      {currentTab === 'checklist' && (
+        <PersonalizedChecklistSection
+          selectedYear={selectedTaxYear}
+          onNavigateToUpload={() => setTab('upload_center')}
+          onNavigateToVault={() => setTab('vault')}
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
       {/* TAB: SECURE DOCUMENT VAULT */}
       {currentTab === 'vault' && (
         <ClientVaultSection
@@ -304,14 +464,102 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         />
       )}
 
-      {/* TAB: QUESTIONNAIRE & ORGANIZER */}
-      {currentTab === 'questionnaire' && (
-        <ClientOrganizerSection
-          organizerService={organizerService}
-          clientId="cli_perotti"
-          onNavigateToVault={() => setTab('vault')}
+      {/* TAB: UPLOAD & SCAN CENTER */}
+      {currentTab === 'upload_center' && (
+        <UploadScanCenterSection
+          selectedYear={selectedTaxYear}
+          onDocumentProcessed={() => {}}
+          onNavigateToAiPipeline={() => setTab('ai_pipeline')}
+        />
+      )}
+
+      {/* TAB: AI PROCESSING PIPELINE */}
+      {currentTab === 'ai_pipeline' && (
+        <AiProcessingPipelineSection />
+      )}
+
+      {/* TAB: MISSING DOCUMENTS */}
+      {currentTab === 'missing_docs' && (
+        <MissingDocumentsSection
+          selectedYear={selectedTaxYear}
+          onNavigateToUpload={() => setTab('upload_center')}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
+      )}
+
+      {/* TAB: ACCOUNTANT REVIEW STATUS */}
+      {currentTab === 'review_status' && (
+        <AccountantReviewStatusSection />
+      )}
+
+      {/* TAB: 15-COMPONENT TAX PREPARATION PACKAGE */}
+      {currentTab === 'tax_package' && (
+        <TaxPackageSection selectedYear={selectedTaxYear} />
+      )}
+
+      {/* TAB: DOCUMENT REQUESTS */}
+      {currentTab === 'requests' && (
+        <ClientDocumentRequestsView onNavigateToUpload={() => setTab('upload_center')} />
+      )}
+
+      {/* TAB: QUESTIONNAIRE & ORGANIZER */}
+      {currentTab === 'questionnaire' && (
+        <ClientQuestionnaireSection
+          selectedYear={selectedTaxYear}
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToChecklist={() => setTab('checklist')}
+          onUnsavedChange={setHasUnsavedChanges}
+        />
+      )}
+
+      {/* TAB: CUSTOMERS & AR */}
+      {currentTab === 'customers_ar' && (
+        <ClientCustomersArView />
+      )}
+
+      {/* TAB: VENDORS & AP */}
+      {currentTab === 'vendors_ap' && (
+        <ClientVendorsApView />
+      )}
+
+      {/* TAB: TRIAL BALANCE */}
+      {currentTab === 'trial_balance' && (
+        <ClientTrialBalanceView />
+      )}
+
+      {/* TAB: PERIOD CLOSE */}
+      {currentTab === 'period_close' && (
+        <ClientPeriodCloseView />
+      )}
+
+      {/* TAB: FILING STATUS & 8879 */}
+      {currentTab === 'filing_status' && (
+        <ClientFilingStatusView />
+      )}
+
+      {/* TAB: APPOINTMENTS */}
+      {currentTab === 'appointments' && (
+        <ClientAppointmentsView />
+      )}
+
+      {/* TAB: NOTIFICATIONS */}
+      {currentTab === 'notifications' && (
+        <ClientNotificationsView />
+      )}
+
+      {/* TAB: ACTIVITY HISTORY & AUDIT LOG */}
+      {currentTab === 'activity_history' && (
+        <ClientActivityHistoryView />
+      )}
+
+      {/* TAB: IMPORT HISTORY */}
+      {currentTab === 'import_history' && (
+        <ClientImportHistoryView />
+      )}
+
+      {/* TAB: CONTACT SUPPORT */}
+      {currentTab === 'contact_support' && (
+        <ClientContactSupportView />
       )}
 
       {/* TAB: BOOKKEEPING & REGISTERS */}
@@ -520,6 +768,61 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         currentSection={currentTab}
         clientId="cli_perotti"
       />
+
+      {/* Tax-Year Switching Safeguard Modal (Section 7) */}
+      {showUnsavedModal && (
+        <div 
+          id="tax-year-unsaved-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="bg-white border border-neutral-300 rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0 text-amber-800">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-neutral-900">
+                  Unsaved Changes in Tax Year {selectedTaxYear}
+                </h3>
+                <p className="text-xs text-neutral-600 leading-relaxed">
+                  You have uncommitted modifications in the CY{selectedTaxYear} organizer draft. Switching to Tax Year {pendingTaxYear} without saving will discard these changes.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-neutral-50 border border-neutral-200 rounded text-xs text-neutral-700 space-y-1">
+              <div className="font-semibold text-neutral-900">Choose an action:</div>
+              <div>• <strong>Save Draft:</strong> Retain all in-progress answers and switch to CY{pendingTaxYear}.</div>
+              <div>• <strong>Discard:</strong> Abandon uncommitted entries and switch immediately.</div>
+              <div>• <strong>Cancel:</strong> Stay in CY{selectedTaxYear} to continue editing.</div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-neutral-200">
+              <button
+                id="btn-cancel-year-switch"
+                onClick={handleCancelSwitch}
+                className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 border border-neutral-300 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                id="btn-discard-year-switch"
+                onClick={handleConfirmSwitchDiscard}
+                className="w-full sm:w-auto px-3.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 border border-red-300 rounded transition-colors"
+              >
+                Discard Changes
+              </button>
+              <button
+                id="btn-save-year-switch"
+                onClick={handleConfirmSwitchSave}
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold bg-[#061A2F] hover:bg-[#0A2544] text-white rounded transition-colors shadow-xs"
+              >
+                Save Draft &amp; Switch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

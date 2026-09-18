@@ -12,6 +12,8 @@ import { RoleLoginPage } from './components/RoleLoginPage';
 import { ErrorPageView, ErrorPageType } from './components/ErrorPages';
 import { AiAssistantDrawer } from './components/AiAssistantDrawer';
 import { IntegrationRegistryModal } from './components/IntegrationRegistryModal';
+import { CLIENT_NAV_GROUPS } from './config/clientNavGroups';
+import { ACCOUNTANT_NAV_GROUPS } from './config/accountantNavGroups';
 
 // Role Views
 import { ClientDashboardView } from './views/ClientDashboardView';
@@ -89,12 +91,26 @@ export const DemoAppRouter: React.FC = () => {
   );
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [integrationsModalOpen, setIntegrationsModalOpen] = useState(false);
-  const [activeNavId, setActiveNavId] = useState<string>('default');
+  const [activeNavId, setActiveNavId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const h = window.location.hash || '';
+      const params = new URLSearchParams(h.includes('?') ? h.split('?')[1] : window.location.search);
+      const tab = params.get('tab');
+      if (tab) return tab;
+    }
+    return 'overview';
+  });
 
   // Listen for hash / popstate changes
   useEffect(() => {
     const handleUrlChange = () => {
-      setCurrentHash(window.location.hash || window.location.pathname);
+      const h = window.location.hash || window.location.pathname;
+      setCurrentHash(h);
+      const params = new URLSearchParams(h.includes('?') ? h.split('?')[1] : window.location.search);
+      const tab = params.get('tab');
+      if (tab) {
+        setActiveNavId(tab);
+      }
     };
     window.addEventListener('hashchange', handleUrlChange);
     window.addEventListener('popstate', handleUrlChange);
@@ -106,7 +122,8 @@ export const DemoAppRouter: React.FC = () => {
 
   // Parse current route
   const routeInfo = useMemo<ParsedDemoRoute>(() => {
-    const raw = (currentHash || '').replace(/^#\/?/, '').replace(/^\/+/, '').toLowerCase();
+    const rawWithQuery = (currentHash || '').replace(/^#\/?/, '').replace(/^\/+/, '');
+    const raw = rawWithQuery.split('?')[0].toLowerCase();
     
     // Check for error pages
     if (raw.startsWith('error/')) {
@@ -565,8 +582,15 @@ export const DemoAppRouter: React.FC = () => {
       <DashboardShell
         role={role}
         activeNavId={activeNavId}
-        onSelectNav={(id) => setActiveNavId(id)}
+        onSelectNav={(id) => {
+          setActiveNavId(id);
+          if (role === 'client' || role === 'accountant') {
+            const cleanPath = roleConfig.dashboardPath.split('?')[0];
+            window.location.hash = `${cleanPath}?tab=${id}`;
+          }
+        }}
         navItems={navItems}
+        navGroups={role === 'client' ? CLIENT_NAV_GROUPS : (role === 'accountant' ? ACCOUNTANT_NAV_GROUPS : undefined)}
         title={roleConfig.title}
         breadcrumbs={['Demonstration Workspace', roleConfig.department, roleConfig.title]}
         onOpenAiAssistant={() => setAiAssistantOpen(true)}

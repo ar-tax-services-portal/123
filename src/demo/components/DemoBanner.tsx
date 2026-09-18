@@ -10,7 +10,7 @@ export const DemoBanner: React.FC = () => {
     >
       <AlertCircle className="w-3.5 h-3.5 text-black flex-shrink-0" />
       <span>
-        Demonstration Environment — No Live Filing, Payment, Signature, Banking Connection, or Government Submission
+        DEMONSTRATION ENVIRONMENT — No live tax filing, payment, signature, banking connection, accounting synchronization, or government submission is currently performed.
       </span>
     </div>
   );
