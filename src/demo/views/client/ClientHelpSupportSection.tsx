@@ -129,11 +129,22 @@ export const ClientHelpSupportSection: React.FC<ClientHelpSupportSectionProps> =
               <Mail className="w-4 h-4 text-[#C99A32]" />
               <span>Assigned Engagement Team</span>
             </div>
-            <div className="text-[#4B5563] space-y-0.5">
+            <div className="text-[#4B5563] space-y-2">
               <div><strong>Lead CPA:</strong> Elena Rostova, CPA</div>
               <div className="text-[11px] font-mono text-[#667085]">elena.rostova@artaxservices.com</div>
-              <div><strong>Managing Partner:</strong> Desmond Hinds, CEO</div>
-              <div className="text-[11px] font-mono text-[#667085]">desmond.hinds@artaxservices.com</div>
+              <div className="flex items-center gap-2.5 pt-1">
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-[#C99A32] flex-shrink-0 bg-[#061A2F]">
+                  <img
+                    src="/images/Desmond-CEO-PROFILE.png"
+                    alt="Desmond Hinds, CEO"
+                    className="w-full h-full object-cover object-top"
+                  />
+                </div>
+                <div>
+                  <div><strong>Managing Partner:</strong> Desmond Hinds, CEO</div>
+                  <div className="text-[11px] font-mono text-[#667085]">desmond.hinds@artaxservices.com</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

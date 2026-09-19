@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { TESTIMONIALS_DATA } from '../../data/mockData';
 import { BrandLogo } from '../common/BrandLogo';
 import { BRAND_ASSETS } from '../../utils/assets';
+import ceoHeroPng from '../../assets/images/desmond-hinds-ceo-ar-tax-services.png';
+import ceoHeroWebp from '../../assets/images/desmond-hinds-ceo-ar-tax-services.webp';
 import { FounderPortrait, ServiceCardImage, EditorialSplitImage } from './images';
 import { 
   ShieldCheck, 
@@ -54,7 +56,7 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-7 space-y-6 sm:space-y-8 text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0D2340] border border-[#C99A3D]/40 text-[#E2BD67] text-xs font-semibold tracking-wide shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-[#C99A3D] flex-shrink-0" />
-                <span>Premier Tax &amp; Strategic Advisory &bull; Columbia, South Carolina</span>
+                <span>Professional Tax &amp; Strategic Advisory &bull; Columbia, South Carolina</span>
               </div>
 
               <div className="space-y-4">
@@ -152,33 +154,34 @@ export const HomePage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Master Editorial Hero Image */}
-                <div className="relative aspect-[16/10] sm:aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden border border-[#1E3A5F] bg-[#07172B]">
+                {/* Master Editorial Hero Image - CEO Corporate Portrait */}
+                <div className="relative aspect-[4/3] sm:aspect-[16/11] md:aspect-[16/10] rounded-xl sm:rounded-2xl overflow-hidden border border-[#1E3A5F] bg-[#07172B] shadow-inner">
                   <picture className="w-full h-full block">
-                    <source srcSet={BRAND_ASSETS.heroExecutiveAdvisoryWebp} type="image/webp" />
+                    <source srcSet={ceoHeroWebp || BRAND_ASSETS.heroCeoPortraitWebp} type="image/webp" />
+                    <source srcSet={ceoHeroPng || BRAND_ASSETS.heroCeoPortraitPng} type="image/png" />
                     <img
-                      src={BRAND_ASSETS.heroExecutiveAdvisoryJpg}
-                      alt="Senior tax advisor consulting with business client in executive office"
-                      width={1600}
-                      height={900}
+                      src={ceoHeroPng || BRAND_ASSETS.heroCeoPortraitPng}
+                      alt="Desmond Hinds, Founder of A/R Tax Services, LLC, at the A/R Tax Services office"
+                      width={896}
+                      height={1200}
                       loading="eager"
                       fetchPriority="high"
                       decoding="async"
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-cover object-top"
                       referrerPolicy="no-referrer"
                     />
                   </picture>
 
-                  {/* Restrained tonal gradient for high contrast readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#06172C] via-[#06172C]/20 to-transparent pointer-events-none" />
+                  {/* Restrained tonal gradient for high contrast readability without obscuring portrait */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#06172C]/90 via-[#06172C]/20 to-transparent pointer-events-none" />
 
-                  {/* Office Location & Advisory Tag */}
-                  <figcaption className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] text-slate-200">
-                    <span className="flex items-center gap-1.5 font-medium bg-[#06172C]/80 px-2.5 py-1 rounded-md border border-[#1E3A5F] backdrop-blur-sm">
+                  {/* Office Location & Advisory Tag repositioned cleanly toward lower corners */}
+                  <figcaption className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between text-[11px] text-slate-200 z-10 pointer-events-none">
+                    <span className="flex items-center gap-1.5 font-medium bg-[#06172C]/90 px-2.5 py-1 rounded-md border border-[#1E3A5F] backdrop-blur-sm shadow-md">
                       <MapPin className="w-3.5 h-3.5 text-[#C99A3D]" />
                       Columbia, SC Practice Office
                     </span>
-                    <span className="text-[#E2BD67] font-semibold text-[10px] bg-[#06172C]/90 px-2 py-0.5 rounded border border-[#C99A3D]/40">
+                    <span className="text-[#E2BD67] font-semibold text-[10px] bg-[#06172C]/95 px-2 py-0.5 rounded border border-[#C99A3D]/40 backdrop-blur-sm shadow-md">
                       Private Advisory
                     </span>
                   </figcaption>
@@ -321,7 +324,7 @@ export const HomePage: React.FC = () => {
               <ServiceCardImage
                 src={BRAND_ASSETS.taxAdvisoryPlanningJpg}
                 webpSrc={BRAND_ASSETS.taxAdvisoryPlanningWebp}
-                alt="Senior tax advisor reviewing customized financial projections in a private consultation room"
+                alt="Strategic tax advisory architecture displaying multi-year tax projection scenarios, S-Corp and LLC entity structure, and pass-through deduction optimization"
                 categoryBadge="Tax Advisory & Strategy"
                 icon={<Workflow className="w-5 h-5 text-[#C99A3D]" />}
               />
@@ -356,7 +359,7 @@ export const HomePage: React.FC = () => {
               <ServiceCardImage
                 src={BRAND_ASSETS.corporateBusinessAdvisoryJpg}
                 webpSrc={BRAND_ASSETS.corporateBusinessAdvisoryWebp}
-                alt="Executive leadership team analyzing business financial statements in a boardroom"
+                alt="Corporate tax compliance suite illustrating Form 1120-S, Form 1065, multistate nexus apportionment, and executive reasonable compensation benchmarks"
                 categoryBadge="Corporate & Enterprise"
                 icon={<Building2 className="w-5 h-5 text-[#C99A3D]" />}
               />
@@ -391,7 +394,7 @@ export const HomePage: React.FC = () => {
               <ServiceCardImage
                 src={BRAND_ASSETS.estateLegacyPlanningJpg}
                 webpSrc={BRAND_ASSETS.estateLegacyPlanningWebp}
-                alt="Family meeting with financial advisor for multigenerational estate planning"
+                alt="Comprehensive family wealth structure mapping revocable and irrevocable trusts, business equity, real estate assets, and generational wealth preservation"
                 categoryBadge="Asset Protection & Legacy"
                 icon={<Scale className="w-5 h-5 text-[#C99A3D]" />}
               />
@@ -426,7 +429,7 @@ export const HomePage: React.FC = () => {
               <ServiceCardImage
                 src={BRAND_ASSETS.meticulousTaxPrepJpg}
                 webpSrc={BRAND_ASSETS.meticulousTaxPrepWebp}
-                alt="Organized tax documentation, financial ledgers, and calculator during thorough professional review"
+                alt="Multi-screen tax preparation workstation demonstrating 7-step review workflow, Form 1040 line-item reconciliation, and certified IRS electronic filing"
                 categoryBadge="Accuracy & Compliance"
                 icon={<FileCheck2 className="w-5 h-5 text-[#C99A3D]" />}
               />
@@ -581,7 +584,7 @@ export const HomePage: React.FC = () => {
             <EditorialSplitImage
               srcJpg={BRAND_ASSETS.privateConsultationExpJpg}
               srcWebp={BRAND_ASSETS.privateConsultationExpWebp}
-              alt="Discreet, professional client tax advisory session in a modern corporate office"
+              alt="Four-phase private client advisory engagement roadmap covering discovery and diagnostic, strategic architecture, meticulous execution, and ongoing stewardship"
               caption="Confidential One-on-One Consultation"
               tag="Personal Attention"
               aspectRatio="4/3"
@@ -712,7 +715,7 @@ export const HomePage: React.FC = () => {
             <EditorialSplitImage
               srcJpg={BRAND_ASSETS.bookkeepingReportingJpg}
               srcWebp={BRAND_ASSETS.bookkeepingReportingWebp}
-              alt="Professional accounting workspace with organized financial reports, ledger analysis, and modern computer"
+              alt="Accurate financial dashboard and general ledger reconciliation suite displaying chart of accounts, trial balance, and real-time bank integrations"
               caption="Financial Reporting & Reconciliation Suite"
               tag="Accounting Oversight"
               aspectRatio="4/3"

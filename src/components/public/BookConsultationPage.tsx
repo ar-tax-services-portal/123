@@ -237,14 +237,32 @@ export const BookConsultationPage: React.FC = () => {
               <label className="block text-xs font-bold uppercase tracking-wider text-[#C6A15B]">
                 Step 4: Your Contact Information
               </label>
+
+              {/* Sensitive Information Warning Banner */}
+              <div className="p-3.5 rounded-xl bg-[#07172B] border border-amber-500/40 text-xs text-amber-200/90 space-y-1">
+                <strong className="text-white block font-semibold">Important Privacy &amp; Data Notice:</strong>
+                <p>
+                  Please do not submit Social Security numbers, tax documents, banking information, or other sensitive personal information through this form. Existing clients should use the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage('client_portal')}
+                    className="text-[#C6A15B] underline hover:text-[#E2BD67] font-semibold"
+                  >
+                    secure client portal
+                  </button>.
+                </p>
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
-                  <label htmlFor="booking-name" className="block text-slate-300 font-semibold mb-1">Full Name *</label>
+                  <label htmlFor="booking-name" className="block text-slate-300 font-semibold mb-1">
+                    Full Name <span className="text-amber-400">*</span>
+                  </label>
                   <input
                     id="booking-name"
                     type="text"
                     required
+                    aria-required="true"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. John Doe"
@@ -253,11 +271,14 @@ export const BookConsultationPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="booking-email" className="block text-slate-300 font-semibold mb-1">Email Address *</label>
+                  <label htmlFor="booking-email" className="block text-slate-300 font-semibold mb-1">
+                    Email Address <span className="text-amber-400">*</span>
+                  </label>
                   <input
                     id="booking-email"
                     type="email"
                     required
+                    aria-required="true"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
@@ -266,11 +287,14 @@ export const BookConsultationPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="booking-phone" className="block text-slate-300 font-semibold mb-1">Phone Number *</label>
+                  <label htmlFor="booking-phone" className="block text-slate-300 font-semibold mb-1">
+                    Phone Number <span className="text-amber-400">*</span>
+                  </label>
                   <input
                     id="booking-phone"
                     type="tel"
                     required
+                    aria-required="true"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. 803-555-0123"
@@ -291,6 +315,11 @@ export const BookConsultationPage: React.FC = () => {
                   placeholder="e.g., S-Corp election for 2026, W-2 plus rental property deductions, multi-state filing questions..."
                   className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                 />
+              </div>
+
+              {/* Engagement Letter Disclaimer */}
+              <div className="p-3 rounded-lg bg-[#07172B] border border-[#1E3A5F] text-[11px] text-slate-400 leading-relaxed">
+                <strong>No Professional Relationship Created:</strong> Submitting this consultation request does not establish an accountant-client relationship. A professional engagement commences only upon the mutual execution of a formal written engagement letter specifying services and terms.
               </div>
             </div>
 

@@ -79,9 +79,9 @@ export const ServicesPage: React.FC = () => {
                 </div>
                 <div className="lg:col-span-5">
                   <ServiceCardImage
-                    src={BRAND_ASSETS.familyTaxPlanningJpg}
-                    webpSrc={BRAND_ASSETS.familyTaxPlanningWebp}
-                    alt="Tax preparation spreadsheet and Form 1040 review"
+                    src={BRAND_ASSETS.meticulousTaxPrepJpg}
+                    webpSrc={BRAND_ASSETS.meticulousTaxPrepWebp}
+                    alt="Multi-screen workstation displaying certified Form 1040 tax return preparation, deduction substantiation, and IRS e-file status"
                     categoryBadge="Private Client Tax"
                     icon={<FileCheck2 className="w-5 h-5 text-[#C6A15B]" />}
                   />
@@ -142,9 +142,9 @@ export const ServicesPage: React.FC = () => {
                 </div>
                 <div className="lg:col-span-5">
                   <ServiceCardImage
-                    src={BRAND_ASSETS.bookkeepingAccountingJpg}
-                    webpSrc={BRAND_ASSETS.bookkeepingAccountingWebp}
-                    alt="Business accounting and bookkeeping ledger advisory"
+                    src={BRAND_ASSETS.corporateBusinessAdvisoryJpg}
+                    webpSrc={BRAND_ASSETS.corporateBusinessAdvisoryWebp}
+                    alt="Corporate tax compliance suite illustrating Form 1120-S, Form 1065, and multistate nexus apportionment"
                     categoryBadge="Corporate Advisory"
                     icon={<Building2 className="w-5 h-5 text-[#C6A15B]" />}
                   />
@@ -205,9 +205,9 @@ export const ServicesPage: React.FC = () => {
                 </div>
                 <div className="lg:col-span-5">
                   <ServiceCardImage
-                    src={BRAND_ASSETS.financialAdvisoryJpg}
-                    webpSrc={BRAND_ASSETS.financialAdvisoryWebp}
-                    alt="Estate planning and legal document organization"
+                    src={BRAND_ASSETS.estateLegacyPlanningJpg}
+                    webpSrc={BRAND_ASSETS.estateLegacyPlanningWebp}
+                    alt="Estate coordination blueprint detailing trust structures, asset protection, and generational wealth preservation"
                     categoryBadge="Legacy & Estates"
                     icon={<Scale className="w-5 h-5 text-[#C6A15B]" />}
                   />

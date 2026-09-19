@@ -25,7 +25,7 @@ export const AboutPage: React.FC = () => {
   const values = [
     {
       title: 'Accuracy',
-      desc: 'Precision is paramount in accounting. We cross-verify all documents and data points with multi-tiered human CPA checks.',
+      desc: 'Precision is paramount in accounting. We cross-verify all documents and data points with multi-tiered professional accounting reviews.',
       icon: Award
     },
     {
@@ -331,9 +331,9 @@ export const AboutPage: React.FC = () => {
 
             <div className="lg:col-span-5 h-full min-h-[300px] p-6 flex items-center">
               <EditorialSplitImage
-                src={BRAND_ASSETS.smallBusinessGrowthJpg}
-                webpSrc={BRAND_ASSETS.smallBusinessGrowthWebp}
-                alt="A/R Tax Services professional advisory and consultation team"
+                src={BRAND_ASSETS.privateConsultationExpJpg}
+                webpSrc={BRAND_ASSETS.privateConsultationExpWebp}
+                alt="A/R Tax Services professional advisory network and strategic collaboration framework"
                 badgeText="Collaborative Advisory"
                 className="w-full h-full min-h-[280px]"
               />

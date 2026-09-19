@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { MessagesTab } from '../../../types/clientPortal';
+import { BRAND_ASSETS } from '../../../utils/assets';
 
 interface MessagesViewProps {
   onOpenUpload: () => void;
@@ -169,8 +170,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-[#06172C] border border-[#C99A3D]/50 p-0.5 overflow-hidden flex-shrink-0">
                 <img
-                  src="/images/Desmond-CEO-PROFILE.png"
-                  alt="Desmond Hinds"
+                  src={BRAND_ASSETS.founderPng}
+                  alt="Desmond Hinds, CEO"
                   className="w-full h-full object-cover object-top rounded-lg"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = 'none';

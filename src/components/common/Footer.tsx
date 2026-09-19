@@ -215,7 +215,7 @@ export const Footer: React.FC = () => {
             <strong className="text-[#E8C66A]">IRS Non-Affiliation:</strong> A/R Tax Services, LLC is not affiliated with, endorsed by, or sponsored by the Internal Revenue Service.
           </p>
           <p>
-            <strong className="text-[#E8C66A]">Professional Credentials:</strong> [INSERT CPA LICENSE NUMBER, ENROLLED AGENT REGISTRATION, OR PTIN AS APPLICABLE]
+            <strong className="text-[#E8C66A]">Professional Credentials:</strong> Tax preparation services are provided by authorized professionals holding active IRS Preparer Tax Identification Numbers (PTIN). Formal CPA attestations and Enrolled Agent representation services are coordinated in compliance with applicable federal and state regulatory standards.
           </p>
           <p>
             <strong className="text-[#E8C66A]">No Guarantee:</strong> Tax outcomes depend on individual taxpayer facts, applicable law, substantiating documentation, and governmental interpretation. No particular tax result, refund, savings amount, audit outcome, or governmental determination is guaranteed.

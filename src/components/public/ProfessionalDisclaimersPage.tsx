@@ -28,18 +28,18 @@ export const ProfessionalDisclaimersPage: React.FC = () => {
             <span>Primary Professional Practice Disclosure</span>
           </div>
           <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-            <strong>A/R Tax Services, LLC</strong> provides professional tax preparation, business bookkeeping, and strategic financial consulting services. The Firm, its owner, agents, and staff do not provide legal counsel, formal judicial representation, or registered securities broker-dealer services. 
+            <strong>A/R Tax Services, LLC</strong> provides professional tax return preparation, business bookkeeping, and strategic tax planning advisory services. The Firm, its owners, and staff do not provide legal counsel, formal judicial representation, registered investment advisory services, or independent CPA attestation/audit opinions.
           </p>
         </section>
 
-        {/* Section 1: Legal Services Disclaimer */}
+        {/* Section 1: Informational Purpose & No Client Relationship */}
         <section className="space-y-3">
-          <h2 className="font-serif text-xl font-bold text-white">1. Estate Planning & Legal Services Coordination</h2>
+          <h2 className="font-serif text-xl font-bold text-white">1. Informational Purpose &amp; No Professional Relationship</h2>
           <p>
-            Any discussions, worksheets, or guidance concerning estate planning, wills, trusts, and powers of attorney provided by A/R Tax Services, LLC are strictly educational, organizational, and tax-evaluative in nature. 
+            The content, tools, calculators, checklists, and guides on this website are provided solely for general educational and informational purposes. Accessing this website, submitting an inquiry form, or scheduling a preliminary consultation does not create an accountant-client, fiduciary, or confidential advisory relationship.
           </p>
           <p>
-            We do not draft formal legal instruments nor practice law. All estate planning implementations, living wills, testamentary trusts, and asset protection covenants are executed in direct referral and coordination with independent, properly licensed legal practitioners in South Carolina or the client’s state of legal residence.
+            A formal professional-client relationship is created only when you and A/R Tax Services, LLC mutually execute a written Engagement Letter detailing the specific scope of services, fee arrangements, and mutual obligations.
           </p>
         </section>
 
@@ -47,35 +47,57 @@ export const ProfessionalDisclaimersPage: React.FC = () => {
         <section className="space-y-3">
           <h2 className="font-serif text-xl font-bold text-white">2. No Guaranteed Refund or Savings Amount</h2>
           <p>
-            No statement, communication, or marketing material from A/R Tax Services, LLC shall be construed as a guarantee of a specific tax refund or elimination of tax liability. Federal and state tax obligations are determined strictly by the statutory provisions of the Internal Revenue Code, state revenue regulations, and the factual, verifiable financial records supplied by the taxpayer.
+            No statement, communication, or marketing material from A/R Tax Services, LLC shall be construed as a guarantee of a specific tax refund, tax credit eligibility, or elimination of tax liability. Federal and state tax obligations are determined strictly by the statutory provisions of the Internal Revenue Code, applicable state and local tax codes, and the factual, verifiable financial records supplied by the taxpayer.
           </p>
         </section>
 
-        {/* Section 3: IRS Circular 230 Disclosure */}
+        {/* Section 3: Legal Services & Financial Products Disclaimer */}
         <section className="space-y-3">
-          <h2 className="font-serif text-xl font-bold text-white">3. IRS Circular 230 Notice</h2>
+          <h2 className="font-serif text-xl font-bold text-white">3. Estate Planning, Legal &amp; Investment Coordination</h2>
           <p>
-            In accordance with IRS requirements, any tax advice contained on this website, in emails, or promotional resources is not intended or written to be used, and cannot be used, for the purpose of (i) avoiding tax-related penalties under the Internal Revenue Code, or (ii) promoting, marketing, or recommending to another party any tax-related transaction or matter.
+            Any discussions, worksheets, or guidance concerning estate planning, business entity formations, wills, trusts, and powers of attorney provided by A/R Tax Services, LLC are strictly educational, organizational, and tax-evaluative in nature.
+          </p>
+          <p>
+            We do not draft formal legal instruments, execute wills or trusts, or practice law. All legal documents and formal entity covenants should be drafted and reviewed by independent, properly licensed legal counsel. Similarly, we do not sell securities or act as registered investment advisors; financial planning coordination is conducted in partnership with client-designated licensed financial professionals.
           </p>
         </section>
 
-        {/* Section 4: External Links */}
+        {/* Section 4: Technology & AI Disclosure */}
         <section className="space-y-3">
-          <h2 className="font-serif text-xl font-bold text-white">4. Third-Party Tools & Banking Integrations</h2>
+          <h2 className="font-serif text-xl font-bold text-white">4. Computational Tools &amp; Technology Notice</h2>
           <p>
-            Links, integrations, or references to third-party platforms (e.g., Intuit QuickBooks, Xero, Stripe, banking APIs) do not constitute endorsements. The Firm is not responsible for the independent terms, uptime, or privacy policies of outside software vendors.
+            A/R Tax Services, LLC employs modern practice management software, encrypted transmission protocols, and analytical computational tools to assist with data organization, receipt scanning, and arithmetic consistency.
+          </p>
+          <p>
+            Automated tools and algorithms never make final filing determinations. All tax classifications, deduction evaluations, statutory elections, and return filings are directly reviewed, substantiated, and finalized by qualified professional tax preparers.
           </p>
         </section>
 
-        {/* Section 5: IRS Non-Affiliation & Professional Credentials */}
+        {/* Section 5: IRS Circular 230 Disclosure */}
+        <section className="space-y-3">
+          <h2 className="font-serif text-xl font-bold text-white">5. IRS Circular 230 Notice</h2>
+          <p>
+            In accordance with IRS regulations, any tax advice contained on this website, in emails, or promotional resources is not intended or written to be used, and cannot be used, for the purpose of (i) avoiding tax-related penalties under the Internal Revenue Code, or (ii) promoting, marketing, or recommending to another party any tax-related transaction or matter.
+          </p>
+        </section>
+
+        {/* Section 6: Third-Party Links & Software */}
+        <section className="space-y-3">
+          <h2 className="font-serif text-xl font-bold text-white">6. Third-Party Tools &amp; Banking Integrations</h2>
+          <p>
+            Links, integrations, or references to third-party platforms (e.g., Intuit QuickBooks, Xero, Stripe, banking APIs) are provided for operational convenience and do not constitute endorsements. The Firm is not responsible for the independent terms, uptime, security practices, or privacy policies of outside software vendors.
+          </p>
+        </section>
+
+        {/* Section 7: IRS Non-Affiliation & Professional Credentials */}
         <section className="space-y-3 border-t border-[#1E3A5F] pt-6">
-          <h2 className="font-serif text-xl font-bold text-white">5. IRS Non-Affiliation & Regulatory Credentials</h2>
+          <h2 className="font-serif text-xl font-bold text-white">7. IRS Non-Affiliation &amp; Regulatory Credentials</h2>
           <p>
-            A/R Tax Services, LLC is not affiliated with, endorsed by, or sponsored by the Internal Revenue Service or any state department of revenue.
+            A/R Tax Services, LLC is an independent commercial firm and is not affiliated with, endorsed by, or sponsored by the Internal Revenue Service or any state department of revenue.
           </p>
           <div className="p-4 rounded-xl bg-[#07172B] border border-[#1E3A5F] space-y-1.5 text-xs text-slate-300">
             <p>
-              <strong className="text-white">Professional Credential / License:</strong> [INSERT CPA LICENSE NUMBER, ENROLLED AGENT REGISTRATION, OR PTIN AS APPLICABLE]
+              <strong className="text-white">Professional Credential Standards:</strong> A/R Tax Services, LLC is a professional tax preparation, bookkeeping, and advisory practice. Tax preparation services are provided by authorized professionals holding active IRS Preparer Tax Identification Numbers (PTIN). Formal CPA attestations and Enrolled Agent representation services are coordinated in compliance with applicable federal and state regulatory standards.
             </p>
             <p>
               <strong className="text-white">Firm Location:</strong> Columbia, South Carolina, USA • <a href="tel:678-205-9486" className="text-[#C6A15B]">678-205-9486</a>

@@ -454,9 +454,18 @@ export const ClientAppointmentsView: React.FC = () => {
         <h3 className="text-xs font-bold text-neutral-700 uppercase tracking-wider">Scheduled Consultations</h3>
         {bookedAppointments.map(apt => (
           <div key={apt.id} className="p-3 border border-neutral-200 rounded flex items-center justify-between text-xs hover:border-neutral-300 transition-colors">
-            <div>
-              <span className="font-bold text-neutral-900">{apt.title}</span>
-              <div className="text-neutral-500 text-[11px] mt-0.5">With {apt.host}</div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-[#D7AC4A] bg-[#061A2F] flex-shrink-0">
+                <img
+                  src="/images/Desmond-CEO-PROFILE.png"
+                  alt="Desmond Hinds, CEO"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <div>
+                <span className="font-bold text-neutral-900">{apt.title}</span>
+                <div className="text-neutral-500 text-[11px] mt-0.5">With {apt.host}</div>
+              </div>
             </div>
             <div className="text-right font-mono">
               <div className="font-bold text-neutral-900">{apt.dateStr}</div>

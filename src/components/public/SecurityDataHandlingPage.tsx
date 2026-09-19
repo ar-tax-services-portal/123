@@ -21,10 +21,18 @@ export const SecurityDataHandlingPage: React.FC = () => {
       </div>
 
       <div className="space-y-8 text-xs sm:text-sm text-slate-300 leading-relaxed">
+        {/* Core Safeguards Notice */}
+        <div className="p-4 rounded-xl bg-[#0D2340] border border-[#C6A15B]/40 text-slate-200 space-y-1.5">
+          <strong className="text-white block font-semibold">Security Governance Statement:</strong>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            A/R Tax Services, LLC uses administrative, technical, and organizational safeguards designed to protect client information. No system can eliminate every security risk. We continually assess and enhance our controls to protect taxpayer confidentiality.
+          </p>
+        </div>
+
         <section className="space-y-3">
           <h2 className="font-serif text-xl font-bold text-white">1. Strong Cryptographic Controls</h2>
           <p>
-            Tax returns, Social Security numbers, bank routing information, and business accounting books represent high-sensitivity assets. A/R Tax Services, LLC protects every client data point with rigorous security standards:
+            Tax returns, Social Security numbers, bank routing information, and business accounting books represent high-sensitivity assets. A/R Tax Services, LLC protects client data through rigorous standards:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div className="p-4 rounded-xl bg-[#0D2340] border border-[#1E3A5F] space-y-1.5">
@@ -33,7 +41,7 @@ export const SecurityDataHandlingPage: React.FC = () => {
                 <span>Encrypted Storage at Rest</span>
               </div>
               <p className="text-xs text-slate-400">
-                All document storage volumes, client tax files, and database clusters are encrypted at rest using industry-standard cryptographic keys.
+                All document storage volumes, client tax files, and database clusters are encrypted at rest using industry-standard cryptographic algorithms (AES-256).
               </p>
             </div>
 
@@ -43,30 +51,30 @@ export const SecurityDataHandlingPage: React.FC = () => {
                 <span>TLS 1.3 Encryption in Transit</span>
               </div>
               <p className="text-xs text-slate-400">
-                All client-to-server traffic is enforced over TLS 1.3 protocols with HSTS (HTTP Strict Transport Security), mitigating eavesdropping and man-in-the-middle exploits.
+                All client-to-server traffic is enforced over TLS 1.3 protocols with HSTS (HTTP Strict Transport Security), preventing unauthorized interception.
               </p>
             </div>
           </div>
         </section>
 
         <section className="space-y-3">
-          <h2 className="font-serif text-xl font-bold text-white">2. Multi-Factor Authentication & Biometric UX</h2>
+          <h2 className="font-serif text-xl font-bold text-white">2. Multi-Factor Authentication &amp; Access Controls</h2>
           <p>
-            Client and staff authentication endpoints require multi-factor verification (TOTP authenticator apps or biometric hardware tokens like TouchID/FaceID via WebAuthn). Passwords are never stored in plaintext and are hashed using bcrypt with salted entropy.
+            Client and staff authentication endpoints utilize multi-factor verification (TOTP authenticator apps or biometric credentials via WebAuthn). Passwords are never stored in plaintext and are hashed using salted cryptographic functions.
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="font-serif text-xl font-bold text-white">3. Role-Based Access Control (RBAC) & Staff Segregation</h2>
+          <h2 className="font-serif text-xl font-bold text-white">3. Role-Based Access Control (RBAC) &amp; Staff Segregation</h2>
           <p>
-            Internal staff access is strictly restricted according to the principle of least privilege. Accountants only access documents belonging to engagements explicitly assigned to their caseload. Administrative actions (role changes, system deletions) require multi-admin authorization and generate unalterable audit trails.
+            Internal staff access is strictly restricted according to the principle of least privilege. Accountants only access documents belonging to engagements explicitly assigned to their caseload. Administrative actions (role changes, system deletions) require supervisory authorization and generate detailed audit trails with administrative safeguards.
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="font-serif text-xl font-bold text-white">4. Continuous Audit Logging & Intrusion Monitoring</h2>
+          <h2 className="font-serif text-xl font-bold text-white">4. Continuous Audit Logging &amp; Access Monitoring</h2>
           <p>
-            Every document upload, viewing session, status transition, and portal login is recorded in an immutable, cryptographically timestamped audit log. Automated anomaly detectors flag suspicious login attempts and immediately isolate sessions.
+            Every document upload, viewing session, status transition, and portal login is recorded in tamper-evident, cryptographically timestamped audit logging with administrative access safeguards. Automated anomaly monitors flag suspicious login attempts and immediately isolate sessions.
           </p>
         </section>
       </div>

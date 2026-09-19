@@ -3,6 +3,7 @@ import { TopUtilityBar } from '../common/TopUtilityBar';
 import { Navbar } from '../common/Navbar';
 import { Footer } from '../common/Footer';
 import { CookiePreferencesModal } from '../common/CookiePreferencesModal';
+import { SEOHead } from '../common/SEOHead';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,9 @@ interface PublicLayoutProps {
 export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-[#06172C] text-[#F8F6F1] font-sans selection:bg-[#C99A3D] selection:text-[#06172C]">
+      {/* Dynamic SEO & Metadata Management */}
+      <SEOHead />
+
       {/* Skip to content accessible anchor for WCAG 2.1 AA keyboard navigation */}
       <a
         href="#main-content"

@@ -52,7 +52,7 @@ export const PublicV2AboutPage: React.FC<PublicV2AboutPageProps> = ({
             </div>
             <div className="flex items-start gap-2.5">
               <span className="font-mono font-bold text-black mt-0.5">02.</span>
-              <p><strong>Senior Technical Review:</strong> Independent audit of statutory deductions, credits, and schedule elections.</p>
+              <p><strong>Senior Technical Review:</strong> Rigorous technical verification of statutory deductions, credits, and schedule elections.</p>
             </div>
             <div className="flex items-start gap-2.5">
               <span className="font-mono font-bold text-black mt-0.5">03.</span>

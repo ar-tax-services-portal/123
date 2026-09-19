@@ -289,7 +289,7 @@ export const INITIAL_TAX_STRATEGIES: TaxStrategyRecord[] = [
     ],
     potentialBenefits: [
       'Saves 15.3% SECA / FICA tax on all profits distributed as S-Corp dividends above the reasonable wage',
-      'Provides bulletproof audit trail against IRS reclassification audits',
+      'Provides a substantiated and defensible documentation trail against IRS reclassification inquiries',
       'Protects shareholder eligibility for IRC § 199A Qualified Business Income (QBI) 20% deduction'
     ],
     materialRisksAndLimitations: [

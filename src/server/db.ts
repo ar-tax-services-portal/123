@@ -521,7 +521,7 @@ class Database {
       phone: '678-205-9486',
       credentials: ['EA Candidate', 'AFSP Registered Tax Return Preparer', 'Certified QuickBooks ProAdvisor'],
       specializations: ['S-Corporation Filings (1120-S)', 'Small Business Accountancy', 'Strategic Tax Planning', 'IRS Resolution'],
-      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      avatarUrl: '/images/desmond-hinds-ceo-official.png?v=2026_ceo_final',
       status: 'active',
       maxClients: 25,
       currentActiveClients: 1,

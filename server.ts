@@ -115,8 +115,14 @@ app.use(['/taxguard', '/taxguard/*'], (req: AuthenticatedRequest, res, next) => 
   handleLegacyTaxGuardRoute(req, res);
 });
 
-// Serve public assets explicitly
-app.use(express.static(path.join(process.cwd(), 'public')));
+// Serve public assets explicitly with cache revalidation
+app.use(express.static(path.join(process.cwd(), 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i)) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  }
+}));
 
 // Vite middleware for dev vs static serving in production
 async function startServer() {

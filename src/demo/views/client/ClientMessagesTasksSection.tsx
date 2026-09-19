@@ -276,10 +276,21 @@ export const ClientMessagesTasksSection: React.FC<ClientMessagesTasksSectionProp
           <div className="md:col-span-2 bg-white rounded-lg border border-[#D8DCE2] p-5 space-y-4 shadow-xs flex flex-col justify-between min-h-[450px]">
             <div>
               <div className="border-b border-[#D8DCE2] pb-3 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-sm text-[#061A2F]">{activeThread.title}</h3>
-                  <div className="text-xs text-[#667085]">
-                    Lead: <strong className="text-[#061A2F]">{activeThread.assignedTo}</strong> &bull; Category: {activeThread.category}
+                <div className="flex items-center gap-3">
+                  {activeThread.assignedTo.includes('Desmond') && (
+                    <div className="w-10 h-10 rounded-full border border-[#D7AC4A] overflow-hidden flex-shrink-0 bg-[#061A2F]">
+                      <img
+                        src="/images/Desmond-CEO-PROFILE.png"
+                        alt="Desmond Hinds, CEO"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-bold text-sm text-[#061A2F]">{activeThread.title}</h3>
+                    <div className="text-xs text-[#667085]">
+                      Lead: <strong className="text-[#061A2F]">{activeThread.assignedTo}</strong> &bull; Category: {activeThread.category}
+                    </div>
                   </div>
                 </div>
                 <span className="px-2 py-0.5 text-[10px] bg-[#E8F5E9] text-[#1B5E20] border border-[#C8E6C9] rounded font-bold">

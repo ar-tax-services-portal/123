@@ -10,7 +10,10 @@ import {
   UploadCloud, 
   ShieldCheck,
   Building2,
-  Calendar
+  Calendar,
+  AlertTriangle,
+  Lock,
+  Info
 } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
@@ -22,12 +25,32 @@ export const ContactPage: React.FC = () => {
   const [subject, setSubject] = useState('General Tax Inquiry');
   const [message, setMessage] = useState('');
   const [attachedFile, setAttachedFile] = useState<string | null>(null);
+  const [consentAcknowledged, setConsentAcknowledged] = useState(false);
+  const [honeypot, setHoneypot] = useState(''); // Spam mitigation
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) newErrors.name = 'Full name is required.';
+    if (!email.trim()) {
+      newErrors.email = 'Email address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+    if (!message.trim()) newErrors.message = 'Please provide a message or inquiry details.';
+    if (!consentAcknowledged) {
+      newErrors.consent = 'Please confirm acknowledgement of the sensitive data notice.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !message) return;
+    if (honeypot) return; // Silent spam rejection
+    if (!validate()) return;
 
     setIsSubmitting(true);
     await new Promise((res) => setTimeout(res, 800));
@@ -145,7 +168,7 @@ export const ContactPage: React.FC = () => {
           <div className="lg:col-span-7">
             <div className="p-8 sm:p-10 rounded-3xl bg-[#0D2340] border border-[#1E3A5F] shadow-2xl">
               {!isSent ? (
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} noValidate className="space-y-5">
                   <div>
                     <h2 className="font-serif text-2xl font-bold text-white">Send Us a Direct Message</h2>
                     <p className="text-xs text-slate-400 mt-1">
@@ -153,31 +176,86 @@ export const ContactPage: React.FC = () => {
                     </p>
                   </div>
 
+                  {/* Sensitive Information Warning Banner */}
+                  <div className="p-3.5 rounded-xl bg-[#07172B] border border-amber-500/40 flex items-start gap-3 text-xs text-amber-200/90 leading-relaxed">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white block font-semibold">Important Privacy &amp; Document Notice:</strong>
+                      Please do not submit Social Security numbers, tax documents, banking information, or other sensitive personal information through this form. Existing clients should use the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage('client_portal')}
+                        className="text-[#C6A15B] underline hover:text-[#E2BD67] font-semibold"
+                      >
+                        secure client portal
+                      </button>.
+                    </div>
+                  </div>
+
+                  {/* Honeypot field (hidden from sighted users and assistive tech) */}
+                  <div className="hidden" aria-hidden="true">
+                    <label htmlFor="website-hp">Leave this blank</label>
+                    <input
+                      id="website-hp"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={honeypot}
+                      onChange={(e) => setHoneypot(e.target.value)}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <label htmlFor="contact-full-name" className="block text-slate-300 font-semibold mb-1">Your Full Name *</label>
+                      <label htmlFor="contact-full-name" className="block text-slate-300 font-semibold mb-1">
+                        Your Full Name <span className="text-amber-400">*</span>
+                      </label>
                       <input
                         id="contact-full-name"
                         type="text"
                         required
+                        aria-required="true"
+                        aria-invalid={!!errors.name}
+                        aria-describedby={errors.name ? "name-error" : undefined}
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                        }}
                         placeholder="e.g. Robert Williams"
-                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
+                        className={`w-full bg-[#07172B] border rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] ${
+                          errors.name ? 'border-red-500 focus:border-red-500' : 'border-[#1E3A5F] focus:border-[#C6A15B]'
+                        }`}
                       />
+                      {errors.name && (
+                        <p id="name-error" className="text-[11px] text-red-400 mt-1 font-medium">{errors.name}</p>
+                      )}
                     </div>
 
                     <div>
-                      <label htmlFor="contact-email" className="block text-slate-300 font-semibold mb-1">Your Email *</label>
+                      <label htmlFor="contact-email" className="block text-slate-300 font-semibold mb-1">
+                        Your Email <span className="text-amber-400">*</span>
+                      </label>
                       <input
                         id="contact-email"
                         type="email"
                         required
+                        aria-required="true"
+                        aria-invalid={!!errors.email}
+                        aria-describedby={errors.email ? "email-error" : undefined}
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
+                        }}
                         placeholder="rwilliams@example.com"
-                        className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
+                        className={`w-full bg-[#07172B] border rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] ${
+                          errors.email ? 'border-red-500 focus:border-red-500' : 'border-[#1E3A5F] focus:border-[#C6A15B]'
+                        }`}
                       />
+                      {errors.email && (
+                        <p id="email-error" className="text-[11px] text-red-400 mt-1 font-medium">{errors.email}</p>
+                      )}
                     </div>
                   </div>
 
@@ -195,39 +273,59 @@ export const ContactPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label htmlFor="contact-subject" className="block text-slate-300 font-semibold mb-1">Subject Matter *</label>
+                      <label htmlFor="contact-subject" className="block text-slate-300 font-semibold mb-1">
+                        Subject Matter <span className="text-amber-400">*</span>
+                      </label>
                       <select
                         id="contact-subject"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
                         className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
                       >
-                        <option value="Individual Tax Strategy">Individual Tax Strategy (1040)</option>
-                        <option value="Business Accounting & S-Corp">Business Accounting & Corporate Filing</option>
-                        <option value="Bookkeeping Cleanup Services">Bookkeeping Cleanup Services</option>
-                        <option value="Financial Protection & Estate">Financial Protection & Estate Coordination</option>
-                        <option value="Credit Solutions Inquiries">Credit Solutions & Disputes</option>
-                        <option value="Other General Inquiry">Other Inquiry</option>
+                        <option value="Individual Tax Strategy">Individual Tax Preparation (1040)</option>
+                        <option value="Business Accounting & S-Corp">Business Tax & Corporate Accounting</option>
+                        <option value="Bookkeeping Cleanup Services">Bookkeeping & General Ledger Reconciliation</option>
+                        <option value="Financial Protection & Estate">Financial Planning & Estate Tax Coordination</option>
+                        <option value="IRS Notice Assistance">IRS & State Tax Notice Assistance</option>
+                        <option value="Other General Inquiry">Other General Inquiry</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="text-xs">
-                    <label htmlFor="contact-message" className="block text-slate-300 font-semibold mb-1">Your Message *</label>
+                    <label htmlFor="contact-message" className="block text-slate-300 font-semibold mb-1">
+                      Your Message <span className="text-amber-400">*</span>
+                    </label>
                     <textarea
                       id="contact-message"
                       rows={4}
                       required
+                      aria-required="true"
+                      aria-invalid={!!errors.message}
+                      aria-describedby={errors.message ? "message-error" : undefined}
                       value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Please explain how we can assist your tax or financial situation..."
-                      className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] focus:border-[#C6A15B]"
+                      onChange={(e) => {
+                        setMessage(e.target.value);
+                        if (errors.message) setErrors(prev => ({ ...prev, message: '' }));
+                      }}
+                      placeholder="Please explain how we can assist your tax, accounting, or business advisory situation..."
+                      className={`w-full bg-[#07172B] border rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C6A15B] ${
+                        errors.message ? 'border-red-500 focus:border-red-500' : 'border-[#1E3A5F] focus:border-[#C6A15B]'
+                      }`}
                     />
+                    {errors.message && (
+                      <p id="message-error" className="text-[11px] text-red-400 mt-1 font-medium">{errors.message}</p>
+                    )}
                   </div>
 
                   {/* Attachment input (Drag-and-drop & Click supported) */}
                   <div className="text-xs">
-                    <label htmlFor="contact-attachment" className="block text-slate-300 font-semibold mb-1">Attach Supporting File (Optional)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label htmlFor="contact-attachment" className="block text-slate-300 font-semibold">
+                        Attach Public Inquiry File (Optional)
+                      </label>
+                      <span className="text-[11px] text-slate-400">Non-sensitive materials only</span>
+                    </div>
                     <div className="p-4 border-2 border-dashed border-[#1E3A5F] rounded-xl bg-[#07172B] text-center hover:border-[#C6A15B] transition-colors relative cursor-pointer">
                       <input
                         id="contact-attachment"
@@ -243,8 +341,29 @@ export const ContactPage: React.FC = () => {
                       <span className="text-slate-300 font-medium block">
                         {attachedFile ? attachedFile : 'Drag and drop or click to attach document'}
                       </span>
-                      <span className="text-[10px] text-slate-500">PDF, JPG, PNG, CSV up to 25MB</span>
+                      <span className="text-[10px] text-slate-500">PDF, JPG, PNG up to 25MB (Do not upload SSNs or tax returns here)</span>
                     </div>
+                  </div>
+
+                  {/* Consent and Disclaimers */}
+                  <div className="space-y-2 pt-1">
+                    <label className="flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={consentAcknowledged}
+                        onChange={(e) => {
+                          setConsentAcknowledged(e.target.checked);
+                          if (errors.consent) setErrors(prev => ({ ...prev, consent: '' }));
+                        }}
+                        className="mt-0.5 rounded border-[#1E3A5F] bg-[#07172B] text-[#C6A15B] focus:ring-[#C6A15B]"
+                      />
+                      <span className="leading-snug">
+                        I confirm that no sensitive personal data (e.g. SSNs or full tax returns) is included in this submission. I understand that submitting this inquiry does not create a professional-client relationship, which requires a mutually executed engagement letter. <span className="text-amber-400">*</span>
+                      </span>
+                    </label>
+                    {errors.consent && (
+                      <p className="text-[11px] text-red-400 font-medium">{errors.consent}</p>
+                    )}
                   </div>
 
                   <div className="pt-2">
@@ -254,15 +373,34 @@ export const ContactPage: React.FC = () => {
                       className="w-full py-3.5 rounded-xl font-bold text-xs text-[#07172B] bg-[#C6A15B] hover:bg-[#D9BF7A] transition-all flex items-center justify-center gap-2 shadow-xl disabled:opacity-50"
                     >
                       {isSubmitting ? (
-                        <span>Transmitting Secure Message...</span>
+                        <span>Transmitting Secure Inquiry...</span>
                       ) : (
                         <>
                           <Send className="w-4 h-4" />
-                          Send Message to Advisors
+                          Send Inquiry to Advisory Team
                         </>
                       )}
                     </button>
                   </div>
+
+                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                    By submitting this form, you agree to our{' '}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage('privacy')}
+                      className="text-[#C6A15B] underline hover:text-[#E2BD67]"
+                    >
+                      Privacy Policy
+                    </button>{' '}
+                    and{' '}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage('disclaimers')}
+                      className="text-[#C6A15B] underline hover:text-[#E2BD67]"
+                    >
+                      Professional Disclaimers
+                    </button>.
+                  </p>
                 </form>
               ) : (
                 <div className="text-center py-10 space-y-4">

@@ -1,6 +1,8 @@
 import React from 'react';
 import { BRAND_ASSETS } from '../../../utils/assets';
 import { ShieldCheck, MapPin } from 'lucide-react';
+import ceoOfficialPng from '../../../assets/images/desmond-hinds-ceo-official.png';
+import ceoOfficialWebp from '../../../assets/images/desmond-hinds-ceo-official.webp';
 
 interface FounderPortraitProps {
   size?: 'sm' | 'md' | 'lg' | 'full';
@@ -77,15 +79,16 @@ export const FounderPortrait: React.FC<FounderPortraitProps> = ({
         className={`relative w-full ${heightClasses} flex items-center justify-center overflow-hidden rounded-xl bg-[#06172C]`}
       >
         <picture className="w-full h-full flex items-center justify-center">
-          <source srcSet={webpSrc} type="image/webp" />
+          <source srcSet={ceoOfficialWebp || BRAND_ASSETS.founderWebp} type="image/webp" />
+          <source srcSet={ceoOfficialPng || BRAND_ASSETS.founderPng} type="image/png" />
           <img
-            src={jpgSrc}
+            src={ceoOfficialPng || BRAND_ASSETS.founderPng}
             alt="Desmond Hinds, Founder and CEO of A/R Tax Services, LLC"
             width={width}
             height={height}
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
-            className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+            className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.02]"
             referrerPolicy="no-referrer"
             style={{ maxHeight: '100%' }}
           />
