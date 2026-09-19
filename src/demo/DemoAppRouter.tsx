@@ -130,9 +130,6 @@ export const DemoAppRouter: React.FC = () => {
       const errType = raw.replace('error/', '') as ErrorPageType;
       // If unauthorized (401), route directly to client login page
       if (errType === '401') {
-        if (typeof window !== 'undefined' && window.location.hash !== '#/client/login') {
-          window.location.hash = '#/client/login';
-        }
         return { isDemo: true, isPortals: false, isLogin: true, isDashboard: false, isError: false, role: 'client' };
       }
       return { isDemo: true, isPortals: false, isLogin: false, isDashboard: false, isError: true, errorType: errType };
@@ -161,10 +158,6 @@ export const DemoAppRouter: React.FC = () => {
     // Additional aliases and legacy redirects to canonical routes
     if (raw === 'client-portal' || raw === 'client_portal' || raw === 'client/portal' || raw === 'portal') {
       const isClientAuth = DemoAuthService.isAuthenticated('client');
-      // If not authenticated, route directly to the login page
-      if (!isClientAuth && typeof window !== 'undefined' && window.location.hash !== '#/client/login') {
-        window.location.hash = '#/client/login';
-      }
       return { 
         isDemo: true, 
         isPortals: false, 
@@ -196,6 +189,22 @@ export const DemoAppRouter: React.FC = () => {
     return { isDemo: false, isPortals: false, isLogin: false, isDashboard: false, isError: false };
   }, [currentHash]);
 
+  const role = routeInfo.role;
+  const roleConfig: DemoRoleConfig | undefined = role ? DEMO_ROLES[role] : undefined;
+  const isAuthenticated = role ? DemoAuthService.isAuthenticated(role) : false;
+
+  // Keep address bar in sync when route is redirected to login without firing synchronous hashchange during render
+  useEffect(() => {
+    if ((routeInfo.isLogin || !isAuthenticated) && roleConfig?.loginPath) {
+      if (typeof window !== 'undefined') {
+        const loginHash = roleConfig.loginPath.startsWith('#') ? roleConfig.loginPath : `#${roleConfig.loginPath}`;
+        if (window.location.hash !== loginHash && !window.location.hash.endsWith('/login')) {
+          window.history.replaceState(null, '', loginHash);
+        }
+      }
+    }
+  }, [routeInfo.isLogin, isAuthenticated, roleConfig?.loginPath]);
+
   // If not a demo route, let the public site render
   if (!routeInfo.isDemo) {
     return null;
@@ -221,12 +230,9 @@ export const DemoAppRouter: React.FC = () => {
     return <ErrorPageView type={routeInfo.errorType} />;
   }
 
-  const role = routeInfo.role;
-  if (!role) {
+  if (!role || !roleConfig) {
     return <ErrorPageView type="404" />;
   }
-
-  const roleConfig: DemoRoleConfig = DEMO_ROLES[role];
 
   // 3. Login Route
   if (routeInfo.isLogin) {
@@ -245,15 +251,8 @@ export const DemoAppRouter: React.FC = () => {
   }
 
   // 4. Protected Dashboard Route: Check Session Authentication
-  const isAuthenticated = DemoAuthService.isAuthenticated(role);
   if (!isAuthenticated) {
-    // Direct access without an active session: Route directly to the role's login page
-    if (typeof window !== 'undefined') {
-      const loginHash = roleConfig.loginPath.startsWith('#') ? roleConfig.loginPath : `#${roleConfig.loginPath}`;
-      if (window.location.hash !== loginHash) {
-        window.location.hash = loginHash;
-      }
-    }
+    // Direct access without an active session: Render role's login page directly
     return (
       <RoleLoginPage
         role={role}
