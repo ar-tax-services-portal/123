@@ -24,6 +24,7 @@ import {
   HelpCircle,
   XCircle,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   ShieldCheck,
   FileText,
@@ -38,10 +39,12 @@ import {
   Eye,
   Camera,
   AlertTriangle,
-  RefreshCw,
   PlusCircle,
-  Sliders,
-  UserCheck
+  UserCheck,
+  CheckCheck,
+  RotateCcw,
+  SlidersHorizontal,
+  Check
 } from 'lucide-react';
 
 import {
@@ -51,20 +54,27 @@ import {
   TargetJurisdiction,
   DocumentStatus,
   PriorityLevel,
-  DEMO_PROFILES,
   STATE_RULES_REGISTRY,
   generatePersonalizedChecklist,
-  calculateReadinessScorecard
+  calculateReadinessScorecard,
+  extractStateCode,
+  deriveIntakeFromClientAndDocs,
+  reconcileChecklistWithClientVaultDocs,
+  generateAutomaticClientChecklist,
+  ALL_STANDARD_TAX_FORMS,
+  StandardTaxFormDef
 } from '../../services/personalizedDocumentsEngine';
+import { demoDataStore } from '../../services/DemoDataService';
 
 import {
   SmartUploadModal,
   OcrInspectionModal,
-  IntakeQuestionnaireModal,
-  ProfessionalOverrideModal
+  ProfessionalOverrideModal,
+  IntakeQuestionnaireModal
 } from './PersonalizedChecklistModals';
 
 interface PersonalizedChecklistSectionProps {
+  clientId?: string;
   selectedYear: number;
   onNavigateToUpload: () => void;
   onNavigateToVault: () => void;
@@ -72,34 +82,57 @@ interface PersonalizedChecklistSectionProps {
 }
 
 export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSectionProps> = ({
+  clientId: externalClientId,
   selectedYear: externalSelectedYear,
   onNavigateToUpload,
   onNavigateToVault,
   onOpenAssistant
 }) => {
-  // 1. Current State Profile & Intake Configuration
-  const [activeProfileKey, setActiveProfileKey] = useState<string>('SC');
-  const activeProfile = DEMO_PROFILES[activeProfileKey] || DEMO_PROFILES.SC;
+  const [storeVersion, setStoreVersion] = useState<number>(0);
+
+  // Subscribe to demoDataStore updates
+  React.useEffect(() => {
+    const unsub = demoDataStore.subscribe(() => {
+      setStoreVersion(v => v + 1);
+    });
+    return unsub;
+  }, []);
+
+  const activeClient = useMemo(() => {
+    return demoDataStore.getClientById(externalClientId || 'cli_perotti') || demoDataStore.getClients()[0];
+  }, [externalClientId, storeVersion]);
+
+  const clientSubmittedDocs = useMemo(() => {
+    return demoDataStore.getDocumentsByClient(activeClient.id);
+  }, [activeClient.id, storeVersion]);
 
   const [activeTaxYear, setActiveTaxYear] = useState<number>(externalSelectedYear || 2025);
-  const [currentIntake, setCurrentIntake] = useState<IntakeResponses>(activeProfile.intake);
-  const [items, setItems] = useState<PersonalizedDocItem[]>(() => {
-    return generatePersonalizedChecklist(activeProfile.intake, activeProfile.seededItems);
-  });
 
-  // 2. Modals state
+  // Automatic intake and checklist derived strictly from customer onboarding details & submitted documents
+  const autoReconciled = useMemo(() => {
+    return generateAutomaticClientChecklist(activeClient, clientSubmittedDocs, activeTaxYear);
+  }, [activeClient, clientSubmittedDocs, activeTaxYear]);
+
+  const [currentIntake, setCurrentIntake] = useState<IntakeResponses>(() => autoReconciled.intake);
+  const [items, setItems] = useState<PersonalizedDocItem[]>(() => autoReconciled.items);
+
+  // Synchronize when customer profile, tax year, or vault documents update automatically
+  React.useEffect(() => {
+    setCurrentIntake(autoReconciled.intake);
+    setItems(autoReconciled.items);
+  }, [autoReconciled]);
+
+  // Modals state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [targetUploadDoc, setTargetUploadDoc] = useState<PersonalizedDocItem | null>(null);
 
   const [ocrModalOpen, setOcrModalOpen] = useState(false);
   const [targetOcrDoc, setTargetOcrDoc] = useState<PersonalizedDocItem | null>(null);
 
-  const [intakeModalOpen, setIntakeModalOpen] = useState(false);
-
   const [overrideModalOpen, setOverrideModalOpen] = useState(false);
   const [targetOverrideDoc, setTargetOverrideDoc] = useState<PersonalizedDocItem | null>(null);
 
-  // 3. Filters & UI State
+  // Filters & UI State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -108,33 +141,112 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
   const [showMissingOnly, setShowMissingOnly] = useState<boolean>(false);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
-  // 4. "Does Not Apply" Explanation Drawer
+  // "Does Not Apply" Explanation Drawer
   const [activeExplainId, setActiveExplainId] = useState<string | null>(null);
   const [explainText, setExplainText] = useState('');
   const [explainError, setExplainError] = useState<string | null>(null);
 
-  // 5. Audit & Action Notifications
+  // Audit & Action Notifications
   const [auditNotice, setAuditNotice] = useState<string | null>(null);
 
-  // When user switches profile in the top selector
-  const handleSwitchProfile = (key: string) => {
-    setActiveProfileKey(key);
-    const profile = DEMO_PROFILES[key] || DEMO_PROFILES.SC;
-    setCurrentIntake(profile.intake);
-    const updated = generatePersonalizedChecklist(profile.intake, profile.seededItems);
-    setItems(updated);
-    setAuditNotice(`Switched to demo profile: ${profile.name} (${profile.state}). State-specific requirements re-evaluated.`);
-    setTimeout(() => setAuditNotice(null), 4000);
+  // On-Page Tax Forms Intake & Availability State
+  const [isIntakeOpen, setIsIntakeOpen] = useState<boolean>(true);
+  const [intakeSearchQuery, setIntakeSearchQuery] = useState<string>('');
+  const [intakeCategoryFilter, setIntakeCategoryFilter] = useState<string>('ALL');
+  const [fullIntakeModalOpen, setFullIntakeModalOpen] = useState<boolean>(false);
+
+  // Toggle individual standard tax form in intake
+  const handleToggleFormIntake = (intakeKey: keyof IntakeResponses) => {
+    const updatedIntake: IntakeResponses = {
+      ...currentIntake,
+      [intakeKey]: !currentIntake[intakeKey]
+    };
+    setCurrentIntake(updatedIntake);
+    const baseItems = generatePersonalizedChecklist(updatedIntake, []);
+    const reconciled = reconcileChecklistWithClientVaultDocs(baseItems, activeClient, clientSubmittedDocs, activeTaxYear);
+    setItems(reconciled.reconciledItems);
+
+    const formDef = ALL_STANDARD_TAX_FORMS.find(f => f.intakeKey === intakeKey);
+    const isNowActive = !!updatedIntake[intakeKey];
+    setAuditNotice(`${formDef ? formDef.formNumber : 'Tax form'} ${isNowActive ? 'enabled and added to' : 'removed from'} required checklist.`);
+    setTimeout(() => setAuditNotice(null), 3000);
   };
 
-  // When intake questionnaire is updated
-  const handleSaveIntake = (updatedIntake: IntakeResponses) => {
-    setCurrentIntake(updatedIntake);
-    const refreshed = generatePersonalizedChecklist(updatedIntake, items);
-    setItems(refreshed);
-    setAuditNotice('Checklist requirements dynamically regenerated based on updated tax facts.');
-    setTimeout(() => setAuditNotice(null), 4000);
+  // Enable all 23 standard tax forms with one click
+  const handleEnableAll23Forms = () => {
+    const allEnabled: IntakeResponses = {
+      ...currentIntake,
+      hadW2Employment: true,
+      hadFreelanceOrContract: true,
+      received1099MISC: true,
+      receivedInterest: true,
+      receivedDividends: true,
+      receivedInterestOrDividends: true,
+      soldInvestments: true,
+      received1099K: true,
+      receivedRetirementDistributions: true,
+      receivedGovernmentPayments: true,
+      receivedSocialSecurity: true,
+      hasPassThroughK1: true,
+      hasMortgage: true,
+      hasCollegeOrTuition: true,
+      paysStudentLoanInterest: true,
+      hasForeclosureOrAbandonment: true,
+      hasCancelledDebt: true,
+      hasCancelledDebtOrForeclosure: true,
+      soldRealEstate: true,
+      hasHSAorMSA: true,
+      contributedToIRA: true,
+      hasMarketplaceInsurance: true,
+      hasLongTermCare: true,
+      hasABLEAccount: true,
+      hasEducationPlans: true,
+      receivedUnemployment: true
+    };
+    setCurrentIntake(allEnabled);
+    const baseItems = generatePersonalizedChecklist(allEnabled, []);
+    const reconciled = reconcileChecklistWithClientVaultDocs(baseItems, activeClient, clientSubmittedDocs, activeTaxYear);
+    setItems(reconciled.reconciledItems);
+    setAuditNotice('All 23 standard federal and multi-state tax forms enabled in customer checklist.');
+    setTimeout(() => setAuditNotice(null), 3500);
   };
+
+  // Reset to onboarding profile defaults
+  const handleResetToOnboarding = () => {
+    const auto = generateAutomaticClientChecklist(activeClient, clientSubmittedDocs, activeTaxYear);
+    setCurrentIntake(auto.intake);
+    setItems(auto.items);
+    setAuditNotice('Checklist reset to customer profile onboarding baseline.');
+    setTimeout(() => setAuditNotice(null), 3500);
+  };
+
+  // Filtered intake forms list for on-page view
+  const filteredIntakeForms = useMemo(() => {
+    return ALL_STANDARD_TAX_FORMS.filter(form => {
+      if (intakeCategoryFilter !== 'ALL' && form.category !== intakeCategoryFilter) {
+        return false;
+      }
+      if (intakeSearchQuery.trim()) {
+        const q = intakeSearchQuery.toLowerCase();
+        const matchesNum = form.formNumber.toLowerCase().includes(q);
+        const matchesTitle = form.title.toLowerCase().includes(q);
+        const matchesCat = form.category.toLowerCase().includes(q);
+        const matchesDesc = form.description.toLowerCase().includes(q);
+        if (!matchesNum && !matchesTitle && !matchesCat && !matchesDesc) return false;
+      }
+      return true;
+    });
+  }, [intakeCategoryFilter, intakeSearchQuery]);
+
+  const activeFormsCount = useMemo(() => {
+    return ALL_STANDARD_TAX_FORMS.filter(f => !!currentIntake[f.intakeKey]).length;
+  }, [currentIntake]);
+
+  const intakeCategoriesList = useMemo(() => {
+    const set = new Set<string>();
+    ALL_STANDARD_TAX_FORMS.forEach(f => set.add(f.category));
+    return Array.from(set);
+  }, []);
 
   // Readiness scorecard
   const scorecard = useMemo(() => {
@@ -270,8 +382,9 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
           taxYearMismatch: uploadedData.taxYearMismatch,
           mismatchDetectedYear: uploadedData.mismatchDetectedYear,
           possibleDuplicateOf: uploadedData.possibleDuplicateOf,
+          autoMatchedFromVault: true,
           accountantApproved: !isMismatched,
-          reviewedBy: !isMismatched ? 'Elena Rostova, CPA' : undefined,
+          reviewedBy: !isMismatched ? (activeClient.assignedReviewerName || 'Elena Rostova, CPA') : undefined,
           needsReviewReason: isMismatched
             ? `Tax Year Mismatch: Document detected for calendar year ${uploadedData.mismatchDetectedYear}, but filing year is CY${activeTaxYear}.`
             : undefined
@@ -279,6 +392,21 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
       }
       return item;
     }));
+
+    // Keep central vault in sync
+    try {
+      demoDataStore.uploadDocument({
+        clientId: activeClient.id,
+        fileName: uploadedData.fileName,
+        fileSize: uploadedData.fileSize,
+        fileType: 'application/pdf',
+        category: targetUploadDoc?.category || 'Tax Document',
+        taxYear: activeTaxYear,
+        uploadedBy: activeClient.name || 'Client'
+      });
+    } catch {
+      // Ignore simulated persistence errors
+    }
 
     setAuditNotice(`Document "${uploadedData.fileName}" uploaded, scanned, and indexed successfully.`);
     setTimeout(() => setAuditNotice(null), 4000);
@@ -336,139 +464,282 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
   return (
     <div className="space-y-6">
       {/* ------------------------------------------------------------------ */}
-      {/* 1. DEMO TAXPAYER PROFILE SWITCHER BAR                              */}
+      {/* 1. CUSTOMER INFORMATION (AUTOMATIC STATE & ONBOARDING DETAILS)     */}
       {/* ------------------------------------------------------------------ */}
-      <div className="p-4 bg-[#0A2544] text-white rounded-xl shadow-md border border-[#061A2F]">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 text-[11px] font-mono font-bold bg-[#E8C66A] text-[#0A2544] rounded uppercase tracking-wider">
-                DEMO / FICTIONAL TAXPAYER
+      <div className="p-6 bg-[#061A2F] border-2 border-[#C99A32] text-[#F7F4ED] rounded-xl shadow-md">
+        <div className="space-y-4">
+          {/* Customer Header: Name, Business Name, Entity & Masked Tax ID */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/15 pb-4">
+            <div>
+              <span className="text-[10px] font-mono tracking-widest uppercase text-[#E8C66A] font-bold block mb-1">
+                Customer Profile
               </span>
-              <span className="text-xs text-neutral-300">
-                Multi-State Service Market Compliance Engine
-              </span>
+              <h2 className="text-xl sm:text-2xl font-bold text-[#F7F4ED] flex items-center gap-2 flex-wrap">
+                <span>{activeClient.name}</span>
+                {activeClient.businessName && (
+                  <span className="text-[#FAF9F5]/70 font-normal text-sm sm:text-base">
+                    &bull; {activeClient.businessName}
+                  </span>
+                )}
+              </h2>
             </div>
-            <h2 className="text-lg font-bold text-white mt-1">
-              {activeProfile.name}
-            </h2>
-            <p className="text-xs text-neutral-300">
-              {activeProfile.title} &bull; {activeProfile.scenarioDescription}
-            </p>
+
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <span className="px-3 py-1 bg-[#0A2544] text-[#E8C66A] text-xs font-mono font-bold rounded-lg border border-[#C99A32]/60">
+                {activeClient.entityType}
+              </span>
+              {activeClient.einOrSsnMasked && (
+                <span className="px-3 py-1 bg-[#031323] text-[#FAF9F5]/90 text-xs font-mono rounded-lg border border-white/15">
+                  Tax ID: {activeClient.einOrSsnMasked}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Profile Buttons */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-300 mr-1">
-              Select Market:
-            </span>
-            {(['CA', 'NY', 'NC', 'SC', 'VA', 'TN', 'FL', 'NJ'] as const).map(st => {
-              const isSelected = activeProfileKey === st;
-              return (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => handleSwitchProfile(st)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-                    isSelected
-                      ? 'bg-[#E8C66A] text-[#0A2544] shadow-sm ring-2 ring-[#E8C66A]/50'
-                      : 'bg-[#061A2F]/80 text-neutral-200 hover:bg-[#061A2F] border border-white/10'
-                  }`}
-                >
-                  {st}
-                </button>
-              );
-            })}
+          {/* Customer Details Grid: Address, Automatic State Jurisdiction, Contact */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#FAF9F5]/60 block font-semibold mb-1">
+                Physical / Mailing Address
+              </span>
+              <p className="text-[#F7F4ED] leading-relaxed font-medium">
+                {activeClient.address}
+              </p>
+            </div>
+
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#FAF9F5]/60 block font-semibold mb-1">
+                Tax Jurisdiction / Filing State
+              </span>
+              <p className="text-[#E8C66A] font-bold text-sm">
+                {activeClient.primaryJurisdiction}
+              </p>
+              {activeClient.secondaryJurisdictions && activeClient.secondaryJurisdictions.length > 0 && (
+                <p className="text-[11px] text-[#FAF9F5]/70 mt-1">
+                  Multi-State Filings: {activeClient.secondaryJurisdictions.join(', ')}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#FAF9F5]/60 block font-semibold mb-1">
+                Contact Details
+              </span>
+              <p className="text-[#F7F4ED] font-medium">{activeClient.email}</p>
+              <p className="text-[#FAF9F5]/80 mt-0.5">{activeClient.phone}</p>
+              <p className="text-[11px] font-mono text-[#FAF9F5]/60 mt-1">Account Ref: {activeClient.id}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 2. STATE COMPLIANCE & STATUTORY NOTICES                            */}
+      {/* 2B. TAX FORMS INTAKE & COMPREHENSIVE REQUIREMENTS SCOPE (ALL 23)   */}
       {/* ------------------------------------------------------------------ */}
-      <div className="p-4 bg-white border border-neutral-200 rounded-xl shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div className="space-y-1.5 max-w-3xl">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 bg-neutral-100 text-neutral-800 font-mono font-bold text-xs rounded border border-neutral-300">
-                {stateRule.name} ({currentIntake.residenceState})
+      <div className="bg-white border border-[#D8DCE2] rounded-xl shadow-xs overflow-hidden">
+        {/* Header Bar */}
+        <div className="p-5 bg-[#FAF9F5] border-b border-[#D8DCE2] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="p-1.5 bg-[#061A2F] text-[#E8C66A] rounded-lg">
+                <SlidersHorizontal className="w-4 h-4" />
               </span>
-              <span className="text-xs font-semibold text-neutral-700">
-                Agency: {stateRule.governingAgency}
-              </span>
-              <span className="text-xs text-neutral-500 font-mono">
-                Return: {stateRule.returnFormName}
+              <h3 className="text-base sm:text-lg font-bold text-[#061A2F]">
+                Tax Forms Intake &amp; Document Availability
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#061A2F] text-[#E8C66A] border border-[#C99A32]/50">
+                {activeFormsCount} of 23 Forms Active
               </span>
             </div>
-
-            {/* Special notices for FL & TN */}
-            {!stateRule.hasIndividualIncomeTax ? (
-              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-xs text-emerald-950 flex items-start gap-2.5">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-bold text-emerald-900">
-                    Statutory Rule: No Personal State Income Tax Return Required
-                  </div>
-                  <div className="text-emerald-800 mt-0.5">
-                    {stateRule.statutoryWarning} Only federal Form 1040 document requirements are tracked for this taxpayer.
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs text-neutral-600">
-                <span className="font-semibold text-neutral-800">State Compliance Features: </span>
-                {stateRule.keyComplianceFeatures.join(' • ')}
-              </div>
-            )}
+            <p className="text-xs text-[#667085] max-w-2xl">
+              All 23 standard tax forms are supported for this customer. Toggle forms directly to dynamically add or exclude them from the document requirements checklist below.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => setIntakeModalOpen(true)}
-              className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors border border-neutral-300"
+              onClick={handleEnableAll23Forms}
+              className="px-3.5 py-1.5 bg-[#061A2F] hover:bg-[#0A2544] text-[#E8C66A] text-xs font-bold font-mono rounded-lg border border-[#C99A32]/40 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
-              <Sliders className="w-3.5 h-3.5 text-[#0A2544]" />
-              <span>Edit Taxpayer Intake</span>
+              <CheckCheck className="w-3.5 h-3.5 text-[#E8C66A]" />
+              Enable All 23 Forms
             </button>
             <button
               type="button"
-              onClick={onOpenAssistant}
-              className="px-3.5 py-2 border border-neutral-300 hover:bg-neutral-50 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+              onClick={handleResetToOnboarding}
+              className="px-3 py-1.5 bg-white hover:bg-[#F2EDE0] text-[#061A2F] text-xs font-semibold rounded-lg border border-[#D8DCE2] transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#D7AC4A]" />
-              <span>Ask Advisor</span>
+              <RotateCcw className="w-3.5 h-3.5 text-[#667085]" />
+              Reset Baseline
+            </button>
+            <button
+              type="button"
+              onClick={() => setFullIntakeModalOpen(true)}
+              className="px-3 py-1.5 bg-white hover:bg-[#F2EDE0] text-[#061A2F] text-xs font-semibold rounded-lg border border-[#D8DCE2] transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#C99A32]" />
+              Intake Questions
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsIntakeOpen(!isIntakeOpen)}
+              className="px-2.5 py-1.5 bg-white hover:bg-[#F2EDE0] text-[#061A2F] text-xs font-medium rounded-lg border border-[#D8DCE2] transition-colors flex items-center gap-1 cursor-pointer"
+              title={isIntakeOpen ? 'Collapse forms intake list' : 'Expand forms intake list'}
+            >
+              {isIntakeOpen ? (
+                <>
+                  <span>Hide Intake</span>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <span>Show All 23 Forms</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
           </div>
         </div>
+
+        {/* Expandable Intake Forms Grid */}
+        {isIntakeOpen && (
+          <div className="p-5 space-y-4">
+            {/* Search and Category Filter */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-[#667085] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={intakeSearchQuery}
+                  onChange={(e) => setIntakeSearchQuery(e.target.value)}
+                  placeholder="Filter forms by code (W-2, 1099-NEC, 1098), title, or category..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#FAF9F5] border border-[#D8DCE2] rounded-lg text-[#061A2F] placeholder-[#667085] focus:outline-hidden focus:border-[#C99A32] focus:bg-white transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-mono text-[#667085] uppercase tracking-wider font-semibold">
+                  Category:
+                </span>
+                <select
+                  value={intakeCategoryFilter}
+                  onChange={(e) => setIntakeCategoryFilter(e.target.value)}
+                  className="px-2.5 py-1.5 text-xs bg-[#FAF9F5] border border-[#D8DCE2] rounded-lg text-[#061A2F] font-medium focus:outline-hidden focus:border-[#C99A32] cursor-pointer"
+                >
+                  <option value="ALL">All Categories ({ALL_STANDARD_TAX_FORMS.length})</option>
+                  {intakeCategoriesList.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Forms Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+              {filteredIntakeForms.map((form) => {
+                const isChecked = !!currentIntake[form.intakeKey];
+                return (
+                  <div
+                    key={form.id}
+                    onClick={() => handleToggleFormIntake(form.intakeKey)}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      isChecked
+                        ? 'bg-white border-[#C99A32]/60 shadow-2xs hover:border-[#061A2F]'
+                        : 'bg-[#FAF9F5]/70 border-[#D8DCE2] opacity-75 hover:opacity-100 hover:border-[#667085]'
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-[#667085] truncate">
+                          {form.category}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${
+                            isChecked
+                              ? 'bg-[#061A2F] text-[#E8C66A] border-[#C99A32]'
+                              : 'bg-white text-[#667085] border-[#D8DCE2]'
+                          }`}
+                        >
+                          {form.formNumber}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-xs font-bold text-[#061A2F] leading-snug">
+                          {form.title}
+                        </h4>
+                        <p className="text-[11px] text-[#475467] mt-1 leading-relaxed">
+                          {form.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 mt-2 border-t border-[#D8DCE2]/60 flex items-center justify-between text-xs">
+                      <span
+                        className={`text-[11px] font-mono font-semibold flex items-center gap-1 ${
+                          isChecked ? 'text-[#061A2F]' : 'text-[#667085]'
+                        }`}
+                      >
+                        {isChecked ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-[#C99A32]" />
+                            <span>Included in Checklist</span>
+                          </>
+                        ) : (
+                          <span>Excluded</span>
+                        )}
+                      </span>
+
+                      {/* Custom Toggle Switch */}
+                      <div
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          isChecked ? 'bg-[#061A2F]' : 'bg-[#D8DCE2]'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-[#FAF9F5] shadow-xs transform transition-transform ${
+                            isChecked ? 'translate-x-4 bg-[#E8C66A]' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
       {/* 3. READINESS SCORECARD & WORKFLOW STAGE                            */}
       {/* ------------------------------------------------------------------ */}
-      <div className="p-6 bg-white border border-neutral-200 rounded-xl shadow-sm space-y-6">
+      <div className="p-6 bg-white border border-[#D8DCE2] rounded-xl shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-neutral-900">Tax Package Readiness &amp; Compliance Scorecard</h3>
-              <span className={`px-2.5 py-0.5 text-xs font-bold font-mono rounded ${
+              <h3 className="text-lg font-bold text-[#061A2F]">Tax Package Readiness &amp; Compliance Scorecard</h3>
+              <span className={`px-2.5 py-0.5 text-xs font-bold font-mono rounded border ${
                 scorecard.filingWorkflowStage === 'Documents Complete'
-                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                  ? 'bg-[#061A2F] text-[#E8C66A] border-[#C99A32]'
                   : scorecard.filingWorkflowStage === 'Professional Review'
-                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
-                  : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  ? 'bg-[#FAF9F5] text-[#061A2F] border-[#C99A32]'
+                  : 'bg-[#FAF9F5] text-[#061A2F] border-[#D8DCE2]'
               }`}>
                 Stage: {scorecard.filingWorkflowStage}
               </span>
             </div>
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-xs text-[#667085] mt-1">
               Readiness is calculated strictly across applicable items for Tax Year {activeTaxYear}. Items marked "Does Not Apply" are excluded from denominator.
             </p>
           </div>
 
           {/* Tax Year Selector */}
-          <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-lg border border-neutral-200">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 px-2 font-semibold">
+          <div className="flex items-center gap-1.5 bg-[#FAF9F5] p-1 rounded-lg border border-[#D8DCE2]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-[#667085] px-2 font-semibold">
               Tax Year:
             </span>
             {[2026, 2025, 2024, 2023].map((yr) => (
@@ -476,10 +747,10 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                 key={yr}
                 type="button"
                 onClick={() => setActiveTaxYear(yr)}
-                className={`px-3 py-1 rounded text-xs font-mono font-bold transition-all ${
+                className={`px-3 py-1 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
                   activeTaxYear === yr
-                    ? 'bg-[#0A2544] text-[#E8C66A] shadow-xs'
-                    : 'text-neutral-700 hover:bg-neutral-200'
+                    ? 'bg-[#061A2F] text-[#E8C66A] shadow-xs'
+                    : 'text-[#061A2F] hover:bg-[#F2EDE0]'
                 }`}
               >
                 {yr}
@@ -491,58 +762,58 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
         {/* Progress Meters Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
           {/* Federal Readiness */}
-          <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
+          <div className="p-4 bg-[#FAF9F5] rounded-xl border border-[#D8DCE2] space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-neutral-800">Federal Readiness (Form 1040)</span>
-              <span className="font-mono font-bold text-[#0A2544]">{scorecard.federalReadinessPct}%</span>
+              <span className="font-bold text-[#061A2F]">Federal Readiness (Form 1040)</span>
+              <span className="font-mono font-bold text-[#061A2F]">{scorecard.federalReadinessPct}%</span>
             </div>
-            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
               <div
-                className="bg-[#0A2544] h-full transition-all duration-300"
+                className="bg-[#061A2F] h-full transition-all duration-300"
                 style={{ width: `${scorecard.federalReadinessPct}%` }}
               />
             </div>
-            <div className="text-[11px] text-neutral-500 flex justify-between font-mono">
+            <div className="text-[11px] text-[#667085] flex justify-between font-mono">
               <span>Required items: {scorecard.requiredReceived} of {scorecard.requiredTotal}</span>
               <span>Missing: {scorecard.requiredMissing}</span>
             </div>
           </div>
 
           {/* State Readiness */}
-          <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
+          <div className="p-4 bg-[#FAF9F5] rounded-xl border border-[#D8DCE2] space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-neutral-800">
+              <span className="font-bold text-[#061A2F]">
                 {stateRule.name} ({currentIntake.residenceState}) Readiness
               </span>
-              <span className="font-mono font-bold text-[#0A2544]">
+              <span className="font-mono font-bold text-[#061A2F]">
                 {!stateRule.hasIndividualIncomeTax ? '100% (No Tax)' : `${scorecard.stateReadinessPct}%`}
               </span>
             </div>
-            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
               <div
-                className="bg-emerald-600 h-full transition-all duration-300"
+                className="bg-[#061A2F] h-full transition-all duration-300"
                 style={{ width: `${!stateRule.hasIndividualIncomeTax ? 100 : scorecard.stateReadinessPct}%` }}
               />
             </div>
-            <div className="text-[11px] text-neutral-500 flex justify-between font-mono">
+            <div className="text-[11px] text-[#667085] flex justify-between font-mono">
               <span>Return: {stateRule.returnFormName}</span>
               <span>Agency: {currentIntake.residenceState}</span>
             </div>
           </div>
 
           {/* Overall Tax Package Readiness */}
-          <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 space-y-2">
+          <div className="p-4 bg-[#FAF9F5] rounded-xl border border-[#D8DCE2] space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-neutral-800">Overall Intake Fulfillment</span>
-              <span className="font-mono font-bold text-emerald-700">{scorecard.overallReadinessPct}%</span>
+              <span className="font-bold text-[#061A2F]">Overall Intake Fulfillment</span>
+              <span className="font-mono font-bold text-[#C99A32]">{scorecard.overallReadinessPct}%</span>
             </div>
-            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
               <div
-                className="bg-emerald-600 h-full transition-all duration-300"
+                className="bg-[#C99A32] h-full transition-all duration-300"
                 style={{ width: `${scorecard.overallReadinessPct}%` }}
               />
             </div>
-            <div className="text-[11px] text-neutral-500 flex justify-between font-mono">
+            <div className="text-[11px] text-[#667085] flex justify-between font-mono">
               <span>Total Applicable: {scorecard.totalApplicable}</span>
               <span>Verified / Accepted: {scorecard.receivedOrAccepted}</span>
             </div>
@@ -550,25 +821,25 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
         </div>
 
         {/* Status Counter Pills */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-neutral-200 text-xs">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-[#D8DCE2] text-xs">
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FAF9F5] border border-[#C99A32] text-[#061A2F]">
+            <CheckCircle2 className="w-4 h-4 text-[#C99A32]" />
             <span className="font-medium">{scorecard.receivedOrAccepted} Accepted</span>
           </div>
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-900">
-            <AlertCircle className="w-4 h-4 text-rose-600" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FAF9F5] border border-[#061A2F] text-[#061A2F]">
+            <AlertCircle className="w-4 h-4 text-[#061A2F]" />
             <span className="font-medium">{scorecard.requiredMissing} Required Missing</span>
           </div>
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-900">
-            <Clock className="w-4 h-4 text-purple-600" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FAF9F5] border border-[#D8DCE2] text-[#061A2F]">
+            <Clock className="w-4 h-4 text-[#667085]" />
             <span className="font-medium">{scorecard.needsReviewCount} Needs Review</span>
           </div>
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
-            <HelpCircle className="w-4 h-4 text-amber-600" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FBFAF7] border border-[#D8DCE2] text-[#4A5568]">
+            <HelpCircle className="w-4 h-4 text-[#667085]" />
             <span className="font-medium">{scorecard.optionalMissing} Optional Missing</span>
           </div>
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-neutral-100 border border-neutral-300 text-neutral-800">
-            <XCircle className="w-4 h-4 text-neutral-500" />
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FBFAF7] border border-[#D8DCE2] text-[#667085]">
+            <XCircle className="w-4 h-4 text-[#667085]" />
             <span className="font-medium">{items.filter(i => i.status === 'Not Applicable').length} Not Applicable</span>
           </div>
         </div>
@@ -576,8 +847,8 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
       {/* Audit Toast Notice */}
       {auditNotice && (
-        <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-lg text-xs font-medium text-emerald-900 flex items-center gap-2 shadow-xs animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <div className="p-3 bg-[#FAF9F5] border border-[#C99A32] rounded-lg text-xs font-medium text-[#061A2F] flex items-center gap-2 shadow-xs animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-[#C99A32] flex-shrink-0" />
           <span>{auditNotice}</span>
         </div>
       )}
@@ -585,17 +856,17 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
       {/* ------------------------------------------------------------------ */}
       {/* 4. SEARCH, FILTERS & CONTROLS BAR                                  */}
       {/* ------------------------------------------------------------------ */}
-      <div className="p-4 bg-white border border-neutral-200 rounded-xl space-y-3 shadow-xs">
+      <div className="p-4 bg-white border border-[#D8DCE2] rounded-xl space-y-3 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-[#667085] absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Search forms, issuers, categories (e.g., W-2, Schwab, 1095-A)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs border border-neutral-300 rounded-lg bg-neutral-50 focus:bg-white focus:outline-hidden focus:border-[#0A2544]"
+              className="w-full pl-9 pr-3 py-2 text-xs border border-[#D8DCE2] rounded-lg bg-[#FAF9F5] text-[#061A2F] focus:bg-white focus:outline-hidden focus:border-[#C99A32]"
             />
           </div>
 
@@ -604,10 +875,10 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
             <button
               type="button"
               onClick={() => setShowMissingOnly(!showMissingOnly)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                 showMissingOnly
-                  ? 'bg-rose-600 text-white'
-                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border border-neutral-300'
+                  ? 'bg-[#061A2F] text-[#E8C66A] border border-[#061A2F]'
+                  : 'bg-[#FAF9F5] text-[#061A2F] hover:bg-[#F2EDE0] border border-[#D8DCE2]'
               }`}
             >
               <AlertCircle className="w-3.5 h-3.5" />
@@ -617,10 +888,10 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
             <button
               type="button"
               onClick={() => setShowAllPossible(!showAllPossible)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
                 showAllPossible
-                  ? 'bg-[#0A2544] text-[#E8C66A]'
-                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border border-neutral-300'
+                  ? 'bg-[#061A2F] text-[#E8C66A] border border-[#061A2F]'
+                  : 'bg-[#FAF9F5] text-[#061A2F] hover:bg-[#F2EDE0] border border-[#D8DCE2]'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -632,7 +903,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
               <button
                 type="button"
                 onClick={() => handleAddMultiInstance('Form W-2')}
-                className="px-2.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded-lg hover:bg-[#0A2544] flex items-center gap-1"
+                className="px-2.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded-lg hover:bg-[#0A2544] border border-[#C99A32]/40 flex items-center gap-1 cursor-pointer"
                 title="Add second W-2 employer"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-[#E8C66A]" />
@@ -641,7 +912,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
               <button
                 type="button"
                 onClick={() => handleAddMultiInstance('Form 1099-NEC')}
-                className="px-2.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded-lg hover:bg-[#0A2544] flex items-center gap-1"
+                className="px-2.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded-lg hover:bg-[#0A2544] border border-[#C99A32]/40 flex items-center gap-1 cursor-pointer"
                 title="Add second 1099-NEC payer"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-[#E8C66A]" />
@@ -650,7 +921,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
               <button
                 type="button"
                 onClick={() => handleAddMultiInstance('Schedule K-1')}
-                className="px-2.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded-lg hover:bg-[#0A2544] flex items-center gap-1"
+                className="px-2.5 py-1.5 bg-[#061A2F] text-white text-xs font-semibold rounded-lg hover:bg-[#0A2544] border border-[#C99A32]/40 flex items-center gap-1 cursor-pointer"
                 title="Add second Schedule K-1 entity"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-[#E8C66A]" />
@@ -661,16 +932,16 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
         </div>
 
         {/* Dropdown Filters */}
-        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-neutral-100 text-xs">
-          <div className="flex items-center gap-1.5 font-semibold text-neutral-700">
-            <Filter className="w-3.5 h-3.5 text-neutral-500" />
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#D8DCE2] text-xs">
+          <div className="flex items-center gap-1.5 font-semibold text-[#061A2F]">
+            <Filter className="w-3.5 h-3.5 text-[#667085]" />
             <span>Filter By:</span>
           </div>
 
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-2.5 py-1.5 border border-neutral-300 rounded-md bg-white text-xs"
+            className="px-2.5 py-1.5 border border-[#D8DCE2] rounded-md bg-white text-[#061A2F] text-xs focus:border-[#C99A32]"
           >
             <option value="ALL">All Categories</option>
             {categoryList.map(cat => (
@@ -681,7 +952,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-2.5 py-1.5 border border-neutral-300 rounded-md bg-white text-xs"
+            className="px-2.5 py-1.5 border border-[#D8DCE2] rounded-md bg-white text-[#061A2F] text-xs focus:border-[#C99A32]"
           >
             <option value="ALL">All Statuses</option>
             <option value="Missing">Missing</option>
@@ -695,7 +966,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value)}
-            className="px-2.5 py-1.5 border border-neutral-300 rounded-md bg-white text-xs"
+            className="px-2.5 py-1.5 border border-[#D8DCE2] rounded-md bg-white text-[#061A2F] text-xs focus:border-[#C99A32]"
           >
             <option value="ALL">All Priorities</option>
             <option value="Required">Required Only</option>
@@ -704,7 +975,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
             <option value="Optional">Optional</option>
           </select>
 
-          <span className="text-neutral-500 font-mono text-[11px] ml-auto">
+          <span className="text-[#667085] font-mono text-[11px] ml-auto">
             Displaying {filteredItems.length} documents for CY{activeTaxYear}
           </span>
         </div>
@@ -715,7 +986,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
       {/* ------------------------------------------------------------------ */}
       <div className="space-y-3">
         {filteredItems.length === 0 ? (
-          <div className="p-8 text-center bg-white border border-neutral-200 rounded-xl text-neutral-500 text-xs">
+          <div className="p-8 text-center bg-white border border-[#D8DCE2] rounded-xl text-[#667085] text-xs">
             No tax documents match the current filter criteria for Tax Year {activeTaxYear}.
           </div>
         ) : (
@@ -724,28 +995,27 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
             const isMissing = item.status === 'Missing';
             const isNeedsReview = item.status === 'Needs Review';
             const isNotApplicable = item.status === 'Not Applicable';
-            const isExpanded = !!expandedCards[item.id];
 
             return (
               <div
                 key={item.id}
                 className={`p-5 bg-white border rounded-xl transition-all shadow-2xs ${
                   isAccepted
-                    ? 'border-emerald-300 bg-emerald-50/15'
+                    ? 'border-[#C99A32] bg-[#FAF9F5]/40'
                     : isNeedsReview
-                    ? 'border-purple-300 bg-purple-50/15'
+                    ? 'border-[#D8DCE2] bg-[#FBFAF7]'
                     : isMissing && item.priority === 'Required'
-                    ? 'border-rose-300 bg-rose-50/10'
+                    ? 'border-[#061A2F] bg-white'
                     : isNotApplicable
-                    ? 'border-neutral-200 bg-neutral-50/50 opacity-75'
-                    : 'border-neutral-200 hover:border-neutral-300'
+                    ? 'border-[#D8DCE2] bg-[#FBFAF7]/60 opacity-75'
+                    : 'border-[#D8DCE2] hover:border-[#C99A32]/60'
                 }`}
               >
                 {/* Possible Duplicate Alert Banner */}
                 {item.possibleDuplicateOf && (
-                  <div className="mb-3 p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 flex items-start justify-between gap-2">
+                  <div className="mb-3 p-2.5 bg-[#FAF9F5] border border-[#C99A32] rounded-lg text-xs text-[#061A2F] flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <AlertTriangle className="w-4 h-4 text-[#C99A32] flex-shrink-0 mt-0.5" />
                       <div>
                         <strong>POSSIBLE DUPLICATE DETECTED:</strong> This upload matches an existing record. Both documents are retained in custody for professional review.
                       </div>
@@ -755,7 +1025,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                       onClick={() => {
                         setItems(prev => prev.map(i => i.id === item.id ? { ...i, possibleDuplicateOf: undefined } : i));
                       }}
-                      className="text-[11px] font-bold text-amber-800 hover:underline flex-shrink-0"
+                      className="text-[11px] font-bold text-[#061A2F] hover:text-[#C99A32] underline flex-shrink-0 cursor-pointer"
                     >
                       Dismiss Warning
                     </button>
@@ -764,9 +1034,9 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
                 {/* Tax Year Mismatch Warning Banner */}
                 {item.taxYearMismatch && (
-                  <div className="mb-3 p-2.5 bg-rose-50 border border-rose-300 rounded-lg text-xs text-rose-900 flex items-start justify-between gap-2">
+                  <div className="mb-3 p-2.5 bg-[#FAF9F5] border border-[#061A2F] rounded-lg text-xs text-[#061A2F] flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                      <AlertTriangle className="w-4 h-4 text-[#061A2F] flex-shrink-0 mt-0.5" />
                       <div>
                         <strong>TAX YEAR MISMATCH:</strong> Scanned file indicates calendar year {item.mismatchDetectedYear}, but active filing is CY{item.taxYear}. Flagged for accountant review.
                       </div>
@@ -776,7 +1046,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                       onClick={() => {
                         setItems(prev => prev.map(i => i.id === item.id ? { ...i, taxYearMismatch: false } : i));
                       }}
-                      className="text-[11px] font-bold text-rose-800 hover:underline flex-shrink-0"
+                      className="text-[11px] font-bold text-[#061A2F] hover:underline flex-shrink-0 cursor-pointer"
                     >
                       Acknowledge
                     </button>
@@ -788,13 +1058,13 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                   <div className="space-y-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Form Code */}
-                      <span className="px-2.5 py-0.5 text-xs font-bold font-mono bg-neutral-100 text-neutral-900 border border-neutral-300 rounded-md">
+                      <span className="px-2.5 py-0.5 text-xs font-bold font-mono bg-[#FAF9F5] text-[#061A2F] border border-[#D8DCE2] rounded-md">
                         {item.formNumber}
                       </span>
 
                       {/* Multi-instance index */}
                       {item.instanceIndex && (
-                        <span className="px-2 py-0.5 text-[10px] font-mono bg-[#0A2544] text-[#E8C66A] rounded">
+                        <span className="px-2 py-0.5 text-[10px] font-mono bg-[#061A2F] text-[#E8C66A] rounded">
                           #{item.instanceIndex}
                         </span>
                       )}
@@ -802,10 +1072,10 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                       {/* Priority Badge */}
                       <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${
                         item.priority === 'Required'
-                          ? 'bg-rose-100 text-rose-900 border border-rose-200'
+                          ? 'bg-[#061A2F] text-[#F7F4ED] border border-[#061A2F]'
                           : item.priority === 'Required if applicable'
-                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                          : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
+                          ? 'bg-[#FAF9F5] text-[#061A2F] border border-[#C99A32]'
+                          : 'bg-[#FBFAF7] text-[#667085] border border-[#D8DCE2]'
                       }`}>
                         {item.priority}
                       </span>
@@ -813,74 +1083,85 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                       {/* Status Badge */}
                       <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded flex items-center gap-1 ${
                         isAccepted
-                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          ? 'bg-[#FAF9F5] text-[#061A2F] border border-[#C99A32]'
                           : isNeedsReview
-                          ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                          ? 'bg-[#FAF9F5] text-[#061A2F] border border-[#D8DCE2]'
                           : isMissing
-                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                          ? 'bg-[#FBFAF7] text-[#061A2F] border border-[#061A2F]'
                           : isNotApplicable
-                          ? 'bg-neutral-100 text-neutral-600 border border-neutral-300'
-                          : 'bg-blue-100 text-blue-900 border border-blue-200'
+                          ? 'bg-[#FBFAF7] text-[#667085] border border-[#D8DCE2]'
+                          : 'bg-[#FAF9F5] text-[#061A2F] border border-[#D8DCE2]'
                       }`}>
-                        {isAccepted && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                        {isMissing && <AlertCircle className="w-3 h-3 text-rose-600" />}
-                        {isNeedsReview && <Clock className="w-3 h-3 text-purple-600" />}
+                        {isAccepted && <CheckCircle2 className="w-3 h-3 text-[#C99A32]" />}
+                        {isMissing && <AlertCircle className="w-3 h-3 text-[#061A2F]" />}
+                        {isNeedsReview && <Clock className="w-3 h-3 text-[#C99A32]" />}
                         <span>{item.status}</span>
                       </span>
 
+                      {/* Auto-Matched from Client Vault Badge */}
+                      {item.autoMatchedFromVault && (
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[#061A2F] text-[#E8C66A] border border-[#C99A32]/60 rounded flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-[#E8C66A]" />
+                          Auto-Reconciled from Vault
+                        </span>
+                      )}
+
                       {/* Jurisdiction */}
-                      <span className="px-2 py-0.5 text-[10px] font-mono bg-neutral-50 text-neutral-600 border border-neutral-200 rounded">
+                      <span className="px-2 py-0.5 text-[10px] font-mono bg-[#FAF9F5] text-[#4A5568] border border-[#D8DCE2] rounded">
                         Applies to: {item.appliesTo}
                       </span>
 
                       {/* Source */}
-                      <span className="px-2 py-0.5 text-[10px] text-neutral-500 font-mono">
+                      <span className="px-2 py-0.5 text-[10px] text-[#667085] font-mono">
                         Source: {item.source}
                       </span>
                     </div>
 
                     {/* Title */}
-                    <h4 className="text-sm font-bold text-neutral-900">
+                    <h4 className="text-sm font-bold text-[#061A2F]">
                       {item.title}
                     </h4>
 
                     {/* Plain Language "WHY WE NEED IT" */}
-                    <p className="text-xs text-neutral-600 leading-relaxed">
-                      <strong className="text-neutral-800">Why we need it: </strong>
+                    <p className="text-xs text-[#4A5568] leading-relaxed">
+                      <strong className="text-[#061A2F]">Why we need it: </strong>
                       {item.whyWeNeedIt}
                     </p>
 
                     {/* Where to find it */}
-                    <p className="text-xs text-neutral-500">
-                      <strong className="text-neutral-700">Where to find it: </strong>
+                    <p className="text-xs text-[#667085]">
+                      <strong className="text-[#061A2F]">Where to find it: </strong>
                       {item.whereCanIFindIt}
                     </p>
 
                     {/* Trigger: "WHY AM I BEING ASKED FOR THIS?" */}
-                    <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 flex items-start gap-2">
-                      <Info className="w-3.5 h-3.5 text-[#0A2544] flex-shrink-0 mt-0.5" />
+                    <div className="p-2.5 bg-[#FAF9F5] border border-[#D8DCE2] rounded-lg text-xs text-[#4A5568] flex items-start gap-2">
+                      <Info className="w-3.5 h-3.5 text-[#061A2F] flex-shrink-0 mt-0.5" />
                       <div>
-                        <span className="font-semibold text-neutral-900">Why am I being asked for this? </span>
+                        <span className="font-semibold text-[#061A2F]">Why am I being asked for this? </span>
                         <span>{item.whyAmIAsked}</span>
                       </div>
                     </div>
 
                     {/* Uploaded File Info & AI Sorter Meta */}
                     {item.uploadedFileName && (
-                      <div className="p-2.5 bg-emerald-50/50 border border-emerald-200 rounded-lg space-y-1 text-xs">
+                      <div className="p-2.5 bg-[#FAF9F5] border border-[#D8DCE2] rounded-lg space-y-1 text-xs">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-emerald-950 font-medium">
-                            <FileText className="w-4 h-4 text-emerald-700" />
-                            <span>Linked file: <strong>{item.uploadedFileName}</strong> ({item.uploadedFileSize || '1.2 MB'})</span>
+                          <div className="flex items-center gap-2 text-[#061A2F] font-medium">
+                            <FileText className="w-4 h-4 text-[#C99A32] flex-shrink-0" />
+                            <span>
+                              {item.autoMatchedFromVault ? 'Vault File Auto-Matched: ' : 'Linked file: '}
+                              <strong>{item.uploadedFileName}</strong> ({item.uploadedFileSize || '1.2 MB'})
+                            </span>
                           </div>
                           {item.confidenceScore && (
-                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                            <span className="text-[11px] font-mono font-bold text-[#E8C66A] bg-[#061A2F] px-2 py-0.5 rounded border border-[#C99A32]/40">
                               AI Classification: {item.confidenceScore}% Confidence ({item.confidenceTier})
                             </span>
                           )}
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600 font-mono pt-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#667085] font-mono pt-1">
                           <span>Uploaded: {item.uploadedDate || '2026-02-14'} &bull; Hash: {item.fileHash || 'sha256_verified'}</span>
                           <button
                             type="button"
@@ -888,9 +1169,9 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                               setTargetOcrDoc(item);
                               setOcrModalOpen(true);
                             }}
-                            className="text-[#0A2544] font-bold hover:underline flex items-center gap-1"
+                            className="text-[#061A2F] hover:text-[#C99A32] font-bold underline flex items-center gap-1 cursor-pointer"
                           >
-                            <Eye className="w-3 h-3" />
+                            <Eye className="w-3 h-3 text-[#C99A32]" />
                             <span>View Extracted Tax Boxes (OCR)</span>
                           </button>
                         </div>
@@ -899,20 +1180,20 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
                     {/* Reviewer Note if Overridden or Reviewed */}
                     {item.professionalOverrideNote && (
-                      <div className="p-2.5 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-900 space-y-0.5">
-                        <div className="font-bold flex items-center gap-1.5">
-                          <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
+                      <div className="p-2.5 bg-[#FAF9F5] border border-[#C99A32] rounded-lg text-xs text-[#061A2F] space-y-0.5">
+                        <div className="font-bold flex items-center gap-1.5 text-[#061A2F]">
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#C99A32]" />
                           <span>Accountant Sign-Off ({item.overriddenBy || 'Elena Rostova, CPA'}):</span>
                         </div>
-                        <div className="italic text-purple-950">"{item.professionalOverrideNote}"</div>
+                        <div className="italic text-[#4A5568]">"{item.professionalOverrideNote}"</div>
                       </div>
                     )}
 
                     {/* Taxpayer "Does Not Apply" Note */}
                     {isNotApplicable && item.notApplicableReason && (
-                      <div className="p-2.5 bg-neutral-100 border border-neutral-300 rounded-lg text-xs text-neutral-800">
-                        <strong>Taxpayer Exemption Statement: </strong>
-                        <span className="italic">{item.notApplicableReason}</span>
+                      <div className="p-2.5 bg-[#FAF9F5] border border-[#D8DCE2] rounded-lg text-xs text-[#061A2F]">
+                        <strong className="text-[#061A2F]">Taxpayer Exemption Statement: </strong>
+                        <span className="italic text-[#4A5568]">{item.notApplicableReason}</span>
                       </div>
                     )}
                   </div>
@@ -921,13 +1202,13 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     {/* Status Selector */}
                     <div className="w-full sm:w-auto text-left">
-                      <label className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold block mb-1">
+                      <label className="text-[10px] font-mono uppercase tracking-wider text-[#667085] font-semibold block mb-1">
                         Client Response:
                       </label>
                       <select
                         value={item.status}
                         onChange={(e) => handleClientStatusChange(item.id, e.target.value as DocumentStatus)}
-                        className="w-full px-3 py-1.5 border border-neutral-300 bg-white rounded-lg text-xs font-semibold text-neutral-800 shadow-2xs focus:border-[#0A2544]"
+                        className="w-full px-3 py-1.5 border border-[#D8DCE2] bg-white rounded-lg text-xs font-semibold text-[#061A2F] shadow-2xs focus:border-[#C99A32]"
                       >
                         <option value="Accepted">Uploaded / Verified</option>
                         <option value="Awaiting Client">Will Upload Later</option>
@@ -945,7 +1226,7 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                           setTargetUploadDoc(item);
                           setUploadModalOpen(true);
                         }}
-                        className="flex-1 sm:flex-none px-3 py-1.5 bg-[#061A2F] hover:bg-[#0A2544] text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                        className="flex-1 sm:flex-none px-3 py-1.5 bg-[#061A2F] hover:bg-[#0A2544] text-[#E8C66A] text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                       >
                         <UploadCloud className="w-3.5 h-3.5 text-[#E8C66A]" />
                         <span>{item.uploadedFileName ? 'Replace' : 'Upload / Scan'}</span>
@@ -958,11 +1239,11 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                           setTargetOverrideDoc(item);
                           setOverrideModalOpen(true);
                         }}
-                        className="px-2.5 py-1.5 border border-neutral-300 hover:bg-neutral-100 text-neutral-700 text-xs font-medium rounded-lg flex items-center gap-1"
+                        className="px-2.5 py-1.5 border border-[#D8DCE2] hover:bg-[#FAF9F5] text-[#061A2F] text-xs font-medium rounded-lg flex items-center gap-1 cursor-pointer"
                         title="Accountant Status Override & Audit Logging"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#0A2544]" />
-                        <span className="hidden sm:inline">Override</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#C99A32]" />
+                        <span className="hidden sm:inline font-semibold">Override</span>
                       </button>
                     </div>
                   </div>
@@ -970,13 +1251,13 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
                 {/* "Does Not Apply" Reason Input Drawer */}
                 {activeExplainId === item.id && (
-                  <div className="mt-4 p-4 bg-neutral-100 border border-neutral-300 rounded-xl space-y-3">
-                    <div className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
-                      <Info className="w-4 h-4 text-[#0A2544]" />
+                  <div className="mt-4 p-4 bg-[#FAF9F5] border border-[#D8DCE2] rounded-xl space-y-3">
+                    <div className="text-xs font-bold text-[#061A2F] flex items-center gap-1.5">
+                      <Info className="w-4 h-4 text-[#061A2F]" />
                       <span>Document Why "{item.formNumber}" Does Not Apply for CY{activeTaxYear}:</span>
                     </div>
                     {explainError && (
-                      <div className="p-2 bg-rose-50 border border-rose-300 text-rose-800 text-xs rounded">
+                      <div className="p-2 bg-[#FAF9F5] border border-[#061A2F] text-[#061A2F] text-xs rounded font-medium">
                         {explainError}
                       </div>
                     )}
@@ -984,21 +1265,21 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
                       value={explainText}
                       onChange={(e) => setExplainText(e.target.value)}
                       placeholder="e.g., Sold this property in CY2024, closed account with zero activity, or had no distributions."
-                      className="w-full px-3 py-2 text-xs border border-neutral-300 rounded-lg bg-white"
+                      className="w-full px-3 py-2 text-xs border border-[#D8DCE2] rounded-lg bg-white text-[#061A2F] focus:border-[#C99A32] focus:outline-hidden"
                       rows={2}
                     />
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setActiveExplainId(null)}
-                        className="px-3 py-1.5 text-xs border border-neutral-300 rounded-lg hover:bg-neutral-200"
+                        className="px-3 py-1.5 text-xs border border-[#D8DCE2] rounded-lg hover:bg-[#F2EDE0] text-[#061A2F] cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSaveNotApplicable(item.id)}
-                        className="px-3 py-1.5 text-xs bg-[#061A2F] text-white font-semibold rounded-lg hover:bg-[#0A2544]"
+                        className="px-3 py-1.5 text-xs bg-[#061A2F] text-[#E8C66A] font-bold rounded-lg hover:bg-[#0A2544] cursor-pointer"
                       >
                         Submit Reason for Accountant Sign-off
                       </button>
@@ -1035,13 +1316,6 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
         doc={targetOcrDoc}
       />
 
-      <IntakeQuestionnaireModal
-        isOpen={intakeModalOpen}
-        onClose={() => setIntakeModalOpen(false)}
-        currentIntake={currentIntake}
-        onSaveIntake={handleSaveIntake}
-      />
-
       <ProfessionalOverrideModal
         isOpen={overrideModalOpen}
         onClose={() => {
@@ -1050,6 +1324,20 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
         }}
         doc={targetOverrideDoc}
         onApplyOverride={handleApplyOverride}
+      />
+
+      <IntakeQuestionnaireModal
+        isOpen={fullIntakeModalOpen}
+        onClose={() => setFullIntakeModalOpen(false)}
+        currentIntake={currentIntake}
+        onSaveIntake={(updatedIntake) => {
+          setCurrentIntake(updatedIntake);
+          const baseItems = generatePersonalizedChecklist(updatedIntake, []);
+          const reconciled = reconcileChecklistWithClientVaultDocs(baseItems, activeClient, clientSubmittedDocs, activeTaxYear);
+          setItems(reconciled.reconciledItems);
+          setAuditNotice('Checklist requirements updated from intake questionnaire.');
+          setTimeout(() => setAuditNotice(null), 3000);
+        }}
       />
     </div>
   );

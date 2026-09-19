@@ -116,6 +116,13 @@ export const ErrorPageView: React.FC<ErrorPageViewProps> = ({
 }) => {
   const config = ERROR_CONFIGS[type] || ERROR_CONFIGS['404'];
 
+  // Route directly to login page if 401 Unauthorized occurs
+  React.useEffect(() => {
+    if (type === '401') {
+      onNavigateLogin(config.recommendedRoleLogin || '#/client/login');
+    }
+  }, [type, onNavigateLogin, config.recommendedRoleLogin]);
+
   return (
     <div className="min-h-screen bg-white text-black flex flex-col font-sans antialiased selection:bg-black selection:text-white">
       {/* Persistent Demo Banner */}

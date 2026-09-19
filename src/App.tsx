@@ -79,7 +79,7 @@ function isDemoRouteUrl(): boolean {
   if (target === 'portals' || target.startsWith('portals/')) return true;
   if (target.endsWith('/login') || target.endsWith('/dashboard')) return true;
   if (target.includes('/login') || target.includes('/dashboard')) return true;
-  if (['client-portal', 'reviewer-portal', 'staff-portal', 'cpa-portal', 'admin-dashboard', 'admin-portal', 'reviewer-workspace', 'accountant-workspace', 'portals'].includes(target)) return true;
+  if (['client-portal', 'client_portal', 'reviewer-portal', 'staff-portal', 'cpa-portal', 'admin-dashboard', 'admin-portal', 'reviewer-workspace', 'accountant-workspace', 'portals'].includes(target)) return true;
   return false;
 }
 
@@ -108,19 +108,19 @@ const AppContent: React.FC = () => {
     console.log(`[DIAGNOSTIC] Router initialization: active page = "${currentPage}", isTaxGuardRoute = ${isTaxGuardRoute}, isDemoRoute = ${isDemoRoute}, isPublicV2Route = ${isPublicV2Route}, user = "${currentUser?.name || 'Guest'}"`);
   }, [currentPage, isTaxGuardRoute, isDemoRoute, isPublicV2Route, currentUser?.name]);
 
-  // Synchronize navigation to demo portals
+  // Synchronize navigation to demo portals - route unauthenticated sessions directly to login
   useEffect(() => {
     let targetHash = '';
     if (currentPage === 'portals') {
       targetHash = '#/portals';
     } else if (currentPage === 'admin_dashboard' || currentPage === 'admin_portal') {
-      targetHash = '#/admin/dashboard';
+      targetHash = DemoAuthService.isAuthenticated('admin') ? '#/admin/dashboard' : '#/admin/login';
     } else if (currentPage === 'reviewer_workspace' || currentPage === 'senior_reviewer_workspace' || currentPage === 'reviewer_portal') {
-      targetHash = '#/reviewer/dashboard';
+      targetHash = DemoAuthService.isAuthenticated('reviewer') ? '#/reviewer/dashboard' : '#/reviewer/login';
     } else if (currentPage === 'accountant_workspace' || currentPage === 'staff_portal') {
-      targetHash = '#/accountant/dashboard';
+      targetHash = DemoAuthService.isAuthenticated('accountant') ? '#/accountant/dashboard' : '#/accountant/login';
     } else if (currentPage === 'client_portal') {
-      targetHash = '#/client/dashboard';
+      targetHash = DemoAuthService.isAuthenticated('client') ? '#/client/dashboard' : '#/client/login';
     }
 
     if (targetHash && window.location.hash !== targetHash) {

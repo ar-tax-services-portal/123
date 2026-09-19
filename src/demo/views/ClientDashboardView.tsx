@@ -476,6 +476,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: PERSONALIZED CHECKLIST */}
       {currentTab === 'checklist' && (
         <PersonalizedChecklistSection
+          clientId={client?.id || 'cli_perotti'}
           selectedYear={selectedTaxYear}
           onNavigateToUpload={() => setTab('upload_center')}
           onNavigateToVault={() => setTab('vault')}

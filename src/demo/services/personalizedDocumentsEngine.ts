@@ -14,6 +14,8 @@
  * - Tax professional override capabilities with audit logging
  */
 
+import { DemoClient, DemoDocument } from '../types';
+
 export type DocumentStatus =
   | 'Required'
   | 'Required if applicable'
@@ -121,6 +123,8 @@ export interface PersonalizedDocItem {
   reviewedBy?: string;
   requiresReviewReason?: boolean;
   whyWeNeedItNotice?: string;
+  autoMatchedFromVault?: boolean;
+  matchedVaultDocumentId?: string;
 }
 
 export interface IntakeResponses {
@@ -132,30 +136,355 @@ export interface IntakeResponses {
   hadW2Employment: boolean;
   w2Count: number;
   hadFreelanceOrContract: boolean;
-  hasOwnBusiness: boolean;
-  received1099K: boolean;
-  soldInvestments: boolean;
-  hasCryptoTransactions: boolean;
+  received1099MISC?: boolean;
+  receivedInterest?: boolean;
+  receivedDividends?: boolean;
   receivedInterestOrDividends: boolean;
+  soldInvestments: boolean;
+  received1099K: boolean;
   receivedRetirementDistributions: boolean;
+  receivedGovernmentPayments?: boolean;
   receivedSocialSecurity: boolean;
-  ownsRealEstate: boolean;
+  hasPassThroughK1: boolean;
   hasMortgage: boolean;
-  soldRealEstate: boolean;
-  ownsRentalProperty: boolean;
   hasCollegeOrTuition: boolean;
   paysStudentLoanInterest: boolean;
+  hasForeclosureOrAbandonment?: boolean;
+  hasCancelledDebt?: boolean;
+  hasCancelledDebtOrForeclosure: boolean;
+  soldRealEstate: boolean;
   hasHSAorMSA: boolean;
   contributedToIRA: boolean;
   hasMarketplaceInsurance: boolean;
+  hasLongTermCare?: boolean;
+  hasABLEAccount?: boolean;
+  hasEducationPlans?: boolean;
+  hasOwnBusiness: boolean;
+  hasCryptoTransactions: boolean;
+  ownsRealEstate: boolean;
+  ownsRentalProperty: boolean;
   hasForeignAccountsOrIncome: boolean;
-  hasCancelledDebtOrForeclosure: boolean;
-  hasPassThroughK1: boolean;
   madeEstimatedTaxPayments: boolean;
   hasDependents: boolean;
   paidChildcare: boolean;
   receivedUnemployment: boolean;
 }
+
+export interface StandardTaxFormDef {
+  id: string;
+  category: DocumentCategory;
+  formNumber: string;
+  title: string;
+  description: string;
+  whyWeNeedIt: string;
+  whereCanIFindIt: string;
+  whyAmIAsked: string;
+  source: PersonalizedDocItem['source'];
+  intakeKey: keyof IntakeResponses;
+  priority: PriorityLevel;
+}
+
+export const ALL_STANDARD_TAX_FORMS: StandardTaxFormDef[] = [
+  {
+    id: 'form_w2',
+    category: 'Employment',
+    formNumber: 'W-2',
+    title: 'Wage and Tax Statement',
+    description: 'Wages, salary, withholding',
+    whyWeNeedIt: 'Reports wages, salaries, tips, federal, state, and local income tax withholdings, and FICA taxes.',
+    whereCanIFindIt: 'Issued by your employer (usually accessible via employer payroll portal ADP, Workday, Gusto or mailed by Jan 31).',
+    whyAmIAsked: 'Required to report earned wages and claim tax withholdings on Form 1040.',
+    source: 'Employer',
+    intakeKey: 'hadW2Employment',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_nec',
+    category: 'Contract / Gig Work',
+    formNumber: '1099-NEC',
+    title: 'Nonemployee Compensation',
+    description: 'Nonemployee compensation',
+    whyWeNeedIt: 'Reports fees, commissions, or other compensation of $600 or more paid to non-employees/independent contractors.',
+    whereCanIFindIt: 'Provided by companies, clients, or platforms you performed services for.',
+    whyAmIAsked: 'Required to report self-employment gross receipts on Schedule C.',
+    source: 'Entity Issuer',
+    intakeKey: 'hadFreelanceOrContract',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_misc',
+    category: 'Other Payments',
+    formNumber: '1099-MISC',
+    title: 'Miscellaneous Information',
+    description: 'Rents, prizes, certain other payments',
+    whyWeNeedIt: 'Reports rents, royalties, prizes, awards, medical payments, and other miscellaneous income.',
+    whereCanIFindIt: 'Issued by payers of rents, sweepstakes, legal settlements, or royalty administrators.',
+    whyAmIAsked: 'Required to accurately report other income sources on Schedule 1 or Schedule E.',
+    source: 'Entity Issuer',
+    intakeKey: 'received1099MISC',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_int',
+    category: 'Interest',
+    formNumber: '1099-INT',
+    title: 'Interest Income',
+    description: 'Bank and investment interest',
+    whyWeNeedIt: 'Reports taxable interest of $10 or more from bank accounts, certificates of deposit (CDs), and bonds.',
+    whereCanIFindIt: 'Download from your online banking portal or consolidated year-end tax packet.',
+    whyAmIAsked: 'Required to report taxable and tax-exempt interest on Schedule B.',
+    source: 'Bank',
+    intakeKey: 'receivedInterest',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_div',
+    category: 'Dividends',
+    formNumber: '1099-DIV',
+    title: 'Dividends and Distributions',
+    description: 'Dividends and distributions',
+    whyWeNeedIt: 'Distinguishes ordinary dividends from qualified dividends and capital gain distributions that qualify for lower tax rates.',
+    whereCanIFindIt: 'Download from your brokerage (Schwab, Fidelity, Vanguard, Morgan Stanley) tax document center.',
+    whyAmIAsked: 'Required to report investment portfolio dividend income on Schedule B and Form 1040.',
+    source: 'Brokerage',
+    intakeKey: 'receivedDividends',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_b',
+    category: 'Brokerage / Investments',
+    formNumber: '1099-B',
+    title: 'Proceeds From Broker and Barter Exchange Transactions',
+    description: 'Sales of stocks, securities and other reportable transactions',
+    whyWeNeedIt: 'Reports gross sales proceeds, acquisition dates, and cost basis needed to calculate capital gains or deductible losses on Schedule D / Form 8949.',
+    whereCanIFindIt: 'Download from your investment broker consolidated 1099 statement.',
+    whyAmIAsked: 'Required to compute net capital gain or capital loss from securities sales.',
+    source: 'Brokerage',
+    intakeKey: 'soldInvestments',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_k',
+    category: 'Payment Processing',
+    formNumber: '1099-K',
+    title: 'Payment Card and Third-Party Network Transactions',
+    description: 'Payment-card and third-party network transactions',
+    whyWeNeedIt: 'Reports gross payment card and third-party app merchant settlements (Stripe, PayPal, Square, Shopify, Venmo).',
+    whereCanIFindIt: 'Merchant payment portal settings under Tax Documents.',
+    whyAmIAsked: 'Required to reconcile gross business revenue and avoid duplicate or omitted income audits.',
+    source: 'Entity Issuer',
+    intakeKey: 'received1099K',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_r',
+    category: 'Retirement',
+    formNumber: '1099-R',
+    title: 'Distributions From Pensions, Annuities, Retirement Plans, IRAs',
+    description: 'Pensions, IRAs and retirement distributions',
+    whyWeNeedIt: 'Reports gross distributions, taxable amounts, and federal/state withholding from 401(k), IRA, pension, or annuity plans.',
+    whereCanIFindIt: 'Retirement plan administrator (Empower, Fidelity, Vanguard, pension portal).',
+    whyAmIAsked: 'Required to calculate taxable portion of retirement income and verify qualified rollovers.',
+    source: 'Brokerage',
+    intakeKey: 'receivedRetirementDistributions',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_g',
+    category: 'Government Payments',
+    formNumber: '1099-G',
+    title: 'Certain Government Payments',
+    description: 'Unemployment compensation, certain state/local refunds and other government payments',
+    whyWeNeedIt: 'Reports state unemployment compensation, state/local tax refunds received, or taxable government grants.',
+    whereCanIFindIt: 'State Department of Labor or State Department of Revenue portal.',
+    whyAmIAsked: 'Required to report taxable government benefit income and determine state refund taxability.',
+    source: 'Government',
+    intakeKey: 'receivedGovernmentPayments',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_ssa_1099',
+    category: 'Social Security / Railroad Retirement',
+    formNumber: 'SSA-1099 / RRB-1099',
+    title: 'Social Security / Railroad Retirement Benefits',
+    description: 'Social Security / railroad retirement benefits',
+    whyWeNeedIt: 'Reports total Social Security or Railroad Retirement benefits paid to determine taxable amount under IRC § 86.',
+    whereCanIFindIt: 'Mailed annually in January by the Social Security Administration or downloaded at ssa.gov.',
+    whyAmIAsked: 'Required to compute taxable Social Security benefits on Form 1040.',
+    source: 'Government',
+    intakeKey: 'receivedSocialSecurity',
+    priority: 'Required'
+  },
+  {
+    id: 'form_k1',
+    category: 'Partnership / S Corporation / Estate / Trust',
+    formNumber: 'Schedule K-1',
+    title: 'Partner / Shareholder Share of Income, Deductions, Credits (1065 / 1120-S)',
+    description: 'Pass-through income, deductions and credits',
+    whyWeNeedIt: 'Passes through net profits, losses, deductions, guaranteed payments, and Section 199A QBID information from entities.',
+    whereCanIFindIt: 'Issued by the partnership managing partner, S-Corporation corporate secretary, or estate fiduciary.',
+    whyAmIAsked: 'Required to report pass-through entity income on Schedule E.',
+    source: 'Entity Issuer',
+    intakeKey: 'hasPassThroughK1',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1098',
+    category: 'Mortgage Interest',
+    formNumber: '1098',
+    title: 'Mortgage Interest Statement',
+    description: 'Mortgage interest',
+    whyWeNeedIt: 'Reports deductible mortgage interest, points paid, and real estate taxes paid from escrow under IRC § 163.',
+    whereCanIFindIt: 'Mortgage servicer website (e.g. Chase, Wells Fargo, Rocket Mortgage) or annual statement.',
+    whyAmIAsked: 'Used for itemized deductions on Schedule A or rental expense on Schedule E.',
+    source: 'Lender',
+    intakeKey: 'hasMortgage',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1098_t',
+    category: 'Education',
+    formNumber: '1098-T',
+    title: 'Tuition Statement',
+    description: 'Tuition and education information',
+    whyWeNeedIt: 'Reports qualified tuition payments (Box 1) and scholarships/grants (Box 5) for education credits (AOTC / LLC).',
+    whereCanIFindIt: 'College or university bursar or registrar student portal.',
+    whyAmIAsked: 'Required to claim American Opportunity Tax Credit or Lifetime Learning Credit on Form 8863.',
+    source: 'Educational Institution',
+    intakeKey: 'hasCollegeOrTuition',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1098_e',
+    category: 'Student Loans',
+    formNumber: '1098-E',
+    title: 'Student Loan Interest Statement',
+    description: 'Student-loan interest',
+    whyWeNeedIt: 'Reports student loan interest paid during the year for an above-the-line deduction up to $2,500 under IRC § 221.',
+    whereCanIFindIt: 'Student loan servicer portal (Nelnet, MOHELA, Aidvantage, Sallie Mae).',
+    whyAmIAsked: 'Allows an above-the-line deduction reducing Adjusted Gross Income.',
+    source: 'Lender',
+    intakeKey: 'paysStudentLoanInterest',
+    priority: 'Recommended'
+  },
+  {
+    id: 'form_1099_a',
+    category: 'Foreclosure / Abandonment',
+    formNumber: '1099-A',
+    title: 'Acquisition or Abandonment of Secured Property',
+    description: 'Acquisition or abandonment of secured property',
+    whyWeNeedIt: 'Reports foreclosure, repossession, or abandonment of property that secured a loan to compute gain or loss.',
+    whereCanIFindIt: 'Issued by the lender or financial institution that held the loan.',
+    whyAmIAsked: 'Required to determine tax consequences of property surrender or abandonment.',
+    source: 'Lender',
+    intakeKey: 'hasForeclosureOrAbandonment',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_c',
+    category: 'Cancelled Debt',
+    formNumber: '1099-C',
+    title: 'Cancellation of Debt',
+    description: 'Cancellation of debt',
+    whyWeNeedIt: 'Reports discharge or forgiveness of indebtedness of $600 or more to evaluate cancellation of debt income or statutory exclusions under IRC § 108.',
+    whereCanIFindIt: 'Issued by the creditor or financial institution that cancelled or settled the debt.',
+    whyAmIAsked: 'Required to assess taxability or qualify for insolvency exclusions on Form 982.',
+    source: 'Lender',
+    intakeKey: 'hasCancelledDebt',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_s',
+    category: 'Real Estate Sale',
+    formNumber: '1099-S',
+    title: 'Proceeds From Real Estate Transactions',
+    description: 'Proceeds from real-estate transactions',
+    whyWeNeedIt: 'Reports gross proceeds from the sale or exchange of real estate, land, or commercial/residential property.',
+    whereCanIFindIt: 'Provided at settlement by the title company, escrow agent, or closing attorney.',
+    whyAmIAsked: 'Required to calculate capital gain or verify the Section 121 home sale exclusion.',
+    source: 'Other',
+    intakeKey: 'soldRealEstate',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_sa',
+    category: 'HSA / MSA',
+    formNumber: '1099-SA / 5498-SA',
+    title: 'HSA / MSA Distributions & Contributions Statement',
+    description: 'HSA/MSA distributions and contributions',
+    whyWeNeedIt: 'Reports HSA/MSA distributions (1099-SA) and contributions (5498-SA) to file Form 8889 and avoid penalties.',
+    whereCanIFindIt: 'HSA custodian online portal (Optum, Fidelity, HSA Bank, HealthEquity).',
+    whyAmIAsked: 'Required to reconcile qualified medical expenses and deduct HSA contributions on Form 8889.',
+    source: 'Bank',
+    intakeKey: 'hasHSAorMSA',
+    priority: 'Required'
+  },
+  {
+    id: 'form_5498',
+    category: 'IRA Contributions',
+    formNumber: '5498',
+    title: 'IRA Contribution Information',
+    description: 'IRA contribution information',
+    whyWeNeedIt: 'Reports Traditional IRA, Roth IRA, SEP-IRA, or SIMPLE IRA contributions, rollovers, and year-end fair market value.',
+    whereCanIFindIt: 'IRA custodian or brokerage tax documents portal.',
+    whyAmIAsked: 'Required to document deductible IRA contributions and track nondeductible basis on Form 8606.',
+    source: 'Brokerage',
+    intakeKey: 'contributedToIRA',
+    priority: 'Recommended'
+  },
+  {
+    id: 'form_1095_a',
+    category: 'Marketplace Insurance',
+    formNumber: '1095-A',
+    title: 'Health Insurance Marketplace Statement',
+    description: 'Health Insurance Marketplace coverage',
+    whyWeNeedIt: 'CRITICAL: Reconciles the Advance Premium Tax Credit (APTC) on Form 8962. Omission causes immediate IRS e-file rejection.',
+    whereCanIFindIt: 'Healthcare.gov or state marketplace account (Covered CA, NY State of Health, etc.).',
+    whyAmIAsked: 'Mandatory if anyone in your tax household enrolled in health coverage via the Marketplace.',
+    source: 'Marketplace',
+    intakeKey: 'hasMarketplaceInsurance',
+    priority: 'Required'
+  },
+  {
+    id: 'form_1099_ltc',
+    category: 'Long-Term Care',
+    formNumber: '1099-LTC',
+    title: 'Long-Term Care and Accelerated Death Benefits',
+    description: 'Long-term-care and accelerated death benefits',
+    whyWeNeedIt: 'Reports payments received from qualified long-term care insurance policies or accelerated death benefits under life insurance.',
+    whereCanIFindIt: 'Issued by the insurance company providing long-term care or life insurance benefits.',
+    whyAmIAsked: 'Required to report qualified benefits on Form 8853 to determine tax-free status.',
+    source: 'Other',
+    intakeKey: 'hasLongTermCare',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_qa',
+    category: 'ABLE Accounts',
+    formNumber: '1099-QA / 5498-QA',
+    title: 'ABLE Account Distributions & Contributions',
+    description: 'ABLE distributions/contributions',
+    whyWeNeedIt: 'Reports distributions and contributions for individuals with disabilities under IRC Section 529A Achieving a Better Life Experience (ABLE) programs.',
+    whereCanIFindIt: 'State ABLE program administrator online portal.',
+    whyAmIAsked: 'Required to confirm distributions were spent on qualified disability expenses.',
+    source: 'Bank',
+    intakeKey: 'hasABLEAccount',
+    priority: 'Required if applicable'
+  },
+  {
+    id: 'form_1099_q',
+    category: 'Education Plans',
+    formNumber: '1099-Q',
+    title: 'Payments From Qualified Education Programs (Under Sections 529 & 530)',
+    description: '529/Coverdell distributions',
+    whyWeNeedIt: 'Reports distributions made from a 529 college savings plan or Coverdell ESA to verify tax-free educational usage.',
+    whereCanIFindIt: 'State 529 plan custodian or Coverdell trustee online tax portal.',
+    whyAmIAsked: 'Required to reconcile distributions against qualified higher education expenses.',
+    source: 'Brokerage',
+    intakeKey: 'hasEducationPlans',
+    priority: 'Required if applicable'
+  }
+];
 
 export interface DemoTaxpayerProfile {
   id: string;
@@ -1410,15 +1739,15 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 3. Payment Processing (1099-K)
-  if (intake.received1099K || intake.hasOwnBusiness) {
+  // 3. Other Payments (1099-MISC)
+  if (intake.received1099MISC) {
     addItem({
-      formNumber: 'Form 1099-K',
-      title: 'Payment Card & Third-Party Network Transactions',
-      category: 'Payment Processing',
-      whyWeNeedIt: 'Reports gross payments processed through Stripe, PayPal, Square, Venmo, or card terminals. Must be reconciled to avoid duplicate income.',
-      whereCanIFindIt: 'Download from your payment processor online merchant tax portal.',
-      whyAmIAsked: 'You indicated processing commercial payments or online client sales.',
+      formNumber: 'Form 1099-MISC',
+      title: 'Miscellaneous Information (Rents, Prizes, Royalties)',
+      category: 'Other Payments',
+      whyWeNeedIt: 'Reports rents, royalties, prizes, awards, medical payments, and other miscellaneous payments under IRC § 6041.',
+      whereCanIFindIt: 'Issued by payers of rents, sweepstakes, royalties, or legal settlements.',
+      whyAmIAsked: 'You indicated receiving rents, prizes, royalties, or other miscellaneous payments.',
       source: 'Entity Issuer',
       appliesTo: 'Federal',
       taxYear: intake.taxYear,
@@ -1427,45 +1756,31 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 4. Brokerage / Capital Transactions (1099-B)
-  if (intake.soldInvestments) {
-    addItem({
-      formNumber: 'Form 1099-B',
-      title: 'Proceeds From Broker & Barter Exchange Transactions',
-      category: 'Brokerage / Investments',
-      whyWeNeedIt: 'Details gross stock sale proceeds, cost basis, covered/noncovered classification, and short-term vs long-term capital gains.',
-      whereCanIFindIt: 'Consolidated Form 1099 from brokerages (Vanguard, Fidelity, Schwab, E*TRADE, Robinhood).',
-      whyAmIAsked: 'You indicated sales of stocks, ETFs, mutual funds, or securities.',
-      source: 'Brokerage',
-      appliesTo: 'Federal',
-      taxYear: intake.taxYear,
-      priority: 'Required',
-      status: 'Missing'
-    });
-  }
-
-  // 5. Interest & Dividends (1099-INT / 1099-DIV)
-  if (intake.receivedInterestOrDividends) {
+  // 4. Interest Income (1099-INT)
+  if (intake.receivedInterest || intake.receivedInterestOrDividends) {
     addItem({
       formNumber: 'Form 1099-INT',
       title: 'Interest Income Statements',
       category: 'Interest',
-      whyWeNeedIt: 'Reports taxable and tax-exempt interest income from banks, savings accounts, CDs, and bonds.',
-      whereCanIFindIt: 'Bank online statements or consolidated tax packages.',
-      whyAmIAsked: 'You confirmed earning taxable interest or holding interest-bearing balances.',
+      whyWeNeedIt: 'Reports taxable and tax-exempt interest income from banks, savings accounts, CDs, and bonds under IRC § 6049.',
+      whereCanIFindIt: 'Download from your online banking portal or consolidated year-end tax packet.',
+      whyAmIAsked: 'You confirmed earning bank or investment interest.',
       source: 'Bank',
       appliesTo: 'Federal',
       taxYear: intake.taxYear,
       priority: 'Required if applicable',
       status: 'Missing'
     });
+  }
 
+  // 5. Dividends & Distributions (1099-DIV)
+  if (intake.receivedDividends || intake.receivedInterestOrDividends) {
     addItem({
       formNumber: 'Form 1099-DIV',
       title: 'Dividends & Distributions',
       category: 'Dividends',
-      whyWeNeedIt: 'Separates ordinary dividends from qualified dividends that receive preferential capital gain tax rates.',
-      whereCanIFindIt: 'Investment brokerage or mutual fund company portal.',
+      whyWeNeedIt: 'Separates ordinary dividends from qualified dividends that receive preferential capital gain tax rates under IRC § 6042.',
+      whereCanIFindIt: 'Download from your investment brokerage or mutual fund portal tax documents section.',
       whyAmIAsked: 'You confirmed receiving dividend distributions from securities holdings.',
       source: 'Brokerage',
       appliesTo: 'Federal',
@@ -1475,15 +1790,15 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 6. Retirement (1099-R)
-  if (intake.receivedRetirementDistributions) {
+  // 6. Brokerage / Investments (1099-B)
+  if (intake.soldInvestments) {
     addItem({
-      formNumber: 'Form 1099-R',
-      title: 'Distributions From Pensions, Annuities, Retirement Plans, or IRAs',
-      category: 'Retirement',
-      whyWeNeedIt: 'Determines the taxable vs non-taxable portion of distributions, early withdrawal penalties, or qualified rollover status.',
-      whereCanIFindIt: 'Retirement plan administrator, 401(k) custodian, or pension office.',
-      whyAmIAsked: 'You indicated taking distributions or rollovers from a retirement account.',
+      formNumber: 'Form 1099-B',
+      title: 'Proceeds From Broker & Barter Exchange Transactions',
+      category: 'Brokerage / Investments',
+      whyWeNeedIt: 'Details gross stock sale proceeds, acquisition dates, cost basis, and short-term vs long-term capital gain or deductible loss calculations.',
+      whereCanIFindIt: 'Consolidated Form 1099 from brokerages (Vanguard, Fidelity, Schwab, E*TRADE, Robinhood).',
+      whyAmIAsked: 'You indicated sales of stocks, securities, ETFs, or other reportable transactions.',
       source: 'Brokerage',
       appliesTo: 'Federal',
       taxYear: intake.taxYear,
@@ -1492,15 +1807,67 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 7. Social Security (SSA-1099 / RRB-1099)
+  // 7. Payment Processing (1099-K)
+  if (intake.received1099K || intake.hasOwnBusiness) {
+    addItem({
+      formNumber: 'Form 1099-K',
+      title: 'Payment Card & Third-Party Network Transactions',
+      category: 'Payment Processing',
+      whyWeNeedIt: 'Reports gross payments processed through Stripe, PayPal, Square, Shopify, or merchant card terminals under IRC § 6050W. Must be reconciled to prevent duplicate income reporting.',
+      whereCanIFindIt: 'Download from your payment processor online merchant tax portal.',
+      whyAmIAsked: 'You indicated processing payment-card or third-party network transactions.',
+      source: 'Entity Issuer',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required if applicable',
+      status: 'Missing'
+    });
+  }
+
+  // 8. Retirement (1099-R)
+  if (intake.receivedRetirementDistributions) {
+    addItem({
+      formNumber: 'Form 1099-R',
+      title: 'Distributions From Pensions, Annuities, Retirement Plans, IRAs',
+      category: 'Retirement',
+      whyWeNeedIt: 'Determines the taxable vs non-taxable portion of distributions, early withdrawal penalties, or qualified rollover status under IRC § 408.',
+      whereCanIFindIt: 'Retirement plan administrator, 401(k) custodian, or pension office.',
+      whyAmIAsked: 'You indicated taking distributions or rollovers from a pension, IRA, or retirement plan.',
+      source: 'Brokerage',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required',
+      status: 'Missing'
+    });
+  }
+
+  // 9. Government Payments (1099-G)
+  if (intake.receivedGovernmentPayments || intake.receivedUnemployment) {
+    addItem({
+      formNumber: 'Form 1099-G',
+      title: 'Certain Government Payments (Unemployment / State Tax Refunds)',
+      category: 'Government Payments',
+      whyWeNeedIt: 'Reports state unemployment compensation, state/local tax refunds received, or taxable government grants under IRC § 6050B.',
+      whereCanIFindIt: 'State Department of Labor or State Department of Revenue tax portal.',
+      whyAmIAsked: 'You received unemployment benefits, certain state/local refunds, or government subsidies.',
+      source: 'Government',
+      appliesTo: 'Multi-State',
+      stateCode: intake.residenceState,
+      taxYear: intake.taxYear,
+      priority: 'Required if applicable',
+      status: 'Missing'
+    });
+  }
+
+  // 10. Social Security / Railroad Retirement (SSA-1099 / RRB-1099)
   if (intake.receivedSocialSecurity) {
     addItem({
-      formNumber: 'SSA-1099',
-      title: 'Social Security Benefit Statement',
+      formNumber: 'SSA-1099 / RRB-1099',
+      title: 'Social Security / Railroad Retirement Benefits Statement',
       category: 'Social Security / Railroad Retirement',
-      whyWeNeedIt: 'Reports total Social Security retirement or disability benefits paid to calculate the federally taxable portion.',
-      whereCanIFindIt: 'Mailed by SSA in January or downloaded from SSA.gov.',
-      whyAmIAsked: 'You received Social Security benefit payments during the tax year.',
+      whyWeNeedIt: 'Reports total Social Security or Railroad Retirement benefits paid to calculate the federally taxable portion under IRC § 86.',
+      whereCanIFindIt: 'Mailed annually in January by the Social Security Administration or downloaded at ssa.gov.',
+      whyAmIAsked: 'You received Social Security or railroad retirement benefits during the tax year.',
       source: 'Government',
       appliesTo: 'Federal',
       taxYear: intake.taxYear,
@@ -1509,7 +1876,25 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 8. Mortgage Interest (Form 1098)
+  // 11. Partnership / S Corp / Estate / Trust (Schedule K-1)
+  if (intake.hasPassThroughK1) {
+    addItem({
+      formNumber: 'Schedule K-1',
+      title: 'Partner / Shareholder Share of Income, Deductions, Credits (1065 / 1120-S)',
+      category: 'Partnership / S Corporation / Estate / Trust',
+      whyWeNeedIt: 'Reports distributive share of partnership, S-Corp, or fiduciary estate earnings, deductions, guaranteed payments, and Section 199A QBID information.',
+      whereCanIFindIt: 'Issued by the managing partner, CPA, or corporate finance officer of the entity.',
+      whyAmIAsked: 'You confirmed ownership in a partnership, S-Corporation, LLC, or trust.',
+      source: 'Entity Issuer',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required',
+      status: 'Missing',
+      isMultiInstanceAllowed: true
+    });
+  }
+
+  // 12. Mortgage Interest (Form 1098)
   if (intake.hasMortgage) {
     addItem({
       formNumber: 'Form 1098',
@@ -1526,41 +1911,7 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 9. Real Estate Sales (1099-S)
-  if (intake.soldRealEstate) {
-    addItem({
-      formNumber: 'Form 1099-S',
-      title: 'Proceeds From Real Estate Transactions & Closing Disclosure',
-      category: 'Real Estate Sale',
-      whyWeNeedIt: 'Reports gross sales price, closing dates, and settlement charges to evaluate the IRC § 121 primary home exclusion ($250k single / $500k married) or capital gain.',
-      whereCanIFindIt: 'Settlement title company or closing attorney closing packet.',
-      whyAmIAsked: 'You indicated the sale or transfer of real property during the year.',
-      source: 'Other',
-      appliesTo: 'Federal',
-      taxYear: intake.taxYear,
-      priority: 'Required',
-      status: 'Missing'
-    });
-  }
-
-  // 10. Rental Property (Schedule E)
-  if (intake.ownsRentalProperty) {
-    addItem({
-      formNumber: 'Rental Property Ledger',
-      title: 'Rental Income & Operating Expense Summary (Schedule E)',
-      category: 'Deductions & Expenses',
-      whyWeNeedIt: 'Reports tenant rental receipts, repairs, management fees, property taxes, and capital improvements for depreciation.',
-      whereCanIFindIt: 'Property management annual statement or rental accounting workbook.',
-      whyAmIAsked: 'You indicated ownership of residential or commercial rental real estate.',
-      source: 'Taxpayer',
-      appliesTo: 'Federal',
-      taxYear: intake.taxYear,
-      priority: 'Required',
-      status: 'Missing'
-    });
-  }
-
-  // 11. Higher Education (1098-T)
+  // 13. Education (Form 1098-T)
   if (intake.hasCollegeOrTuition) {
     addItem({
       formNumber: 'Form 1098-T',
@@ -1568,7 +1919,7 @@ export function generatePersonalizedChecklist(
       category: 'Education',
       whyWeNeedIt: 'Reports qualified tuition payments (Box 1) and scholarships (Box 5) to claim the American Opportunity Tax Credit (AOTC) or Lifetime Learning Credit.',
       whereCanIFindIt: 'College or university bursar student portal (ECSI, Heartland, etc.).',
-      whyAmIAsked: 'You or your dependent attended eligible college, university, or vocational school.',
+      whyAmIAsked: 'You or your dependent attended eligible college, university, or post-secondary school.',
       source: 'Educational Institution',
       appliesTo: 'Federal',
       taxYear: intake.taxYear,
@@ -1577,7 +1928,7 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 12. Student Loans (1098-E)
+  // 14. Student Loans (Form 1098-E)
   if (intake.paysStudentLoanInterest) {
     addItem({
       formNumber: 'Form 1098-E',
@@ -1594,65 +1945,30 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 13. Health Savings Accounts (1099-SA / 5498-SA)
-  if (intake.hasHSAorMSA) {
+  // 15. Foreclosure / Abandonment (Form 1099-A)
+  if (intake.hasForeclosureOrAbandonment || intake.hasCancelledDebtOrForeclosure) {
     addItem({
-      formNumber: 'Form 1099-SA',
-      title: 'Distributions From an HSA or Archer MSA',
-      category: 'HSA / MSA',
-      whyWeNeedIt: 'Verifies distributions were utilized for qualified medical expenses to avoid income tax and the 20% excise penalty.',
-      whereCanIFindIt: 'HSA administrator portal (HSA Bank, Fidelity, Optum, HealthEquity).',
-      whyAmIAsked: 'You held or took distributions from a Health Savings Account.',
-      source: 'Bank',
+      formNumber: 'Form 1099-A',
+      title: 'Acquisition or Abandonment of Secured Property',
+      category: 'Foreclosure / Abandonment',
+      whyWeNeedIt: 'Reports foreclosure, repossession, or abandonment of property that secured a loan to compute capital gain or loss under IRC § 6050J.',
+      whereCanIFindIt: 'Issued by the lender or financial institution that held the loan.',
+      whyAmIAsked: 'You indicated surrender, repossession, or abandonment of secured property.',
+      source: 'Lender',
       appliesTo: 'Federal',
       taxYear: intake.taxYear,
-      priority: 'Required',
+      priority: 'Required if applicable',
       status: 'Missing'
     });
   }
 
-  // 14. Marketplace Health Insurance (1095-A) - CRITICAL PRIORITY
-  if (intake.hasMarketplaceInsurance) {
-    addItem({
-      formNumber: 'Form 1095-A',
-      title: 'Health Insurance Marketplace Statement',
-      category: 'Marketplace Insurance',
-      whyWeNeedIt: 'HIGH PRIORITY: Required by the IRS to reconcile the Premium Tax Credit on Form 8962. E-filing without this form causes immediate IRS rejection.',
-      whereCanIFindIt: 'Healthcare.gov or your state health exchange account (Covered CA, NY State of Health).',
-      whyAmIAsked: 'You indicated obtaining health coverage through the Health Insurance Marketplace.',
-      source: 'Marketplace',
-      appliesTo: 'Federal',
-      taxYear: intake.taxYear,
-      priority: 'Required',
-      status: 'Missing'
-    });
-  }
-
-  // 15. Pass-Through Entities (Schedule K-1)
-  if (intake.hasPassThroughK1) {
-    addItem({
-      formNumber: 'Schedule K-1',
-      title: 'Partner / Shareholder Share of Income, Deductions, Credits (1065 / 1120-S)',
-      category: 'Partnership / S Corporation / Estate / Trust',
-      whyWeNeedIt: 'Reports your distributive share of partnership, S-Corp, or fiduciary estate earnings, guaranteed payments, and Section 199A QBID information.',
-      whereCanIFindIt: 'Issued by the managing partner, CPA, or corporate finance officer of the entity.',
-      whyAmIAsked: 'You confirmed ownership in a partnership, S-Corporation, LLC, or trust.',
-      source: 'Entity Issuer',
-      appliesTo: 'Federal',
-      taxYear: intake.taxYear,
-      priority: 'Required',
-      status: 'Missing',
-      isMultiInstanceAllowed: true
-    });
-  }
-
-  // 16. Cancellation of Debt / Foreclosure (1099-C / 1099-A)
-  if (intake.hasCancelledDebtOrForeclosure) {
+  // 16. Cancelled Debt (Form 1099-C)
+  if (intake.hasCancelledDebt || intake.hasCancelledDebtOrForeclosure) {
     addItem({
       formNumber: 'Form 1099-C',
       title: 'Cancellation of Debt',
       category: 'Cancelled Debt',
-      whyWeNeedIt: 'Reports cancelled or forgiven debt. Flagged for professional analysis to determine insolvency, bankruptcy, or qualified principal residence exclusions under IRC § 108.',
+      whyWeNeedIt: 'Reports cancelled or forgiven debt of $600 or more. Flagged for professional analysis to determine insolvency, bankruptcy, or qualified principal residence exclusions under IRC § 108.',
       whereCanIFindIt: 'Provided by the lending institution or creditor that discharged the debt.',
       whyAmIAsked: 'You reported forgiven, settled, or cancelled debt obligations.',
       source: 'Lender',
@@ -1663,7 +1979,143 @@ export function generatePersonalizedChecklist(
     });
   }
 
-  // 17. Estimated Tax Payments
+  // 17. Real Estate Sale (Form 1099-S)
+  if (intake.soldRealEstate) {
+    addItem({
+      formNumber: 'Form 1099-S',
+      title: 'Proceeds From Real Estate Transactions & Closing Disclosure',
+      category: 'Real Estate Sale',
+      whyWeNeedIt: 'Reports gross sales price, closing dates, and settlement charges to evaluate the IRC § 121 primary home exclusion ($250k single / $500k married) or capital gain.',
+      whereCanIFindIt: 'Settlement title company or closing attorney closing packet.',
+      whyAmIAsked: 'You indicated the sale or transfer of real property during the year.',
+      source: 'Other',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required',
+      status: 'Missing'
+    });
+  }
+
+  // 18. Health Savings Accounts (Form 1099-SA / 5498-SA)
+  if (intake.hasHSAorMSA) {
+    addItem({
+      formNumber: 'Form 1099-SA / 5498-SA',
+      title: 'HSA / MSA Distributions & Contributions Statement',
+      category: 'HSA / MSA',
+      whyWeNeedIt: 'Verifies distributions were utilized for qualified medical expenses to avoid income tax and the 20% excise penalty, and substantiates contributions on Form 8889.',
+      whereCanIFindIt: 'HSA administrator portal (HSA Bank, Fidelity, Optum, HealthEquity).',
+      whyAmIAsked: 'You held, contributed to, or took distributions from a Health Savings Account (HSA/MSA).',
+      source: 'Bank',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required',
+      status: 'Missing'
+    });
+  }
+
+  // 19. IRA Contributions (Form 5498)
+  if (intake.contributedToIRA) {
+    addItem({
+      formNumber: 'Form 5498',
+      title: 'IRA Contribution Information (Traditional, Roth, SEP, SIMPLE)',
+      category: 'IRA Contributions',
+      whyWeNeedIt: 'Reports contributions, rollovers, and year-end fair market value for IRAs. Required to verify deduction limits and track nondeductible basis on Form 8606.',
+      whereCanIFindIt: 'Retirement account custodian or brokerage tax documents section.',
+      whyAmIAsked: 'You made contributions or rollovers to a Traditional, Roth, SEP, or SIMPLE IRA.',
+      source: 'Brokerage',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Recommended',
+      status: 'Missing'
+    });
+  }
+
+  // 20. Marketplace Insurance (Form 1095-A) - CRITICAL PRIORITY
+  if (intake.hasMarketplaceInsurance) {
+    addItem({
+      formNumber: 'Form 1095-A',
+      title: 'Health Insurance Marketplace Statement',
+      category: 'Marketplace Insurance',
+      whyWeNeedIt: 'CRITICAL PRIORITY: Required by the IRS to reconcile the Advance Premium Tax Credit (APTC) on Form 8962. E-filing without this form causes immediate IRS rejection.',
+      whereCanIFindIt: 'Healthcare.gov or state health exchange portal (Covered CA, NY State of Health).',
+      whyAmIAsked: 'You indicated obtaining health coverage through the Health Insurance Marketplace.',
+      source: 'Marketplace',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required',
+      status: 'Missing'
+    });
+  }
+
+  // 21. Long-Term Care (Form 1099-LTC)
+  if (intake.hasLongTermCare) {
+    addItem({
+      formNumber: 'Form 1099-LTC',
+      title: 'Long-Term Care and Accelerated Death Benefits',
+      category: 'Long-Term Care',
+      whyWeNeedIt: 'Reports payments received from qualified long-term care insurance policies or accelerated death benefits under life insurance to evaluate tax exclusions on Form 8853.',
+      whereCanIFindIt: 'Issued by the insurance company providing long-term care coverage.',
+      whyAmIAsked: 'You received long-term care or accelerated death benefit payments.',
+      source: 'Other',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required if applicable',
+      status: 'Missing'
+    });
+  }
+
+  // 22. ABLE Accounts (Form 1099-QA / 5498-QA)
+  if (intake.hasABLEAccount) {
+    addItem({
+      formNumber: 'Form 1099-QA / 5498-QA',
+      title: 'ABLE Account Distributions & Contributions (IRC § 529A)',
+      category: 'ABLE Accounts',
+      whyWeNeedIt: 'Reports distributions and contributions for individuals with disabilities under Achieving a Better Life Experience (ABLE) programs to confirm qualified disability expenses.',
+      whereCanIFindIt: 'State ABLE plan administrator portal.',
+      whyAmIAsked: 'You maintained, contributed to, or distributed funds from an ABLE account.',
+      source: 'Bank',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required if applicable',
+      status: 'Missing'
+    });
+  }
+
+  // 23. Education Plans (Form 1099-Q)
+  if (intake.hasEducationPlans) {
+    addItem({
+      formNumber: 'Form 1099-Q',
+      title: 'Payments From Qualified Education Programs (Sections 529 & 530)',
+      category: 'Education Plans',
+      whyWeNeedIt: 'Reports distributions from a 529 college savings plan or Coverdell ESA to ensure funds were used for qualified education expenses and avoid tax penalties.',
+      whereCanIFindIt: 'State 529 plan custodian or Coverdell trustee account portal.',
+      whyAmIAsked: 'You took distributions from a 529 college savings account or Coverdell ESA.',
+      source: 'Brokerage',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required if applicable',
+      status: 'Missing'
+    });
+  }
+
+  // Rental Property (Schedule E)
+  if (intake.ownsRentalProperty) {
+    addItem({
+      formNumber: 'Rental Property Ledger',
+      title: 'Rental Income & Operating Expense Summary (Schedule E)',
+      category: 'Deductions & Expenses',
+      whyWeNeedIt: 'Reports tenant rental receipts, repairs, management fees, property taxes, and capital improvements for depreciation.',
+      whereCanIFindIt: 'Property management annual statement or rental accounting workbook.',
+      whyAmIAsked: 'You indicated ownership of residential or commercial rental real estate.',
+      source: 'Taxpayer',
+      appliesTo: 'Federal',
+      taxYear: intake.taxYear,
+      priority: 'Required',
+      status: 'Missing'
+    });
+  }
+
+  // Estimated Tax Payments
   if (intake.madeEstimatedTaxPayments) {
     addItem({
       formNumber: 'Estimated Tax Payment Records',
@@ -1921,3 +2373,214 @@ export function detectUploadAnomalies(
     mismatchYear
   };
 }
+
+// --------------------------------------------------------------------------
+// AUTOMATIC CLIENT DETAILS & SUBMITTED DOCUMENTS RECONCILIATION ENGINE
+// --------------------------------------------------------------------------
+
+export function extractStateCode(jurisdictionStr?: string, addressStr?: string): 'CA' | 'NY' | 'NC' | 'SC' | 'VA' | 'TN' | 'FL' | 'NJ' {
+  const combined = `${jurisdictionStr || ''} ${addressStr || ''}`.toUpperCase();
+  if (combined.includes('SOUTH CAROLINA') || combined.includes('(SC)') || combined.includes(' SC ') || combined.includes(', SC')) return 'SC';
+  if (combined.includes('NORTH CAROLINA') || combined.includes('(NC)') || combined.includes(' NC ') || combined.includes(', NC')) return 'NC';
+  if (combined.includes('CALIFORNIA') || combined.includes('(CA)') || combined.includes(' CA ') || combined.includes(', CA')) return 'CA';
+  if (combined.includes('NEW YORK') || combined.includes('(NY)') || combined.includes(' NY ') || combined.includes(', NY')) return 'NY';
+  if (combined.includes('VIRGINIA') || combined.includes('(VA)') || combined.includes(' VA ') || combined.includes(', VA')) return 'VA';
+  if (combined.includes('TENNESSEE') || combined.includes('(TN)') || combined.includes(' TN ') || combined.includes(', TN')) return 'TN';
+  if (combined.includes('FLORIDA') || combined.includes('(FL)') || combined.includes(' FL ') || combined.includes(', FL')) return 'FL';
+  if (combined.includes('NEW JERSEY') || combined.includes('(NJ)') || combined.includes(' NJ ') || combined.includes(', NJ')) return 'NJ';
+  return 'SC';
+}
+
+export function deriveIntakeFromClientAndDocs(
+  client: DemoClient,
+  submittedDocs: DemoDocument[],
+  taxYear: number
+): IntakeResponses {
+  const primaryState = extractStateCode(client.primaryJurisdiction, client.address);
+  const workStates: ('CA' | 'NY' | 'NC' | 'SC' | 'VA' | 'TN' | 'FL' | 'NJ')[] = [primaryState];
+
+  if (client.secondaryJurisdictions && Array.isArray(client.secondaryJurisdictions)) {
+    client.secondaryJurisdictions.forEach(j => {
+      const code = extractStateCode(j);
+      if (code && !workStates.includes(code)) {
+        workStates.push(code);
+      }
+    });
+  }
+
+  const entityLower = (client.entityType || '').toLowerCase();
+  const businessLower = (client.businessName || '').toLowerCase();
+  const isSCorp = entityLower.includes('s corporation') || entityLower.includes('s-corp');
+  const isPartnership = entityLower.includes('partnership') || entityLower.includes('llp') || entityLower.includes('1065');
+  const isCCorp = entityLower.includes('c corporation') || entityLower.includes('c-corp');
+  const isSoleProp = entityLower.includes('sole proprietor') || entityLower.includes('carpentry') || entityLower.includes('schedule c');
+  const isBusinessOwner = isSCorp || isPartnership || isCCorp || isSoleProp || !!client.businessName;
+
+  // Scan submitted docs for specific signals
+  const hasW2Submitted = submittedDocs.some(d =>
+    d.category?.toLowerCase().includes('w-2') ||
+    d.fileName?.toLowerCase().includes('w2') ||
+    d.fileName?.toLowerCase().includes('w-2')
+  );
+  const has1099Submitted = submittedDocs.some(d =>
+    d.category?.toLowerCase().includes('1099') ||
+    d.fileName?.toLowerCase().includes('1099')
+  );
+  const hasRentalSignal = businessLower.includes('rental') || businessLower.includes('property') || entityLower.includes('individual');
+
+  return {
+    taxYear,
+    residenceState: primaryState,
+    workStates,
+    hasOtherStateIncome: workStates.length > 1,
+    filingStatus: 'Married Filing Jointly',
+    hadW2Employment: true, // Form W-2
+    w2Count: 1,
+    hadFreelanceOrContract: true, // Form 1099-NEC
+    received1099MISC: true, // Form 1099-MISC
+    receivedInterest: true, // Form 1099-INT
+    receivedDividends: true, // Form 1099-DIV
+    receivedInterestOrDividends: true,
+    soldInvestments: true, // Form 1099-B
+    received1099K: true, // Form 1099-K
+    receivedRetirementDistributions: true, // Form 1099-R
+    receivedGovernmentPayments: true, // Form 1099-G
+    receivedSocialSecurity: true, // Form SSA-1099 / RRB-1099
+    hasPassThroughK1: true, // Form Schedule K-1
+    hasMortgage: true, // Form 1098
+    hasCollegeOrTuition: true, // Form 1098-T
+    paysStudentLoanInterest: true, // Form 1098-E
+    hasForeclosureOrAbandonment: true, // Form 1099-A
+    hasCancelledDebt: true, // Form 1099-C
+    hasCancelledDebtOrForeclosure: true,
+    soldRealEstate: true, // Form 1099-S
+    hasHSAorMSA: true, // Form 1099-SA / 5498-SA
+    contributedToIRA: true, // Form 5498
+    hasMarketplaceInsurance: true, // Form 1095-A
+    hasLongTermCare: true, // Form 1099-LTC
+    hasABLEAccount: true, // Form 1099-QA / 5498-QA
+    hasEducationPlans: true, // Form 1099-Q
+    hasOwnBusiness: isBusinessOwner,
+    hasCryptoTransactions: false,
+    ownsRealEstate: true,
+    ownsRentalProperty: true,
+    hasForeignAccountsOrIncome: false,
+    madeEstimatedTaxPayments: true,
+    hasDependents: true,
+    paidChildcare: false,
+    receivedUnemployment: true
+  };
+}
+
+export function reconcileChecklistWithClientVaultDocs(
+  items: PersonalizedDocItem[],
+  client: DemoClient,
+  submittedDocs: DemoDocument[],
+  taxYear: number
+): { reconciledItems: PersonalizedDocItem[]; matchedCount: number } {
+  let matchedCount = 0;
+  const matchedDocIds = new Set<string>();
+
+  const reconciledItems = items.map(item => {
+    // Only check items for active tax year
+    if (item.taxYear !== taxYear && item.taxYear !== 0) {
+      return item;
+    }
+
+    const formNum = (item.formNumber || '').toLowerCase();
+    const cat = (item.category || '').toLowerCase();
+    const title = (item.title || '').toLowerCase();
+
+    // Look for matching document among submitted documents
+    const matchingDoc = submittedDocs.find(d => {
+      if (matchedDocIds.has(d.id)) return false;
+      const dCat = (d.category || '').toLowerCase();
+      const dFile = (d.fileName || '').toLowerCase();
+
+      // W-2 match
+      if (formNum.includes('w-2') || cat === 'employment') {
+        return dCat.includes('w-2') || dFile.includes('w2') || dFile.includes('w-2');
+      }
+
+      // Bank or business expense statement
+      if (formNum.includes('business expense') || cat.includes('deductions') || title.includes('bank') || title.includes('operating')) {
+        return dCat.includes('bank') || dFile.includes('operating') || dFile.includes('bank') || dFile.includes('statement');
+      }
+
+      // 1120-S or Pass-through K-1
+      if (formNum.includes('k-1') || formNum.includes('1120') || title.includes('s-corporation') || title.includes('k-1')) {
+        return dCat.includes('tax return') || dFile.includes('1120') || dFile.includes('k1') || dFile.includes('k-1');
+      }
+
+      // Depreciation & Fixed Assets
+      if (title.includes('depreciation') || title.includes('fixed asset') || cat.includes('depreciation')) {
+        return dCat.includes('depreciation') || dFile.includes('fixed_asset') || dFile.includes('assets');
+      }
+
+      // IRS Notice / Examination
+      if (formNum.includes('notice') || title.includes('notice') || title.includes('cp2000')) {
+        return dCat.includes('notice') || dFile.includes('notice') || dFile.includes('cp2000');
+      }
+
+      return false;
+    });
+
+    if (matchingDoc) {
+      matchedDocIds.add(matchingDoc.id);
+      matchedCount++;
+      return {
+        ...item,
+        status: (matchingDoc.status === 'Verified' ? 'Accepted' : 'Accepted') as DocumentStatus,
+        uploadedFileName: matchingDoc.fileName,
+        uploadedFileSize: matchingDoc.fileSize,
+        uploadedDate: new Date(matchingDoc.uploadedAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }),
+        fileHash: matchingDoc.sha256Hash,
+        confidenceScore: 99,
+        confidenceTier: 'High' as const,
+        autoMatchedFromVault: true,
+        matchedVaultDocumentId: matchingDoc.id,
+        accountantApproved: matchingDoc.status === 'Verified',
+        reviewedBy: matchingDoc.status === 'Verified' ? (client.assignedReviewerName || 'Elena Rostova, CPA') : undefined,
+        ocrData: item.ocrData || (formNum.includes('w-2') ? {
+          payerName: client.businessName || 'Perotti Capital Holdings, LLC',
+          box1Wages: 175000,
+          box2FederalWithholding: 34200,
+          box16StateWages: 175000,
+          box17StateTax: 10850,
+          employeeSSN: client.einOrSsnMasked || '•••-••-4819'
+        } : undefined)
+      };
+    }
+
+    return item;
+  });
+
+  return { reconciledItems, matchedCount };
+}
+
+export function generateAutomaticClientChecklist(
+  client: DemoClient,
+  submittedDocs: DemoDocument[],
+  taxYear: number
+): {
+  intake: IntakeResponses;
+  items: PersonalizedDocItem[];
+  matchedCount: number;
+  stateCode: 'CA' | 'NY' | 'NC' | 'SC' | 'VA' | 'TN' | 'FL' | 'NJ';
+} {
+  const intake = deriveIntakeFromClientAndDocs(client, submittedDocs, taxYear);
+  const baseItems = generatePersonalizedChecklist(intake, []);
+  const { reconciledItems, matchedCount } = reconcileChecklistWithClientVaultDocs(baseItems, client, submittedDocs, taxYear);
+
+  return {
+    intake,
+    items: reconciledItems,
+    matchedCount,
+    stateCode: intake.residenceState
+  };
+}
+

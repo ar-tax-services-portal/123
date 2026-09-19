@@ -30,7 +30,8 @@ import {
   PersonalizedDocItem,
   IntakeResponses,
   OcrAuditEntry,
-  detectUploadAnomalies
+  detectUploadAnomalies,
+  ALL_STANDARD_TAX_FORMS
 } from '../../services/personalizedDocumentsEngine';
 
 // --------------------------------------------------------------------------
@@ -222,8 +223,8 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
                 Align document edges inside the viewport. Auto-edge detection &amp; perspective correction enabled.
               </p>
               <div className="mt-4 flex items-center justify-center gap-2">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                <span className="text-[10px] font-mono text-emerald-300">Scanner Ready (300 DPI Simulated)</span>
+                <span className="inline-block h-2 w-2 rounded-full bg-[#C99A32] animate-ping" />
+                <span className="text-[10px] font-mono text-[#E8C66A]">Scanner Ready (300 DPI Simulated)</span>
               </div>
             </div>
           ) : (
@@ -279,10 +280,10 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
           </div>
 
           {simulatedDocYear !== selectedTaxYear && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="rounded-lg border border-[#C99A32] bg-[#FAF9F5] p-2.5 text-xs text-[#061A2F] flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-[#C99A32] flex-shrink-0 mt-0.5" />
               <span>
-                <strong>Test Notice:</strong> Document year ({simulatedDocYear}) differs from currently active tax year ({selectedTaxYear}). This will trigger the Tax Year Mismatch audit flag upon upload.
+                <strong>Notice:</strong> Document year ({simulatedDocYear}) differs from currently active tax year ({selectedTaxYear}). This will trigger the Tax Year Mismatch audit flag upon upload.
               </span>
             </div>
           )}
@@ -353,7 +354,7 @@ export const OcrInspectionModal: React.FC<OcrInspectionModalProps> = ({
       <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-2xl border border-neutral-200 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#061A2F] text-[#E8C66A]">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
@@ -374,7 +375,7 @@ export const OcrInspectionModal: React.FC<OcrInspectionModalProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg bg-neutral-50 p-3 border border-neutral-200 text-xs">
             <div>
               <span className="text-neutral-500 block text-[10px] font-mono uppercase">Confidence</span>
-              <span className="font-bold text-emerald-700">{doc.confidenceScore || 98}% ({doc.confidenceTier || 'High'})</span>
+              <span className="font-bold text-[#061A2F]">{doc.confidenceScore || 98}% ({doc.confidenceTier || 'High'})</span>
             </div>
             <div>
               <span className="text-neutral-500 block text-[10px] font-mono uppercase">Tax Year</span>
@@ -423,8 +424,8 @@ export const OcrInspectionModal: React.FC<OcrInspectionModalProps> = ({
                             : String(val)}
                         </td>
                         <td className="px-3 py-2">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#061A2F] bg-[#FAF9F5] px-2 py-0.5 rounded border border-[#C99A32]">
+                            <CheckCircle2 className="h-3 w-3 text-[#C99A32]" />
                             Verified
                           </span>
                         </td>
@@ -445,8 +446,8 @@ export const OcrInspectionModal: React.FC<OcrInspectionModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-neutral-600">
               <div>SHA-256 Hash: <span className="text-neutral-900">{doc.fileHash || 'sha256_e8910a293b8214'}</span></div>
               <div>Upload Timestamp: <span className="text-neutral-900">{doc.uploadedDate || '2026-02-14 14:22 EST'}</span></div>
-              <div>Malware &amp; PDF Sanitization: <span className="text-emerald-700 font-bold">Passed (Zero Threats)</span></div>
-              <div>PII Redaction Engine: <span className="text-emerald-700 font-bold">SSN &amp; Bank Accts Masked</span></div>
+              <div>Malware &amp; PDF Sanitization: <span className="text-[#061A2F] font-bold">Passed (Zero Threats)</span></div>
+              <div>PII Redaction Engine: <span className="text-[#061A2F] font-bold">SSN &amp; Bank Accts Masked</span></div>
             </div>
           </div>
         </div>
@@ -522,246 +523,103 @@ export const IntakeQuestionnaireModal: React.FC<IntakeModalProps> = ({
         </div>
 
         <div className="mt-4 space-y-6">
-          {/* State of Residence */}
-          <div>
-            <label className="block text-xs font-bold text-neutral-800 mb-1.5">
-              Primary State of Residence for Tax Year {draft.taxYear}:
-            </label>
-            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-              {(['CA', 'NY', 'NC', 'SC', 'VA', 'TN', 'FL', 'NJ'] as const).map(st => (
+          {/* Automatic State of Residence Notice */}
+          <div className="rounded-lg bg-[#FAF9F5] p-3 border border-[#C99A32]/40 text-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-bold text-[#061A2F]">State of Residence: </span>
+                <span className="font-mono font-bold text-[#C99A32] bg-[#061A2F] text-white px-2 py-0.5 rounded text-[11px] ml-1">
+                  {draft.residenceState}
+                </span>
+                <span className="text-[#667085] ml-2 text-[11px]">
+                  (Configured automatically during client onboarding)
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
-                  key={st}
                   type="button"
-                  onClick={() => setDraft(prev => ({ ...prev, residenceState: st }))}
-                  className={`rounded-lg py-2 text-xs font-bold font-mono transition-all border ${
-                    draft.residenceState === st
-                      ? 'border-[#0A2544] bg-[#0A2544] text-[#E8C66A] shadow-xs'
-                      : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
-                  }`}
+                  onClick={() => {
+                    setDraft(prev => ({
+                      ...prev,
+                      hadW2Employment: true,
+                      hadFreelanceOrContract: true,
+                      received1099MISC: true,
+                      receivedInterest: true,
+                      receivedDividends: true,
+                      receivedInterestOrDividends: true,
+                      soldInvestments: true,
+                      received1099K: true,
+                      receivedRetirementDistributions: true,
+                      receivedGovernmentPayments: true,
+                      receivedSocialSecurity: true,
+                      hasPassThroughK1: true,
+                      hasMortgage: true,
+                      hasCollegeOrTuition: true,
+                      paysStudentLoanInterest: true,
+                      hasForeclosureOrAbandonment: true,
+                      hasCancelledDebt: true,
+                      hasCancelledDebtOrForeclosure: true,
+                      soldRealEstate: true,
+                      hasHSAorMSA: true,
+                      contributedToIRA: true,
+                      hasMarketplaceInsurance: true,
+                      hasLongTermCare: true,
+                      hasABLEAccount: true,
+                      hasEducationPlans: true,
+                      receivedUnemployment: true
+                    }));
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-semibold bg-[#061A2F] text-[#E8C66A] rounded border border-[#C99A32]/40 hover:bg-[#0A2544]"
                 >
-                  {st}
+                  Enable All 23 Forms
                 </button>
-              ))}
-            </div>
-            {(draft.residenceState === 'FL' || draft.residenceState === 'TN') && (
-              <p className="mt-2 text-xs font-medium text-emerald-800 bg-emerald-50 p-2 rounded border border-emerald-200">
-                ✓ {draft.residenceState === 'FL' ? 'Florida' : 'Tennessee'} has NO state individual personal income tax. No state individual tax return will be prepared.
-              </p>
-            )}
-          </div>
-
-          {/* Income & Employment */}
-          <div>
-            <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-neutral-500 mb-2">
-              Employment &amp; Earned Income
-            </h4>
-            <div className="space-y-2">
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">W-2 Employment</div>
-                  <div className="text-[11px] text-neutral-500">Received Form W-2 from one or more employers</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.hadW2Employment}
-                  onChange={() => handleToggle('hadW2Employment')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              {draft.hadW2Employment && (
-                <div className="pl-4 pr-3 py-2 bg-neutral-50 border-l-2 border-[#0A2544] flex items-center justify-between text-xs">
-                  <span className="text-neutral-700 font-medium">Number of W-2 Employers:</span>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4].map(num => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setDraft(prev => ({ ...prev, w2Count: num }))}
-                        className={`px-2.5 py-1 text-xs font-mono font-bold rounded ${
-                          draft.w2Count === num
-                            ? 'bg-[#0A2544] text-[#E8C66A]'
-                            : 'bg-white border border-neutral-300 text-neutral-700'
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Independent Contracting &amp; Freelance (1099-NEC)</div>
-                  <div className="text-[11px] text-neutral-500">Performed consulting, gig work, or independent contractor services</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.hadFreelanceOrContract}
-                  onChange={() => handleToggle('hadFreelanceOrContract')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Payment Processor (1099-K)</div>
-                  <div className="text-[11px] text-neutral-500">Processed card payments or online sales via Stripe, Square, PayPal, Venmo</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.received1099K}
-                  onChange={() => handleToggle('received1099K')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
+              </div>
             </div>
           </div>
 
-          {/* Investments & Property */}
+          {/* All 23 Standard Forms Grid */}
           <div>
-            <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-neutral-500 mb-2">
-              Investments, Property &amp; Real Estate
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Sold Stocks / Investments (1099-B)</div>
-                  <div className="text-[11px] text-neutral-500">Brokerage trades &amp; capital gains</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.soldInvestments}
-                  onChange={() => handleToggle('soldInvestments')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Interest or Dividends (1099-INT/DIV)</div>
-                  <div className="text-[11px] text-neutral-500">Bank accounts or dividend portfolios</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.receivedInterestOrDividends}
-                  onChange={() => handleToggle('receivedInterestOrDividends')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Mortgage on Real Estate (Form 1098)</div>
-                  <div className="text-[11px] text-neutral-500">Deductible mortgage interest &amp; escrow</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.hasMortgage}
-                  onChange={() => handleToggle('hasMortgage')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Rental Real Estate (Schedule E)</div>
-                  <div className="text-[11px] text-neutral-500">Owns residential/commercial rentals</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.ownsRentalProperty}
-                  onChange={() => handleToggle('ownsRentalProperty')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Sold Real Estate (Form 1099-S)</div>
-                  <div className="text-[11px] text-neutral-500">Sale of primary home or property</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.soldRealEstate}
-                  onChange={() => handleToggle('soldRealEstate')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Pass-Through Entity (Schedule K-1)</div>
-                  <div className="text-[11px] text-neutral-500">Partner, S-Corp shareholder, or trust</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.hasPassThroughK1}
-                  onChange={() => handleToggle('hasPassThroughK1')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-[#061A2F]">
+                Standard Tax Forms Intake Checklist (23 Forms)
+              </h4>
+              <span className="text-[11px] font-mono text-[#667085]">
+                {ALL_STANDARD_TAX_FORMS.filter(f => !!draft[f.intakeKey]).length} of 23 Active
+              </span>
             </div>
-          </div>
-
-          {/* Healthcare & Specialized */}
-          <div>
-            <h4 className="text-xs font-mono uppercase tracking-wider font-bold text-neutral-500 mb-2">
-              Healthcare, Education &amp; Retirement
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Marketplace Insurance (Form 1095-A)</div>
-                  <div className="text-[11px] text-neutral-500">Healthcare.gov or state marketplace plan</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.hasMarketplaceInsurance}
-                  onChange={() => handleToggle('hasMarketplaceInsurance')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Health Savings Account (1099-SA / 5498-SA)</div>
-                  <div className="text-[11px] text-neutral-500">Distributions or contributions to HSA</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.hasHSAorMSA}
-                  onChange={() => handleToggle('hasHSAorMSA')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Retirement Distributions (1099-R)</div>
-                  <div className="text-[11px] text-neutral-500">Pensions, annuities, 401(k), IRA distributions</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.receivedRetirementDistributions}
-                  onChange={() => handleToggle('receivedRetirementDistributions')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 cursor-pointer">
-                <div>
-                  <div className="text-xs font-bold text-neutral-900">Social Security Benefits (SSA-1099)</div>
-                  <div className="text-[11px] text-neutral-500">Monthly Social Security benefits received</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={draft.receivedSocialSecurity}
-                  onChange={() => handleToggle('receivedSocialSecurity')}
-                  className="h-4 w-4 rounded border-neutral-300 text-[#0A2544]"
-                />
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[50vh] overflow-y-auto pr-1">
+              {ALL_STANDARD_TAX_FORMS.map(form => {
+                const isChecked = !!draft[form.intakeKey];
+                return (
+                  <label
+                    key={form.id}
+                    className={`flex items-start justify-between p-3 rounded-lg border transition-all cursor-pointer ${
+                      isChecked
+                        ? 'border-[#C99A32] bg-[#FAF9F5]'
+                        : 'border-[#D8DCE2] bg-white hover:bg-[#FAF9F5]/40'
+                    }`}
+                  >
+                    <div className="pr-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-xs font-bold text-[#061A2F] bg-[#FAF9F5] border border-[#C99A32]/50 px-1.5 py-0.5 rounded">
+                          {form.formNumber}
+                        </span>
+                        <span className="text-[10px] font-semibold text-[#667085] uppercase font-mono">
+                          {form.category}
+                        </span>
+                      </div>
+                      <div className="text-xs font-bold text-[#061A2F]">{form.title}</div>
+                      <div className="text-[11px] text-[#667085] mt-0.5">{form.description}</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggle(form.intakeKey)}
+                      className="mt-1 h-4 w-4 rounded border-[#D8DCE2] text-[#061A2F] accent-[#061A2F] focus:ring-[#C99A32]"
+                    />
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -885,7 +743,7 @@ export const ProfessionalOverrideModal: React.FC<OverrideModalProps> = ({
               className="w-full rounded-lg border border-neutral-300 p-2.5 text-xs text-neutral-800 focus:border-[#0A2544] focus:outline-hidden"
             />
             {error && (
-              <p className="text-[11px] text-rose-600 font-medium mt-1">{error}</p>
+              <p className="text-[11px] text-[#061A2F] font-bold mt-1 bg-[#FAF9F5] border border-[#061A2F] p-2 rounded">{error}</p>
             )}
           </div>
         </div>

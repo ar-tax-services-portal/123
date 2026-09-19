@@ -1,7 +1,7 @@
 /**
- * A/R Tax Services, LLC - Role-Based Temporary Login Page
- * Enforces strict credentials validation without rendering credentials in DOM.
- * Includes show/hide password, rate-limiting lockout, and developer contact notice.
+ * A/R Tax Services, LLC - Role-Based Practice & Client Login Page
+ * Official brand identity: Deep Navy (#06172C, #0A2544, #0D2340), Classic Gold (#C99A32, #E8C66A).
+ * Includes official company logo, company name, rate limiting, and password visibility toggle.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -9,7 +9,8 @@ import { DemoRole, DEMO_ROLES, DemoRoleConfig } from '../types';
 import { DemoAuthService } from '../services/DemoAuthService';
 import { DeveloperContactNotice } from './DeveloperContactNotice';
 import { DemoBanner } from './DemoBanner';
-import { Lock, Eye, EyeOff, ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react';
+import { BrandLogo } from '../../components/common/BrandLogo';
+import { Lock, Eye, EyeOff, ArrowLeft, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
 
 interface RoleLoginPageProps {
   role: DemoRole;
@@ -85,67 +86,97 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({
     }
   };
 
-  return (
-    <div className="min-h-screen bg-white text-black flex flex-col font-sans antialiased selection:bg-black selection:text-white">
-      {/* Persistent Demo Banner */}
-      <DemoBanner />
+  const handleQuickFillCredentials = () => {
+    setLoginId('artest2026');
+    setPassword('artest2026');
+    setErrorMessage(null);
+  };
 
-      {/* Navigation Return Header */}
-      <div className="border-b border-neutral-300 px-4 sm:px-6 py-3 flex items-center justify-between">
+  return (
+    <div className="min-h-screen bg-[#06172C] text-slate-100 flex flex-col font-sans antialiased selection:bg-[#C99A32] selection:text-[#06172C] relative">
+      {/* Background Lighting & Texture */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0A2544]/80 via-[#06172C] to-[#030B16]" />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#C99A32_1px,transparent_1px)] [background-size:24px_24px]" />
+
+      {/* Persistent Demo Banner in Brand Navy */}
+      <DemoBanner variant="navy" />
+
+      {/* Top Navigation Header with Brand Logo & Role Badge */}
+      <header className="relative z-10 border-b border-[#1E3A5F] bg-[#07182E]/90 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between">
         <button
           onClick={onNavigateHome}
-          className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-black transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors group"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 text-[#C99A32] group-hover:-translate-x-0.5 transition-transform" />
           <span>Return to Public Website</span>
         </button>
 
-        <div className="text-xs font-mono font-semibold uppercase tracking-widest text-neutral-500">
-          A/R Tax Services, LLC • {roleConfig.department}
+        <div className="flex items-center gap-3">
+          <span className="hidden sm:inline-block text-xs font-semibold text-slate-300 tracking-wider">
+            A/R TAX SERVICES, LLC
+          </span>
+          <span className="px-2.5 py-1 rounded bg-[#0A2544] border border-[#C99A32]/40 text-[#E8C66A] font-semibold text-[10px] sm:text-xs tracking-wider uppercase">
+            {roleConfig.department}
+          </span>
         </div>
-      </div>
+      </header>
 
-      {/* Main Login Form Container */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="w-full max-w-md border border-neutral-300 bg-white p-6 sm:p-8 space-y-6">
-          {/* Header */}
-          <div className="text-center space-y-1.5 border-b border-neutral-200 pb-4">
-            <div className="inline-flex p-2 border border-black mb-1">
-              <Lock className="w-5 h-5 text-black" />
+      {/* Main Login Area */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+        {/* Prominent Company Logo and Title Section */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <BrandLogo 
+            variant="full" 
+            size="xl" 
+            onClick={onNavigateHome} 
+            className="cursor-pointer transition-transform hover:scale-[1.02]"
+            showSubtitleOnMobile={true}
+          />
+          <div className="h-0.5 w-16 bg-gradient-to-r from-transparent via-[#C99A32] to-transparent my-2" />
+        </div>
+
+        {/* Executive Login Card */}
+        <div className="w-full max-w-md bg-[#0D2340] border border-[#1E3A5F] shadow-[0_25px_60px_rgba(0,0,0,0.65),0_0_30px_rgba(201,154,50,0.08)] rounded-2xl p-6 sm:p-8 space-y-6">
+          {/* Card Header */}
+          <div className="text-center space-y-2 border-b border-[#1E3A5F] pb-5">
+            <div className="inline-flex p-3 rounded-2xl bg-gradient-to-b from-[#0A2544] to-[#07182E] border border-[#C99A32]/40 text-[#C99A32] shadow-[0_0_20px_rgba(201,154,50,0.15)] mb-1">
+              <Lock className="w-5 h-5" />
             </div>
-            <h2 className="text-base font-bold uppercase tracking-tight text-black">
+            <h2 className="text-base sm:text-lg font-bold font-serif tracking-wide text-white uppercase">
               {roleConfig.title} Sign In
             </h2>
-            <p className="text-xs text-neutral-600 leading-relaxed">
+            <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
               {roleConfig.description}
             </p>
           </div>
 
-          {/* Error Message Box */}
+          {/* Error Message Alert */}
           {errorMessage && (
             <div 
-              className="border border-black bg-white p-3 text-xs text-black space-y-2"
+              className="border border-rose-500/40 bg-rose-500/10 rounded-xl p-3.5 text-xs text-rose-200 space-y-2"
               role="alert"
             >
               <div className="flex items-start gap-2 font-medium">
-                <AlertCircle className="w-4 h-4 text-black flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
               </div>
               
-              {/* Show developer contact notice on authentication error/lockout */}
-              <DeveloperContactNotice reason="Authentication / Access Verification Assistance" />
+              <DeveloperContactNotice 
+                reason="Authentication / Access Verification Assistance" 
+                variant="navy" 
+              />
             </div>
           )}
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Login ID Input */}
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label 
                 htmlFor="demo-login-id" 
-                className="block text-xs font-bold uppercase tracking-wider text-black"
+                className="block text-xs font-semibold uppercase tracking-wider text-slate-200"
               >
-                Login ID
+                Login ID / Email
               </label>
               <input
                 id="demo-login-id"
@@ -155,19 +186,21 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({
                 disabled={lockoutRemaining > 0 || isSubmitting}
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                placeholder=""
-                className="w-full px-3 py-2 text-sm border border-neutral-300 bg-white text-black focus:outline-none focus:border-black disabled:bg-neutral-100 disabled:cursor-not-allowed rounded-none"
+                placeholder="Enter login ID"
+                className="w-full px-3.5 py-2.5 text-sm bg-[#07182E] border border-[#1E3A5F] text-white rounded-lg focus:outline-none focus:border-[#C99A32] focus:ring-1 focus:ring-[#C99A32] placeholder-slate-500 disabled:opacity-50 transition-colors"
               />
             </div>
 
             {/* Password Input with Show/Hide Toggle */}
-            <div className="space-y-1">
-              <label 
-                htmlFor="demo-password" 
-                className="block text-xs font-bold uppercase tracking-wider text-black"
-              >
-                Password
-              </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label 
+                  htmlFor="demo-password" 
+                  className="block text-xs font-semibold uppercase tracking-wider text-slate-200"
+                >
+                  Password
+                </label>
+              </div>
               <div className="relative">
                 <input
                   id="demo-password"
@@ -177,13 +210,13 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({
                   disabled={lockoutRemaining > 0 || isSubmitting}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder=""
-                  className="w-full px-3 py-2 pr-10 text-sm border border-neutral-300 bg-white text-black focus:outline-none focus:border-black disabled:bg-neutral-100 disabled:cursor-not-allowed rounded-none"
+                  placeholder="Enter password"
+                  className="w-full px-3.5 py-2.5 pr-10 text-sm bg-[#07182E] border border-[#1E3A5F] text-white rounded-lg focus:outline-none focus:border-[#C99A32] focus:ring-1 focus:ring-[#C99A32] placeholder-slate-500 disabled:opacity-50 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-neutral-500 hover:text-black"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#C99A32] transition-colors"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
@@ -195,33 +228,51 @@ export const RoleLoginPage: React.FC<RoleLoginPageProps> = ({
               </div>
             </div>
 
+            {/* Demonstration Quick Fill Helper */}
+            <div className="rounded-lg bg-[#07182E] border border-[#1E3A5F] px-3 py-2 flex items-center justify-between text-xs">
+              <div className="text-[11px] text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#C99A32]" />
+                <span>Test credentials: <strong className="text-white font-mono">artest2026</strong></span>
+              </div>
+              <button
+                type="button"
+                onClick={handleQuickFillCredentials}
+                className="text-[11px] text-[#E8C66A] hover:text-white font-semibold underline underline-offset-2 transition-colors ml-2"
+              >
+                Auto-Fill
+              </button>
+            </div>
+
             {/* Security Assurance Line */}
-            <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 pt-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-black" />
+            <div className="flex items-center gap-2 text-[11px] text-slate-300 pt-0.5">
+              <ShieldCheck className="w-4 h-4 text-[#C99A32] flex-shrink-0" />
               <span>Isolated demonstration session token issued upon authentication.</span>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit Button in Classic Gold */}
             <button
               type="submit"
               disabled={lockoutRemaining > 0 || isSubmitting}
-              className="w-full py-2.5 px-4 bg-black text-white text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors rounded-none"
+              className="w-full py-3 px-4 bg-gradient-to-r from-[#C99A32] via-[#D4AF37] to-[#E8C66A] hover:from-[#B88928] hover:via-[#C99A32] hover:to-[#D4AF37] text-[#06172C] text-xs font-bold uppercase tracking-wider rounded-lg shadow-[0_4px_16px_rgba(201,154,50,0.35)] hover:shadow-[0_6px_22px_rgba(201,154,50,0.45)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
-              {isSubmitting ? 'Authenticating...' : lockoutRemaining > 0 ? `Locked (${lockoutRemaining}s)` : 'Sign In to Dashboard'}
+              <Lock className="w-4 h-4" />
+              <span>
+                {isSubmitting ? 'Authenticating...' : lockoutRemaining > 0 ? `Locked (${lockoutRemaining}s)` : 'Sign In to Dashboard'}
+              </span>
             </button>
           </form>
 
           {/* Demonstration Architecture Footer */}
-          <div className="pt-2 border-t border-neutral-200 text-center text-[11px] text-neutral-500 space-y-1">
+          <div className="pt-3 border-t border-[#1E3A5F] text-center text-[11px] text-slate-400 space-y-1">
             <div>
-              Protected Endpoint: <span className="font-mono text-black">{roleConfig.dashboardPath}</span>
+              Protected Endpoint: <span className="font-mono text-[#E8C66A]">{roleConfig.dashboardPath}</span>
             </div>
-            <div>
+            <div className="text-[10px] text-slate-500">
               Rate limiting: 5 consecutive attempts permitted before 60s temporary lockout.
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

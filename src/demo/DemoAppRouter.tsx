@@ -128,6 +128,13 @@ export const DemoAppRouter: React.FC = () => {
     // Check for error pages
     if (raw.startsWith('error/')) {
       const errType = raw.replace('error/', '') as ErrorPageType;
+      // If unauthorized (401), route directly to client login page
+      if (errType === '401') {
+        if (typeof window !== 'undefined' && window.location.hash !== '#/client/login') {
+          window.location.hash = '#/client/login';
+        }
+        return { isDemo: true, isPortals: false, isLogin: true, isDashboard: false, isError: false, role: 'client' };
+      }
       return { isDemo: true, isPortals: false, isLogin: false, isDashboard: false, isError: true, errorType: errType };
     }
 
@@ -152,10 +159,22 @@ export const DemoAppRouter: React.FC = () => {
     }
 
     // Additional aliases and legacy redirects to canonical routes
-    if (raw === 'client-portal' || raw === 'client/portal' || raw === 'portal') {
-      return { isDemo: true, isPortals: false, isLogin: false, isDashboard: true, isError: false, role: 'client' };
+    if (raw === 'client-portal' || raw === 'client_portal' || raw === 'client/portal' || raw === 'portal') {
+      const isClientAuth = DemoAuthService.isAuthenticated('client');
+      // If not authenticated, route directly to the login page
+      if (!isClientAuth && typeof window !== 'undefined' && window.location.hash !== '#/client/login') {
+        window.location.hash = '#/client/login';
+      }
+      return { 
+        isDemo: true, 
+        isPortals: false, 
+        isLogin: !isClientAuth, 
+        isDashboard: isClientAuth, 
+        isError: false, 
+        role: 'client' 
+      };
     }
-    if (raw === 'client-login' || raw === 'portal/login') {
+    if (raw === 'client-login' || raw === 'client_login' || raw === 'portal/login') {
       return { isDemo: true, isPortals: false, isLogin: true, isDashboard: false, isError: false, role: 'client' };
     }
     if (raw === 'staff-portal' || raw === 'accountant-workspace') {
@@ -228,29 +247,22 @@ export const DemoAppRouter: React.FC = () => {
   // 4. Protected Dashboard Route: Check Session Authentication
   const isAuthenticated = DemoAuthService.isAuthenticated(role);
   if (!isAuthenticated) {
-    // Check if user has an active session for a DIFFERENT role -> URL manipulation = 403 Forbidden
-    const hasAnySession = DemoAuthService.hasAnyActiveSession();
-    if (hasAnySession) {
-      const activeRoles = DemoAuthService.getActiveRoles();
-      const activeRoleTitles = activeRoles.map(r => DEMO_ROLES[r]?.title || r).join(', ');
-      return (
-        <ErrorPageView 
-          type="403" 
-          customMessage={`Cross-Role Access Forbidden: Your active demonstration session (${activeRoleTitles}) does not possess authorization for the ${roleConfig.title} workspace. URL manipulation across role boundaries is prohibited.`}
-          onNavigateLogin={() => {
-            window.location.hash = roleConfig.loginPath;
-          }}
-        />
-      );
+    // Direct access without an active session: Route directly to the role's login page
+    if (typeof window !== 'undefined') {
+      const loginHash = roleConfig.loginPath.startsWith('#') ? roleConfig.loginPath : `#${roleConfig.loginPath}`;
+      if (window.location.hash !== loginHash) {
+        window.location.hash = loginHash;
+      }
     }
-
-    // Direct access without any session -> 401 Unauthorized
     return (
-      <ErrorPageView 
-        type="401" 
-        customMessage={`Direct access to the ${roleConfig.title} workspace is restricted. Please sign in with your demonstration credentials to initialize an authorized role session.`}
-        onNavigateLogin={() => {
-          window.location.hash = roleConfig.loginPath;
+      <RoleLoginPage
+        role={role}
+        onSuccess={() => {
+          window.location.hash = roleConfig.dashboardPath;
+        }}
+        onNavigateHome={() => {
+          window.location.hash = '#/';
+          window.history.pushState(null, '', '/');
         }}
       />
     );
