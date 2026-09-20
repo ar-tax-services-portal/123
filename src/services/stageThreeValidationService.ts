@@ -616,14 +616,10 @@ export class StageThreeValidationService {
 
     docs.forEach(doc => {
       // Invariant: Only cleared, non-quarantined, non-rejected documents sync into validation
-<<<<<<< HEAD
      if (
   doc.securityCheckStatus === 'Quarantined' ||
   doc.processingStatus === 'Rejected'
 ) {
-=======
-      if (doc.securityCheckStatus === 'Quarantined' || doc.processingStatus === 'Rejected') {
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
         return;
       }
 
@@ -645,7 +641,6 @@ export class StageThreeValidationService {
               engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
               taxYear,
               collectionVersion: 1,
-<<<<<<< HEAD
               documentVersion:
   doc.intelligenceRecord?.versionRelationship?.versionNumber ?? 1, 
               documentCategory: doc.claimedCategory,
@@ -654,25 +649,14 @@ export class StageThreeValidationService {
              OCRArtifactId:
   doc.intelligenceRecord?.ocrArtifact?.ocrArtifactId ??
   `OCR-${doc.documentId}`,
-=======
-              documentVersion: doc.intelligenceRecord?.versionIntelligence.versionNumber ?? 1,
-              documentCategory: doc.claimedCategory,
-              originalFilename: doc.originalFileName,
-              sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              OCRArtifactId: doc.intelligenceRecord?.ocrArtifact?.ocrArtifactId ?? `OCR-${doc.documentId}`,
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
               extractionArtifactId: `EXT-${doc.documentId}`,
               pageNumber: 1,
               fieldName: field,
               rawExtractedValue: String(val),
               normalizedValue: String(val),
               sourceTier: tier,
-<<<<<<< HEAD
               AIConfidence:
   doc.intelligenceRecord?.overallExtractionConfidence ?? 0,
-=======
-              AIConfidence: doc.intelligenceRecord?.overallExtractionConfidence ?? 0,
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
               isAiProposedOnly: true,
               humanReviewStatus: doc.isVerified ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
               validationStatus: 'UNVALIDATED'
@@ -687,12 +671,8 @@ export class StageThreeValidationService {
             engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
             taxYear,
             collectionVersion: 1,
-<<<<<<< HEAD
             documentVersion:
   doc.intelligenceRecord?.versionRelationship?.versionNumber ?? 1,
-=======
-            documentVersion: doc.intelligenceRecord?.versionIntelligence.versionNumber ?? 1,
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
             documentCategory: doc.claimedCategory,
             originalFilename: doc.originalFileName,
             sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -1262,12 +1242,8 @@ export class StageThreeValidationService {
       recordId: conflictId,
       ipAddress: '127.0.0.1 (Validation Engine)',
       result: 'success',
-<<<<<<< HEAD
       riskLevel:
   conflict.materiality === 'MATERIAL' ? 'material' : 'routine',
-=======
-      riskLevel: conflict.materiality === 'MATERIAL' ? 'material' : 'routine',
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
       details: `Validation conflict logged [${conflict.conflictCategory}] on field '${conflict.affectedField}': ${conflict.observedValues}. Severity: ${conflict.severity}`
     });
 
@@ -1403,16 +1379,12 @@ export class StageThreeValidationService {
       recordId: exceptionId,
       ipAddress: '127.0.0.1 (Validation Service)',
       result: 'success',
-<<<<<<< HEAD
       riskLevel:
   params.severity === 'CRITICAL'
     ? 'critical'
     : params.isBlocking
       ? 'high_risk'
       : 'routine',
-=======
-      riskLevel: params.severity === 'CRITICAL' ? 'critical' : params.isBlocking ? 'high_risk' : 'routine',
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
       details: `Stage 03 validation exception created [${exceptionId}]: ${exception.title}. Severity: ${exception.severity}. Blocking: ${exception.isBlocking}`
     });
 
@@ -1677,11 +1649,7 @@ export class StageThreeValidationService {
         recordId: `INV-${clientId}-${taxYear}`,
         ipAddress: '127.0.0.1 (Watcher)',
         result: 'success',
-<<<<<<< HEAD
 riskLevel: 'material',
-=======
-        riskLevel: 'material',
->>>>>>> d7457e2 (fix(stage03): align validation service with Stage 02 contracts)
         details: `Stage 03 validation marked REVALIDATION_REQUIRED due to upstream Stage 02 reopening. Validated sources marked STALE.`
       });
 
