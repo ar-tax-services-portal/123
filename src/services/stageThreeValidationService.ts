@@ -575,7 +575,7 @@ export class StageThreeValidationService {
       userEmail: 'system@artaxservices.com',
       userRole: 'system',
       action: 'VALIDATION_SOURCE_REGISTERED',
-      recordType: 'evidence',
+      recordType: 'verification',
       recordId: validationSourceId,
       ipAddress: '127.0.0.1 (Validation Service)',
       result: 'success',
@@ -616,7 +616,10 @@ export class StageThreeValidationService {
 
     docs.forEach(doc => {
       // Invariant: Only cleared, non-quarantined, non-rejected documents sync into validation
-      if (doc.status === 'Quarantined' || doc.status === 'Rejected') {
+     if (
+  doc.securityCheckStatus === 'Quarantined' ||
+  doc.processingStatus === 'Rejected'
+) {
         return;
       }
 
@@ -638,18 +641,22 @@ export class StageThreeValidationService {
               engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
               taxYear,
               collectionVersion: 1,
-              documentVersion: doc.version || 1,
+              documentVersion:
+  doc.intelligenceRecord?.versionRelationship?.versionNumber ?? 1, 
               documentCategory: doc.claimedCategory,
               originalFilename: doc.originalFileName,
               sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-              OCRArtifactId: doc.intelligenceRecord?.ocrArtifactId || `OCR-${doc.documentId}`,
+             OCRArtifactId:
+  doc.intelligenceRecord?.ocrArtifact?.ocrArtifactId ??
+  `OCR-${doc.documentId}`,
               extractionArtifactId: `EXT-${doc.documentId}`,
               pageNumber: 1,
               fieldName: field,
               rawExtractedValue: String(val),
               normalizedValue: String(val),
               sourceTier: tier,
-              AIConfidence: doc.intelligenceRecord?.overallConfidence || 0.95,
+              AIConfidence:
+  doc.intelligenceRecord?.overallExtractionConfidence ?? 0,
               isAiProposedOnly: true,
               humanReviewStatus: doc.isVerified ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
               validationStatus: 'UNVALIDATED'
@@ -664,7 +671,8 @@ export class StageThreeValidationService {
             engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
             taxYear,
             collectionVersion: 1,
-            documentVersion: doc.version || 1,
+            documentVersion:
+  doc.intelligenceRecord?.versionRelationship?.versionNumber ?? 1,
             documentCategory: doc.claimedCategory,
             originalFilename: doc.originalFileName,
             sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -1234,7 +1242,8 @@ export class StageThreeValidationService {
       recordId: conflictId,
       ipAddress: '127.0.0.1 (Validation Engine)',
       result: 'success',
-      riskLevel: conflict.materiality === 'MATERIAL' ? 'elevated' : 'routine',
+      riskLevel:
+  conflict.materiality === 'MATERIAL' ? 'material' : 'routine',
       details: `Validation conflict logged [${conflict.conflictCategory}] on field '${conflict.affectedField}': ${conflict.observedValues}. Severity: ${conflict.severity}`
     });
 
@@ -1370,7 +1379,12 @@ export class StageThreeValidationService {
       recordId: exceptionId,
       ipAddress: '127.0.0.1 (Validation Service)',
       result: 'success',
-      riskLevel: params.severity === 'CRITICAL' || params.isBlocking ? 'elevated' : 'routine',
+      riskLevel:
+  params.severity === 'CRITICAL'
+    ? 'critical'
+    : params.isBlocking
+      ? 'high_risk'
+      : 'routine',
       details: `Stage 03 validation exception created [${exceptionId}]: ${exception.title}. Severity: ${exception.severity}. Blocking: ${exception.isBlocking}`
     });
 
@@ -1634,8 +1648,8 @@ export class StageThreeValidationService {
         recordType: 'governance',
         recordId: `INV-${clientId}-${taxYear}`,
         ipAddress: '127.0.0.1 (Watcher)',
-        result: 'warning',
-        riskLevel: 'elevated',
+        result: 'success',
+riskLevel: 'material',
         details: `Stage 03 validation marked REVALIDATION_REQUIRED due to upstream Stage 02 reopening. Validated sources marked STALE.`
       });
 
