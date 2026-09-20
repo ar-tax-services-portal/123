@@ -23,6 +23,14 @@ import {
   PipelineStage,
   QuarantineStatus
 } from './stageTwoIntakeSecurityService';
+import {
+  StageTwoDocumentIntelligenceService,
+  DocumentIntelligenceRecord,
+  HumanReviewQueueItem,
+  HumanReviewAction,
+  TaxDocumentCategory
+} from './stageTwoDocumentIntelligenceService';
+import { StageTwoCollectionOperationsService } from './stageTwoCollectionOperationsService';
 
 export type CollectionDocumentStatus =
   | 'Required'
@@ -87,6 +95,9 @@ export interface StageTwoUploadedDocument {
   humanReviewed?: boolean;
   isReadyForOcr?: boolean;
   stagedSecurityDoc?: StagedSecurityDocument;
+
+  // Sprint 3 Document Intelligence Extensions
+  intelligenceRecord?: DocumentIntelligenceRecord;
 }
 
 export interface CollectionReadinessReport {
@@ -873,6 +884,43 @@ export class StageTwoCollectionService {
       details: `Stage 02 Document Ingested: ${payload.originalFileName} (${payload.claimedCategory}, ${payload.fileSizeBytes} bytes). SHA-256: ${calculatedHash.substring(0, 16)}... Status: ${isQuarantined ? 'Quarantined' : 'Received (Unverified)'}.`
     });
 
+    // Sprint 3: If document has cleared all security gates and reached READY_FOR_OCR,
+    // automatically initiate the Document Intelligence pipeline (OCR, Classification, Extraction)
+    if (stagedSecurityDoc.isReadyForOcr) {
+      try {
+        const intel = await StageTwoDocumentIntelligenceService.processDocumentThroughOcr(stagedSecurityDoc);
+        newUpload.intelligenceRecord = intel;
+
+        // TG-COL-028: Check if newly ingested doc supersedes or corrects existing doc
+        if (intel.versionIntelligence?.relationship === 'CORRECTED' || intel.versionIntelligence?.relationship === 'REPLACEMENT') {
+          StageTwoCollectionOperationsService.handleUpstreamDocumentChange({
+            clientId: payload.clientId,
+            taxYear: payload.taxYear,
+            engagementId: payload.engagementId,
+            documentId,
+            reason: intel.versionIntelligence.relationship === 'CORRECTED' ? 'CORRECTED' : 'REPLACED',
+            actor: payload.uploadedBy,
+            actorRole: 'client',
+            notes: `New revision uploaded for target document: ${intel.versionIntelligence.supersedesDocId || 'prior revision'}`
+          });
+        }
+      } catch (err) {
+        console.warn('OCR processing deferred or encountered gate block:', err);
+      }
+    } else if (isQuarantined) {
+      // TG-COL-028: If quarantined, trigger upstream invalidation
+      StageTwoCollectionOperationsService.handleUpstreamDocumentChange({
+        clientId: payload.clientId,
+        taxYear: payload.taxYear,
+        engagementId: payload.engagementId,
+        documentId,
+        reason: 'QUARANTINED',
+        actor: 'Security Scanner',
+        actorRole: 'system',
+        notes: `Document quarantined due to security violation.`
+      });
+    }
+
     return newUpload;
   }
 
@@ -902,7 +950,57 @@ export class StageTwoCollectionService {
     reason: string;
     requestingTenantId?: string;
   }): StagedSecurityDocument {
-    return StageTwoIntakeSecurityService.dispositionQuarantinedDocument(params);
+    const result = StageTwoIntakeSecurityService.dispositionQuarantinedDocument(params);
+    if (params.disposition === 'REJECTED') {
+      StageTwoCollectionOperationsService.handleUpstreamDocumentChange({
+        clientId: result.clientId,
+        taxYear: result.taxYear,
+        engagementId: result.engagementId,
+        documentId: params.documentId,
+        reason: 'REJECTED',
+        actor: params.actor,
+        actorRole: params.actorRole,
+        notes: params.reason
+      });
+    }
+    return result;
+  }
+
+  /**
+   * Helper proxies for Sprint 3 Document Intelligence, OCR & Human Review
+   */
+  public static async processOcrAndIntelligence(
+    stagedDoc: StagedSecurityDocument
+  ): Promise<DocumentIntelligenceRecord> {
+    return StageTwoDocumentIntelligenceService.processDocumentThroughOcr(stagedDoc);
+  }
+
+  public static getIntelligenceRecord(
+    documentId: string,
+    requestingClientId?: string,
+    requestingRole: string = 'cpa'
+  ): DocumentIntelligenceRecord | undefined {
+    return StageTwoDocumentIntelligenceService.getIntelligenceRecord(documentId, requestingClientId, requestingRole);
+  }
+
+  public static getHumanReviewQueue(
+    clientId?: string,
+    taxYear?: number,
+    requestingRole: string = 'cpa'
+  ): HumanReviewQueueItem[] {
+    return StageTwoDocumentIntelligenceService.getReviewQueue(clientId, taxYear, requestingRole);
+  }
+
+  public static executeHumanReviewAction(params: {
+    documentId: string;
+    actor: string;
+    actorRole: string;
+    action: HumanReviewAction;
+    justification: string;
+    fieldCorrections?: Record<string, any>;
+    reclassifiedCategory?: TaxDocumentCategory;
+  }): DocumentIntelligenceRecord {
+    return StageTwoDocumentIntelligenceService.executeHumanReviewAction(params);
   }
 
   /**
@@ -910,24 +1008,28 @@ export class StageTwoCollectionService {
    */
   public static getUploadedDocuments(clientId: string, taxYear: number): StageTwoUploadedDocument[] {
     const key = `${clientId}_${taxYear}`;
+    let uploads: StageTwoUploadedDocument[] = [];
     if (this.inMemoryUploads.has(key)) {
-      return this.inMemoryUploads.get(key)!;
-    }
-
-    if (typeof window !== 'undefined') {
+      uploads = this.inMemoryUploads.get(key)!;
+    } else if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(`${STORAGE_KEY_UPLOADS}_${key}`);
         if (stored) {
-          const parsed = JSON.parse(stored) as StageTwoUploadedDocument[];
-          this.inMemoryUploads.set(key, parsed);
-          return parsed;
+          uploads = JSON.parse(stored) as StageTwoUploadedDocument[];
+          this.inMemoryUploads.set(key, uploads);
         }
       } catch (e) {
         console.warn('Error reading stored uploads', e);
       }
     }
 
-    return [];
+    uploads.forEach(u => {
+      if (!u.intelligenceRecord) {
+        u.intelligenceRecord = StageTwoDocumentIntelligenceService.getIntelligenceRecord(u.documentId);
+      }
+    });
+
+    return uploads;
   }
 
   /**
@@ -975,10 +1077,25 @@ export class StageTwoCollectionService {
   }
 
   /**
+   * Evaluates Collection Completeness with Deterministic Multi-Factor Checks (TG-COL-026)
+   */
+  public static evaluateCollectionCompleteness(clientId: string, taxYear: number, engagementId?: string) {
+    return StageTwoCollectionOperationsService.evaluateCollectionCompleteness(clientId, taxYear, engagementId);
+  }
+
+  /**
+   * Executes Stage 02 Hard Exit Gate (TG-COL-027)
+   */
+  public static executeStageTwoExitGate(params: Parameters<typeof StageTwoCollectionOperationsService.executeStageTwoExitGate>[0]) {
+    return StageTwoCollectionOperationsService.executeStageTwoExitGate(params);
+  }
+
+  /**
    * Testing reset helper
    */
   public static resetCollectionForTesting(): void {
     StageTwoIntakeSecurityService.resetForTesting();
+    StageTwoCollectionOperationsService.resetForTesting();
     this.inMemoryRequirements.clear();
     this.inMemoryUploads.clear();
     if (typeof window !== 'undefined') {

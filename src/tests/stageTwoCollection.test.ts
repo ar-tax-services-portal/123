@@ -203,7 +203,7 @@ describe('Milestone M2 / Stage 02: Collect — Sprint 1 Verification', () => {
       // Check audit log
       const logs = TaxGuardAuditService.getLogs();
       expect(logs.length).toBeGreaterThan(initialLogsCount);
-      const docLog = logs.find(l => l.recordId === uploaded.documentId);
+      const docLog = logs.find(l => l.recordId === uploaded.documentId && l.action === 'DOCUMENT_UPLOAD_INGESTED');
       expect(docLog).toBeDefined();
       expect(docLog?.action).toBe('DOCUMENT_UPLOAD_INGESTED');
       expect(docLog?.recordType).toBe('document');

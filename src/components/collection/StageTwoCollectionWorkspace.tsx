@@ -41,7 +41,12 @@ import {
   Layers,
   Camera,
   X,
-  Plus
+  Plus,
+  GitBranch,
+  Edit3,
+  Tag,
+  Ban,
+  Check
 } from 'lucide-react';
 
 import {
@@ -53,7 +58,20 @@ import {
   CollectionDocumentStatus
 } from '../../services/stageTwoCollectionService';
 import { StagedSecurityDocument } from '../../services/stageTwoIntakeSecurityService';
+import {
+  DocumentIntelligenceRecord,
+  HumanReviewQueueItem,
+  HumanReviewAction,
+  TaxDocumentCategory,
+  CONTROLLED_TAX_CATEGORIES,
+  ExtractedFieldProvenance
+} from '../../services/stageTwoDocumentIntelligenceService';
 
+import { StageTwoMissingDocumentsView } from './StageTwoMissingDocumentsView';
+import { StageTwoDocumentRequestsView } from './StageTwoDocumentRequestsView';
+import { StageTwoExceptionsView } from './StageTwoExceptionsView';
+import { StageTwoExitGateView } from './StageTwoExitGateView';
+import { StageTwoCollectionOperationsService } from '../../services/stageTwoCollectionOperationsService';
 import { UploadScanCenterSection } from '../../demo/views/client/UploadScanCenterSection';
 import { ClientVaultSection } from '../../demo/views/client/ClientVaultSection';
 import { MissingDocumentsSection } from '../../demo/views/client/MissingDocumentsSection';
@@ -88,6 +106,7 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
   // Direct Upload Modal State (TG-COL-003)
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [targetRequirement, setTargetRequirement] = useState<ChecklistRequirement | null>(null);
+  const [targetReqForRequest, setTargetReqForRequest] = useState<ChecklistRequirement | null>(null);
   const [uploadCategory, setUploadCategory] = useState('Tax Return & Supporting Schedule');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isSubmittingUpload, setIsSubmittingUpload] = useState(false);
@@ -124,6 +143,23 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
     return StageTwoCollectionService.getQuarantinedDocuments(context.clientId);
   }, [context.clientId, workspaceVersion]);
 
+  // Sprint 4 Operational State
+  const sprintFourExceptions = useMemo(() => {
+    return StageTwoCollectionOperationsService.getExceptions(context.clientId, context.taxYear);
+  }, [context.clientId, context.taxYear, workspaceVersion]);
+
+  const openExceptionsCount = useMemo(() => {
+    return sprintFourExceptions.filter(e => e.status === 'OPEN' || e.status === 'REOPENED' || e.status === 'UNDER_REVIEW').length;
+  }, [sprintFourExceptions]);
+
+  const sprintFourRequests = useMemo(() => {
+    return StageTwoCollectionOperationsService.getDocumentRequests(context.clientId, context.taxYear);
+  }, [context.clientId, context.taxYear, workspaceVersion]);
+
+  const openRequestsCount = useMemo(() => {
+    return sprintFourRequests.filter(r => r.status === 'OPEN' || r.status === 'IN_PROGRESS').length;
+  }, [sprintFourRequests]);
+
   // Quarantine disposition state (TG-COL-008)
   const [selectedQuarantineDoc, setSelectedQuarantineDoc] = useState<StagedSecurityDocument | null>(null);
   const [dispositionReason, setDispositionReason] = useState('');
@@ -151,6 +187,55 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
       setTimeout(() => setDispositionStatusMessage(null), 3000);
     } catch (err: any) {
       alert(`Disposition failed: ${err.message}`);
+    }
+  };
+
+  // Sprint 3: Document Intelligence Review Queue & Actions
+  const reviewQueue = useMemo<HumanReviewQueueItem[]>(() => {
+    return StageTwoCollectionService.getHumanReviewQueue(context.clientId, context.taxYear, 'cpa');
+  }, [context.clientId, context.taxYear, workspaceVersion]);
+
+  const [selectedReviewItem, setSelectedReviewItem] = useState<HumanReviewQueueItem | null>(null);
+  const [reviewAction, setReviewAction] = useState<HumanReviewAction>('ACCEPT');
+  const [reviewRole, setReviewRole] = useState<'cpa' | 'preparer' | 'compliance' | 'admin'>('cpa');
+  const [reviewJustification, setReviewJustification] = useState('');
+  const [fieldCorrectionKey, setFieldCorrectionKey] = useState('');
+  const [fieldCorrectionValue, setFieldCorrectionValue] = useState('');
+  const [reclassifiedCategory, setReclassifiedCategory] = useState<TaxDocumentCategory>('W-2');
+  const [reviewStatusMessage, setReviewStatusMessage] = useState<string | null>(null);
+
+  const handleExecuteReviewAction = () => {
+    if (!selectedReviewItem) return;
+    if (!reviewJustification.trim()) {
+      alert('A justification or operational explanation is required to complete this human review action.');
+      return;
+    }
+
+    try {
+      const corrections: Record<string, any> = {};
+      if (reviewAction === 'CORRECT' && fieldCorrectionKey.trim()) {
+        corrections[fieldCorrectionKey.trim()] = fieldCorrectionValue;
+      }
+
+      StageTwoCollectionService.executeHumanReviewAction({
+        documentId: selectedReviewItem.documentId,
+        actor: `Staff Reviewer (${reviewRole.toUpperCase()})`,
+        actorRole: reviewRole,
+        action: reviewAction,
+        justification: reviewJustification,
+        fieldCorrections: Object.keys(corrections).length > 0 ? corrections : undefined,
+        reclassifiedCategory: reviewAction === 'RECLASSIFY' ? reclassifiedCategory : undefined
+      });
+
+      setReviewStatusMessage(`Document ${selectedReviewItem.documentId} review action [${reviewAction}] completed.`);
+      setSelectedReviewItem(null);
+      setReviewJustification('');
+      setFieldCorrectionKey('');
+      setFieldCorrectionValue('');
+      setWorkspaceVersion(v => v + 1);
+      setTimeout(() => setReviewStatusMessage(null), 3500);
+    } catch (err: any) {
+      alert(`Review action failed: ${err.message}`);
     }
   };
 
@@ -341,11 +426,11 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
           { id: 'upload', label: 'Upload Center', icon: UploadCloud },
           { id: 'vault', label: 'Document Vault', icon: FolderLock },
           { id: 'missing', label: 'Missing Documents', icon: AlertCircle, count: readiness.missingCount, badgeColor: 'bg-rose-100 text-rose-800' },
-          { id: 'requests', label: 'Document Requests', icon: Inbox },
+          { id: 'requests', label: 'Document Requests', icon: Inbox, count: openRequestsCount > 0 ? openRequestsCount : undefined, badgeColor: 'bg-blue-100 text-blue-900' },
           { id: 'processing', label: 'Processing Status', icon: Sparkles, count: uploadedDocs.length },
           { id: 'security', label: 'Security & Staging', icon: ShieldAlert, count: quarantinedDocs.length > 0 ? quarantinedDocs.length : undefined, badgeColor: 'bg-rose-100 text-rose-800' },
-          { id: 'exceptions', label: 'Exceptions', icon: AlertTriangle },
-          { id: 'review', label: 'Human Review', icon: Eye },
+          { id: 'exceptions', label: 'Exceptions', icon: AlertTriangle, count: openExceptionsCount > 0 ? openExceptionsCount : undefined, badgeColor: 'bg-rose-100 text-rose-800' },
+          { id: 'review', label: 'Human Review', icon: Eye, count: reviewQueue.filter(i => i.status === 'PENDING_REVIEW').length > 0 ? reviewQueue.filter(i => i.status === 'PENDING_REVIEW').length : undefined, badgeColor: 'bg-amber-100 text-amber-900' },
           { id: 'readiness', label: 'Collection Readiness', icon: ShieldCheck }
         ].map((tab) => {
           const Icon = tab.icon;
@@ -563,92 +648,331 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
         </div>
       )}
 
-      {/* SUB-TAB: MISSING DOCUMENTS */}
+      {/* SUB-TAB: MISSING DOCUMENTS (TG-COL-021) */}
       {activeSubTab === 'missing' && (
-        <div className="space-y-6">
-          <MissingDocumentsSection
-            selectedYear={context.taxYear}
-            onNavigateToUpload={() => setActiveSubTab('upload')}
-            onOpenAssistant={onOpenAssistant || (() => {})}
-          />
-        </div>
+        <StageTwoMissingDocumentsView
+          clientId={context.clientId}
+          taxYear={context.taxYear}
+          engagementId={context.engagementId}
+          onNavigateToUpload={(req) => {
+            if (req) {
+              handleOpenUploadForReq(req);
+            } else {
+              setActiveSubTab('upload');
+            }
+          }}
+          onNavigateToRequests={(req) => {
+            setTargetReqForRequest(req || null);
+            setActiveSubTab('requests');
+          }}
+          onRefresh={() => setWorkspaceVersion(v => v + 1)}
+        />
       )}
 
-      {/* SUB-TAB: DOCUMENT REQUESTS */}
+      {/* SUB-TAB: DOCUMENT REQUESTS (TG-COL-022 & TG-COL-023) */}
       {activeSubTab === 'requests' && (
-        <div className="space-y-6">
-          <ClientDocumentRequestsView
-            onNavigateToUpload={() => setActiveSubTab('upload')}
-          />
-        </div>
+        <StageTwoDocumentRequestsView
+          clientId={context.clientId}
+          taxYear={context.taxYear}
+          engagementId={context.engagementId}
+          initialTargetRequirement={targetReqForRequest}
+          onNavigateToUpload={() => setActiveSubTab('upload')}
+        />
       )}
 
       {/* SUB-TAB: PROCESSING STATUS */}
       {activeSubTab === 'processing' && (
-        <div className="p-6 bg-white border border-neutral-300 rounded-lg shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-neutral-900">Ingested Documents & Processing Pipeline</h2>
-              <p className="text-xs text-neutral-600 mt-0.5">
-                Every uploaded document receives a unique Document ID, client-side SHA-256 validation, and remains unverified until staff examination.
-              </p>
-            </div>
-            <span className="px-2.5 py-1 text-xs font-mono font-bold bg-neutral-100 text-neutral-800 border border-neutral-300 rounded">
-              {uploadedDocs.length} Total Ingested
-            </span>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {uploadedDocs.map((doc) => (
-              <div
-                key={doc.documentId}
-                className="p-4 border border-neutral-300 rounded-lg bg-neutral-50/50 flex flex-col md:flex-row md:items-center justify-between gap-3"
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-white border border-neutral-300 rounded text-neutral-800">
-                      {doc.documentId}
-                    </span>
-                    <span className="text-xs font-bold text-neutral-900">{doc.originalFileName}</span>
-                    <span className="text-[10px] text-neutral-500 font-mono">
-                      {(doc.fileSizeBytes / 1024).toFixed(1)} KB
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-600">
-                    <span>Category: <strong>{doc.claimedCategory}</strong></span>
-                    <span>•</span>
-                    <span>Uploaded: {new Date(doc.uploadTimestamp).toLocaleDateString()}</span>
-                    <span>•</span>
-                    <span className="font-mono text-[11px]">SHA-256: {doc.sha256Hash.substring(0, 16)}...</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-[11px] pt-1">
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-900 rounded font-semibold text-[10px]">
-                      {doc.processingStatus}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded font-semibold text-[10px] ${
-                      doc.isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-                    }`}>
-                      {doc.isVerified ? 'Staff Verified' : 'Unverified (Pending Review)'}
-                    </span>
-                  </div>
+        <div className="space-y-6">
+          {/* AI Intelligence & Governance Header */}
+          <div className="p-5 bg-gradient-to-r from-[#061A2F] to-[#0A2E5C] text-white rounded-xl shadow-md border border-[#1A365D] space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-[#D7AC4A]/20 text-[#D7AC4A] rounded-lg">
+                  <Sparkles className="w-5 h-5" />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setActiveSubTab('vault')}
-                    className="px-3 py-1.5 bg-white hover:bg-neutral-100 text-neutral-800 border border-neutral-300 rounded text-xs font-medium"
-                  >
-                    View in Vault
-                  </button>
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Stage 02 Document Intelligence & OCR Pipeline
+                  </h2>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    TG-COL-012 through TG-COL-020: Isolated gate clearance, OCR extraction, AI classification, duplicate detection, and version tracking.
+                  </p>
                 </div>
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 text-[11px] font-mono font-bold bg-[#1A365D] text-[#D7AC4A] border border-[#D7AC4A]/40 rounded">
+                  ENGINE: DEV / SIMULATED OCR
+                </span>
+                <span className="px-2.5 py-1 text-[11px] font-mono font-bold bg-white/10 text-white rounded">
+                  {uploadedDocs.length} Ingested Records
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-black/25 border border-white/10 rounded-lg text-xs text-slate-300 leading-relaxed flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-[#D7AC4A] shrink-0 mt-0.5" />
+              <span>
+                <strong>Strict AI Governance Mandate:</strong> AI operates strictly as an intake extraction and decision-support tool. Proposed data does <strong>NOT</strong> verify tax returns, confirm tax positions, approve deductions, or sign returns. Professional CPA/preparer review remains the sole authoritative record.
+              </span>
+            </div>
+          </div>
+
+          {/* Ingested Documents List with Intelligence Cards */}
+          <div className="space-y-4">
+            {uploadedDocs.map((doc) => {
+              const intel: DocumentIntelligenceRecord | undefined =
+                doc.intelligenceRecord ||
+                StageTwoCollectionService.getIntelligenceRecord(doc.documentId);
+
+              return (
+                <div
+                  key={doc.documentId}
+                  className="bg-white border border-neutral-300 rounded-xl p-5 shadow-xs space-y-4"
+                >
+                  {/* Top Bar: Doc ID, Original File, Categories */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-neutral-200">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 text-xs font-mono font-bold bg-neutral-100 text-neutral-800 border border-neutral-300 rounded">
+                          {doc.documentId}
+                        </span>
+                        <span className="text-sm font-bold text-neutral-900">{doc.originalFileName}</span>
+                        <span className="text-xs font-mono text-neutral-500">
+                          ({(doc.fileSizeBytes / 1024).toFixed(1)} KB)
+                        </span>
+                        <span className="text-xs font-mono text-neutral-400">
+                          SHA-256: {doc.sha256Hash.substring(0, 12)}...
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-600">
+                        <span>Claimed: <strong>{doc.claimedCategory}</strong></span>
+                        {intel && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              AI Detected: <strong className="text-[#0A2544]">{intel.aiDetectedCategory}</strong>
+                              <span className="text-[10px] font-mono text-neutral-500">
+                                ({(intel.classificationConfidence * 100).toFixed(0)}% conf)
+                              </span>
+                            </span>
+                          </>
+                        )}
+                        <span>•</span>
+                        <span>Uploaded {new Date(doc.uploadTimestamp).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => setActiveSubTab('vault')}
+                        className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-300 rounded text-xs font-medium"
+                      >
+                        View in Vault
+                      </button>
+
+                      {intel?.humanReviewRequired && (
+                        <button
+                          onClick={() => {
+                            setActiveSubTab('review');
+                            const item = reviewQueue.find(q => q.documentId === doc.documentId);
+                            if (item) setSelectedReviewItem(item);
+                          }}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-semibold shadow-xs flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Review Flagged Data</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Intelligence Status Badges */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* OCR Status */}
+                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg space-y-1">
+                      <div className="text-[10px] font-mono uppercase text-neutral-500 font-bold">OCR Ingestion</div>
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                          intel?.ocrState === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : intel?.ocrState === 'FAILED'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {intel?.ocrState || 'PENDING_OCR'}
+                        </span>
+                        <span className="text-[10px] font-mono text-neutral-500">
+                          {intel?.ocrArtifact?.pageCount || 1} pg
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-neutral-500 truncate">
+                        Simulated Dev Engine
+                      </div>
+                    </div>
+
+                    {/* AI Classification */}
+                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg space-y-1">
+                      <div className="text-[10px] font-mono uppercase text-neutral-500 font-bold">Classification</div>
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                          intel?.classificationConflict
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {intel?.classificationConflict ? 'CONFLICT' : 'MATCHED'}
+                        </span>
+                        <span className="text-[10px] font-mono text-neutral-500">
+                          {intel ? `${(intel.classificationConfidence * 100).toFixed(0)}%` : '—'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-neutral-500 truncate">
+                        {intel?.classificationConflict
+                          ? `Claimed ${doc.claimedCategory}`
+                          : intel?.aiDetectedCategory || 'Pending'}
+                      </div>
+                    </div>
+
+                    {/* Duplicate Detection */}
+                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg space-y-1">
+                      <div className="text-[10px] font-mono uppercase text-neutral-500 font-bold">Duplicate Check</div>
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                          intel?.duplicateDetection.isDuplicate
+                            ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {intel?.duplicateDetection.isDuplicate ? 'DUPLICATE' : 'UNIQUE'}
+                        </span>
+                        <span className="text-[10px] font-mono text-neutral-500">
+                          {intel?.duplicateDetection.duplicateType || 'NONE'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-neutral-500 truncate">
+                        {intel?.duplicateDetection.matchedDocumentId
+                          ? `Matches ${intel.duplicateDetection.matchedDocumentId}`
+                          : 'No duplicate detected'}
+                      </div>
+                    </div>
+
+                    {/* Version Intelligence */}
+                    <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg space-y-1">
+                      <div className="text-[10px] font-mono uppercase text-neutral-500 font-bold">Version Status</div>
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-0.5 text-xs font-bold rounded ${
+                          intel?.versionIntelligence.relationship === 'SUPERSEDED'
+                            ? 'bg-neutral-200 text-neutral-700'
+                            : intel?.versionIntelligence.relationship === 'CORRECTED'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {intel?.versionIntelligence.relationship || 'ORIGINAL'}
+                        </span>
+                        <span className="text-[10px] font-mono text-neutral-500">
+                          v{intel?.versionIntelligence.versionNumber || 1}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-neutral-500 truncate">
+                        {intel?.versionIntelligence.requiresDownstreamRevalidation
+                          ? '⚡ Revalidation Required'
+                          : 'Standard Version'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conflict or Review Alert Callout */}
+                  {intel?.classificationConflict && (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2.5 text-xs text-amber-900">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Category Conflict Detected:</strong> Uploader claimed category "
+                        {doc.claimedCategory}", but AI Document Intelligence identified "
+                        {intel.aiDetectedCategory}". Routed to the Human Review Queue for professional CPA determination.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Structured Extracted Data Card */}
+                  {intel && intel.extractedData && (
+                    <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileSpreadsheet className="w-4 h-4 text-[#0A2544]" />
+                          <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                            Normalized Structured Data Schema ({intel.aiDetectedCategory})
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-mono text-neutral-500">
+                          Extraction Schema v1.0
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border border-neutral-200 rounded">
+                          <thead className="bg-neutral-100 text-neutral-700 font-semibold border-b border-neutral-200">
+                            <tr>
+                              <th className="p-2.5">Field / Box</th>
+                              <th className="p-2.5">Extracted Value</th>
+                              <th className="p-2.5">Confidence</th>
+                              <th className="p-2.5">Tier</th>
+                              <th className="p-2.5">Materiality</th>
+                              <th className="p-2.5">Provenance</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-200">
+                            {Object.entries(intel.extractedData as any)
+                              .filter(([k, v]) => k !== 'documentType' && v && typeof v === 'object' && 'confidence' in v)
+                              .map(([key, rawProv]) => {
+                                const prov = rawProv as ExtractedFieldProvenance;
+                                return (
+                                  <tr key={key} className="hover:bg-white transition-colors">
+                                    <td className="p-2.5 font-medium text-neutral-900">
+                                      {prov.fieldLabel || prov.fieldKey || key}
+                                    </td>
+                                    <td className="p-2.5 font-mono font-bold text-neutral-800">
+                                      {String(prov.extractedValue ?? '—')}
+                                    </td>
+                                    <td className="p-2.5 font-mono">
+                                      {(prov.confidence * 100).toFixed(0)}%
+                                    </td>
+                                    <td className="p-2.5">
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        prov.confidenceTier === 'HIGH_CONFIDENCE'
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : prov.confidenceTier === 'REVIEW_REQUIRED'
+                                          ? 'bg-amber-100 text-amber-900'
+                                          : 'bg-rose-100 text-rose-800'
+                                      }`}>
+                                        {prov.confidenceTier}
+                                      </span>
+                                    </td>
+                                    <td className="p-2.5">
+                                      {prov.isMaterialField ? (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                                          Material
+                                        </span>
+                                      ) : (
+                                        <span className="text-neutral-400 text-[10px]">Standard</span>
+                                      )}
+                                    </td>
+                                    <td className="p-2.5 text-[11px] text-neutral-500 font-mono">
+                                      {prov.sourceReference || 'Extracted'}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {uploadedDocs.length === 0 && (
               <div className="p-8 text-center bg-neutral-50 border border-dashed border-neutral-300 rounded-lg text-neutral-500 text-xs">
-                No documents uploaded yet for Tax Year {context.taxYear}. Use the Upload Center or Attach Upload button above to submit records.
+                No documents uploaded yet for Tax Year {context.taxYear}. Use the Upload Center to submit records.
               </div>
             )}
           </div>
@@ -1003,120 +1327,422 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
         </div>
       )}
 
-      {/* SUB-TAB: EXCEPTIONS */}
+      {/* SUB-TAB: EXCEPTIONS (TG-COL-024) */}
       {activeSubTab === 'exceptions' && (
-        <div className="p-6 bg-white border border-neutral-300 rounded-lg shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-amber-800">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-            <h2 className="text-base font-bold">Exceptions & Diagnostic Flags</h2>
-          </div>
-          <p className="text-xs text-neutral-600">
-            Automated integrity and compliance exceptions identified across your uploaded records.
-          </p>
-
-          <div className="space-y-3 pt-2">
-            <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-lg space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-900">Tax Year Verification Check</span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-100 text-amber-900 rounded">
-                  Flagged for Staff
-                </span>
-              </div>
-              <p className="text-xs text-amber-800">
-                Any document detected with a calendar year mismatch against active Tax Year {context.taxYear} is quarantined for human accountant sign-off.
-              </p>
-            </div>
-
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-900">Chain of Custody & Non-Alteration</span>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-100 text-emerald-900 rounded">
-                  Enforced
-                </span>
-              </div>
-              <p className="text-xs text-slate-600">
-                Cryptographic SHA-256 hashes generated at intake guarantee uploaded tax records cannot be modified after receipt.
-              </p>
-            </div>
-          </div>
-        </div>
+        <StageTwoExceptionsView
+          clientId={context.clientId}
+          taxYear={context.taxYear}
+          engagementId={context.engagementId}
+          userRole="cpa"
+          onRefresh={() => setWorkspaceVersion(v => v + 1)}
+        />
       )}
 
-      {/* SUB-TAB: HUMAN REVIEW */}
+      {/* SUB-TAB: HUMAN REVIEW (TG-COL-019 & TG-COL-020) */}
       {activeSubTab === 'review' && (
         <div className="space-y-6">
-          <AccountantReviewStatusSection />
+          {/* Status Message Banner */}
+          {reviewStatusMessage && (
+            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-semibold text-emerald-900 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{reviewStatusMessage}</span>
+            </div>
+          )}
+
+          {/* AI Governance & Professional Control Header */}
+          <div className="p-5 bg-gradient-to-r from-[#061A2F] to-[#0A2E5C] text-white rounded-xl shadow-md border border-[#1A365D] space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-[#D7AC4A]/20 text-[#D7AC4A] rounded-lg">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Stage 02 Operational Human Review Queue
+                  </h2>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    TG-COL-019 & TG-COL-020: Professional review of AI category conflicts, low-confidence extractions, duplicates, and superseded versions.
+                  </p>
+                </div>
+              </div>
+
+              {/* Reviewer Role Picker */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-300">Acting Role:</span>
+                <select
+                  value={reviewRole}
+                  onChange={(e) => setReviewRole(e.target.value as any)}
+                  className="px-2.5 py-1 text-xs font-semibold bg-[#1A365D] text-[#D7AC4A] border border-[#D7AC4A]/40 rounded focus:outline-none"
+                >
+                  <option value="cpa">CPA (Level 2 Reviewer)</option>
+                  <option value="preparer">Tax Preparer</option>
+                  <option value="compliance">Compliance Officer</option>
+                  <option value="admin">System Administrator</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-3 bg-black/25 border border-white/10 rounded-lg text-xs text-slate-300 leading-relaxed flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-[#D7AC4A] shrink-0 mt-0.5" />
+              <span>
+                <strong>Authoritative Review Mandate:</strong> In accordance with Circular 230 and TaxGuard compliance controls, AI extractions are purely advisory. An authorized human tax professional must independently accept, correct, reclassify, or reject all flagged records before Gate 2 clearance.
+              </span>
+            </div>
+          </div>
+
+          {/* Queue Metrics Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="p-4 bg-white border border-neutral-300 rounded-xl shadow-xs">
+              <div className="text-[10px] font-mono uppercase text-neutral-500 font-bold">Total Flagged</div>
+              <div className="text-2xl font-bold text-neutral-900 mt-0.5">{reviewQueue.length}</div>
+              <div className="text-[11px] text-neutral-500">Intake documents requiring inspection</div>
+            </div>
+
+            <div className="p-4 bg-white border border-amber-300 rounded-xl shadow-xs bg-amber-50/20">
+              <div className="text-[10px] font-mono uppercase text-amber-800 font-bold">Pending Review</div>
+              <div className="text-2xl font-bold text-amber-900 mt-0.5">
+                {reviewQueue.filter(q => q.status === 'PENDING_REVIEW').length}
+              </div>
+              <div className="text-[11px] text-amber-700">Awaiting CPA action</div>
+            </div>
+
+            <div className="p-4 bg-white border border-blue-300 rounded-xl shadow-xs bg-blue-50/20">
+              <div className="text-[10px] font-mono uppercase text-blue-800 font-bold">In Review / Escalated</div>
+              <div className="text-2xl font-bold text-blue-900 mt-0.5">
+                {reviewQueue.filter(q => q.status === 'IN_REVIEW' || q.status === 'ESCALATED').length}
+              </div>
+              <div className="text-[11px] text-blue-700">Under active partner review</div>
+            </div>
+
+            <div className="p-4 bg-white border border-emerald-300 rounded-xl shadow-xs bg-emerald-50/20">
+              <div className="text-[10px] font-mono uppercase text-emerald-800 font-bold">Completed / Cleared</div>
+              <div className="text-2xl font-bold text-emerald-900 mt-0.5">
+                {reviewQueue.filter(q => q.status === 'REVIEWED').length}
+              </div>
+              <div className="text-[11px] text-emerald-700">Approved for downstream</div>
+            </div>
+          </div>
+
+          {/* Operational Review Queue Table */}
+          <div className="bg-white border border-neutral-300 rounded-xl shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-900">Pending Review Items</h3>
+                <p className="text-xs text-neutral-500">
+                  Select an item to inspect low-confidence fields, resolve category conflicts, or record audit-logged dispositions.
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold px-2.5 py-1 bg-neutral-100 text-neutral-700 border border-neutral-300 rounded">
+                Tax Year {context.taxYear}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-neutral-100 text-neutral-700 font-semibold border-b border-neutral-200">
+                  <tr>
+                    <th className="p-3">Document ID & File</th>
+                    <th className="p-3">Claimed vs Detected</th>
+                    <th className="p-3">Review Triggers</th>
+                    <th className="p-3">Flagged Fields</th>
+                    <th className="p-3">Queue Status</th>
+                    <th className="p-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200">
+                  {reviewQueue.map((item) => (
+                    <tr key={item.reviewItemId} className="hover:bg-neutral-50/80 transition-colors">
+                      <td className="p-3">
+                        <div className="font-mono font-bold text-neutral-900">{item.documentId}</div>
+                        <div className="text-[11px] text-neutral-500">{item.filename}</div>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="text-xs">
+                          Claimed: <span className="font-semibold text-neutral-700">{item.clientClaimedCategory}</span>
+                        </div>
+                        <div className="text-xs text-[#0A2544]">
+                          Detected: <span className="font-semibold">{item.aiDetectedCategory}</span>
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {item.reviewReasons.map((reason, idx) => (
+                            <span
+                              key={idx}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                reason === 'CATEGORY_CONFLICT'
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                  : reason === 'LOW_CONFIDENCE_MATERIAL_FIELD'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : reason === 'DUPLICATE_SUSPECTED'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {reason}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        {item.flaggedFields.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {item.flaggedFields.map((f, i) => (
+                              <div key={i} className="text-[11px] font-mono text-rose-700">
+                                {f.fieldLabel || f.fieldKey}: {(f.confidence * 100).toFixed(0)}% conf
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-400 italic">None</span>
+                        )}
+                      </td>
+
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          item.status === 'PENDING_REVIEW'
+                            ? 'bg-amber-100 text-amber-900'
+                            : item.status === 'IN_REVIEW'
+                            ? 'bg-blue-100 text-blue-900'
+                            : item.status === 'REVIEWED'
+                            ? 'bg-emerald-100 text-emerald-900'
+                            : 'bg-rose-100 text-rose-900'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+
+                      <td className="p-3 text-right">
+                        <button
+                          onClick={() => {
+                            setSelectedReviewItem(item);
+                            setReviewAction('ACCEPT');
+                            setReviewJustification('');
+                            setFieldCorrectionKey(item.flaggedFields[0]?.fieldKey || '');
+                            setFieldCorrectionValue('');
+                            setReclassifiedCategory(item.aiDetectedCategory);
+                          }}
+                          className="px-3 py-1.5 bg-[#061A2F] hover:bg-[#0A2E5C] text-white rounded text-xs font-semibold shadow-xs"
+                        >
+                          Review & Action
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {reviewQueue.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-neutral-500 text-xs">
+                        No documents currently require human review for Tax Year {context.taxYear}. All intake documents meet confidence thresholds.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Interactive Review & Action Modal */}
+          {selectedReviewItem && (
+            <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
+              <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-neutral-300 overflow-hidden max-h-[90vh] flex flex-col">
+                {/* Modal Header */}
+                <div className="p-5 bg-[#061A2F] text-white flex items-center justify-between border-b border-[#1A365D]">
+                  <div className="space-y-0.5">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                      Human Review Disposition — {selectedReviewItem.documentId}
+                    </h3>
+                    <p className="text-xs text-slate-300">
+                      Acting as: <strong>{reviewRole.toUpperCase()}</strong> | File: {selectedReviewItem.filename}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedReviewItem(null)}
+                    className="text-slate-400 hover:text-white p-1 rounded transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  {/* Triggers Callout */}
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg space-y-1">
+                    <div className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      <span>Review Triggered Reasons:</span>
+                    </div>
+                    <ul className="list-disc list-inside text-xs text-amber-800 space-y-0.5">
+                      {selectedReviewItem.reviewReasons.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Flagged Fields Table (if any) */}
+                  {selectedReviewItem.flaggedFields.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-neutral-800">Flagged Low-Confidence Fields:</div>
+                      <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-neutral-100 text-neutral-700">
+                            <tr>
+                              <th className="p-2">Field</th>
+                              <th className="p-2">Extracted Value</th>
+                              <th className="p-2">Confidence</th>
+                              <th className="p-2">Material</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-200">
+                            {selectedReviewItem.flaggedFields.map((f, i) => (
+                              <tr key={i}>
+                                <td className="p-2 font-mono font-bold text-neutral-800">{f.fieldLabel || f.fieldKey}</td>
+                                <td className="p-2 font-mono text-neutral-700">{String(f.extractedValue ?? '—')}</td>
+                                <td className="p-2 font-mono text-rose-700">{(f.confidence * 100).toFixed(0)}%</td>
+                                <td className="p-2">
+                                  {f.isMaterialField ? (
+                                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-800 rounded">
+                                      Material
+                                    </span>
+                                  ) : (
+                                    'No'
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Selection */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-neutral-800">
+                      Select Human Review Action (TG-COL-020):
+                    </label>
+                    <select
+                      value={reviewAction}
+                      onChange={(e) => setReviewAction(e.target.value as HumanReviewAction)}
+                      className="w-full p-2 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#061A2F]"
+                    >
+                      <option value="ACCEPT">ACCEPT — Accept AI extraction as verified proposed data</option>
+                      <option value="CORRECT">CORRECT — Override extracted field with human-verified figure</option>
+                      <option value="RECLASSIFY">RECLASSIFY — Change document tax category</option>
+                      <option value="MARK_DUPLICATE">MARK_DUPLICATE — Flag as duplicate of existing record</option>
+                      <option value="MARK_SUPERSEDED">MARK_SUPERSEDED — Supersede with newer document version</option>
+                      <option value="REQUEST_REPLACEMENT">REQUEST_REPLACEMENT — Request new copy from client</option>
+                      <option value="ESCALATE">ESCALATE — Escalate to Senior CPA / Partner</option>
+                      <option value="REJECT">REJECT — Reject document completely</option>
+                    </select>
+                  </div>
+
+                  {/* Dynamic inputs based on action */}
+                  {reviewAction === 'CORRECT' && (
+                    <div className="p-3 bg-neutral-50 border border-neutral-300 rounded-lg space-y-3">
+                      <div className="text-xs font-bold text-neutral-800">Field Override Details:</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] text-neutral-600 block mb-1">Field Name / Key:</label>
+                          <input
+                            type="text"
+                            value={fieldCorrectionKey}
+                            onChange={(e) => setFieldCorrectionKey(e.target.value)}
+                            placeholder="e.g. wagesTipsOtherComp"
+                            className="w-full p-2 text-xs border border-neutral-300 rounded focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-neutral-600 block mb-1">Human-Verified Value:</label>
+                          <input
+                            type="text"
+                            value={fieldCorrectionValue}
+                            onChange={(e) => setFieldCorrectionValue(e.target.value)}
+                            placeholder="e.g. 85400.00"
+                            className="w-full p-2 text-xs border border-neutral-300 rounded focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {reviewAction === 'RECLASSIFY' && (
+                    <div className="p-3 bg-neutral-50 border border-neutral-300 rounded-lg space-y-2">
+                      <label className="text-xs font-bold text-neutral-800 block">
+                        Corrected Tax Document Category (19 Controlled Categories):
+                      </label>
+                      <select
+                        value={reclassifiedCategory}
+                        onChange={(e) => setReclassifiedCategory(e.target.value as TaxDocumentCategory)}
+                        className="w-full p-2 text-xs border border-neutral-300 rounded focus:outline-none"
+                      >
+                        {CONTROLLED_TAX_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Mandatory Justification */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-neutral-800 flex items-center justify-between">
+                      <span>Operational / Compliance Justification:</span>
+                      <span className="text-[10px] font-normal text-rose-600 font-mono">* Required for Audit Trail</span>
+                    </label>
+                    <textarea
+                      value={reviewJustification}
+                      onChange={(e) => setReviewJustification(e.target.value)}
+                      placeholder="Detail the reason for this action, professional findings, or client communications..."
+                      rows={3}
+                      className="w-full p-2 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#061A2F]"
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 bg-neutral-100 border-t border-neutral-300 flex items-center justify-between">
+                  <button
+                    onClick={() => setSelectedReviewItem(null)}
+                    className="px-4 py-2 bg-white hover:bg-neutral-200 text-neutral-700 border border-neutral-300 rounded text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleExecuteReviewAction}
+                    className="px-4 py-2 bg-[#061A2F] hover:bg-[#0A2E5C] text-white rounded text-xs font-bold shadow-xs flex items-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Execute Human Disposition</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Collapsible Original Staff Review Section */}
+          <div className="pt-4 border-t border-neutral-200">
+            <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">
+              Standard Engagement Review Panel
+            </h4>
+            <AccountantReviewStatusSection />
+          </div>
         </div>
       )}
 
-      {/* SUB-TAB: COLLECTION READINESS (EXIT GATE PREVIEW) */}
+      {/* SUB-TAB: COLLECTION READINESS & HARD EXIT GATE (TG-COL-025 to TG-COL-028) */}
       {activeSubTab === 'readiness' && (
-        <div className="p-6 bg-white border border-neutral-300 rounded-lg shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-[#D7AC4A]" />
-                <span>Stage 02 Collection Readiness Scorecard</span>
-              </h2>
-              <p className="text-xs text-neutral-600 mt-0.5">
-                Evaluation of all mandatory requirements before transitioning to Stage 03 (Validate) and Gate 2 clearance.
-              </p>
-            </div>
-
-            <div className={`px-3 py-1.5 rounded-md text-xs font-mono font-bold border ${
-              readiness.stageTwoGateStatus === 'READY_FOR_REVIEW'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                : readiness.stageTwoGateStatus === 'IN_PROGRESS'
-                ? 'bg-amber-50 text-amber-900 border-amber-300'
-                : 'bg-neutral-100 text-neutral-800 border-neutral-300'
-            }`}>
-              Gate Status: {readiness.stageTwoGateStatus}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg">
-              <div className="text-[10px] text-neutral-500 uppercase font-semibold">Total Requirements</div>
-              <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">{readiness.totalRequirements}</div>
-            </div>
-            <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg">
-              <div className="text-[10px] text-neutral-500 uppercase font-semibold">Mandatory Required</div>
-              <div className="text-2xl font-bold font-mono text-neutral-900 mt-1">{readiness.requiredCount}</div>
-            </div>
-            <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg">
-              <div className="text-[10px] text-neutral-500 uppercase font-semibold">Received Records</div>
-              <div className="text-2xl font-bold font-mono text-blue-700 mt-1">{readiness.receivedCount}</div>
-            </div>
-            <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg">
-              <div className="text-[10px] text-neutral-500 uppercase font-semibold">Missing Mandatory</div>
-              <div className="text-2xl font-bold font-mono text-rose-700 mt-1">{readiness.missingCount}</div>
-            </div>
-          </div>
-
-          {/* Blocking items list */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-              Gate 2 Blocking Conditions ({readiness.blockingItems.length})
-            </h3>
-
-            {readiness.blockingItems.map((item, i) => (
-              <div
-                key={i}
-                className="p-3 bg-rose-50/60 border border-rose-200 rounded text-xs text-rose-900 flex items-center gap-2"
-              >
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
-                <span>{item}</span>
-              </div>
-            ))}
-
-            {readiness.blockingItems.length === 0 && (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>All mandatory document collection criteria satisfied. Ready for Stage 03 Validation and Pre-Filing Gate 2 certification.</span>
-              </div>
-            )}
-          </div>
-        </div>
+        <StageTwoExitGateView
+          clientId={context.clientId}
+          taxYear={context.taxYear}
+          engagementId={context.engagementId}
+          userRole="cpa"
+          onRefresh={() => setWorkspaceVersion(v => v + 1)}
+        />
       )}
 
       {/* ========================================================================= */}
