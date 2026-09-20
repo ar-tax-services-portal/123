@@ -420,6 +420,36 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         })}
       </div>
 
+      {/* Unified 18-Stage Tax Operating Workflow Banner */}
+      <div className="p-3.5 bg-[#061A2F] text-white border border-[#C99A32]/40 rounded-xl shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 rounded-lg bg-[#C99A32]/20 border border-[#C99A32]/40 text-[#C99A32]">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] font-bold text-[#C99A32] uppercase">
+                Unified 18-Stage Operating Workflow
+              </span>
+              <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-900/60 text-emerald-300 font-mono font-bold">
+                Stage 01 Passed &bull; Stage 02 (Collect) Active
+              </span>
+            </div>
+            <div className="font-semibold text-slate-200 text-xs">
+              Client Identity &amp; IRC § 7216 Onboarding Dossier Cleared &bull; Hard Exit Gate Passed
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="#stage_one_onboard"
+            className="px-3 py-1.5 rounded-lg bg-[#C99A32] hover:bg-[#D9BF7A] text-[#061A2F] font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer no-underline"
+          >
+            <span>Review Identity Dossier</span>
+          </a>
+        </div>
+      </div>
+
       {/* Multi-Year Notification Banner (Section 5) */}
       {selectedTaxYear !== 2025 && (
         <div className="p-3 bg-neutral-100 border border-neutral-300 rounded-lg text-xs text-neutral-800 flex items-center justify-between">

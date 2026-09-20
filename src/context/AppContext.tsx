@@ -71,6 +71,7 @@ export type PageRoute =
   | 'register'
   | 'onboarding'
   | 'client_onboarding'
+  | 'stage_one_onboard'
   | 'staff_onboarding'
   | 'client_portal'
   | 'accountant_workspace'

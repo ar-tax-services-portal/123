@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BrandLogo } from '../common/BrandLogo';
 import { requestPasswordReset } from '../../firebase/auth';
+import { StageOneOnboardingService } from '../../services/stageOneOnboardingService';
 import { 
   Lock, 
   Mail, 
@@ -272,6 +273,15 @@ export const ClientRegisterPage: React.FC = () => {
 
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
 
+    // Stage One Onboarding initialization: Generate internal Client ID
+    const dossier = StageOneOnboardingService.createInitialDossier({
+      fullName,
+      email,
+      phone,
+      taxpayerType: category === 'individual' ? 'individual' : 'entity',
+      businessName: category !== 'individual' ? company : undefined
+    });
+
     const success = await register({
       name: fullName,
       email,
@@ -284,8 +294,8 @@ export const ClientRegisterPage: React.FC = () => {
     setLoading(false);
 
     if (success) {
-      // Immediately open client onboarding wizard
-      setCurrentPage('client_onboarding');
+      // Immediately route to Identity Verification Wizard (Stage One Onboard)
+      setCurrentPage('stage_one_onboard');
     } else {
       setError('Unable to complete registration. Email may already be in use.');
     }
@@ -297,11 +307,11 @@ export const ClientRegisterPage: React.FC = () => {
         <BrandLogo variant="emblem" size="md" />
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#07172B] border border-[#C6A15B]/40 text-[#C6A15B] text-xs font-semibold">
           <ShieldCheck className="w-3 h-3" />
-          <span>Confidential Client Onboarding</span>
+          <span>STAGE 01: ONBOARD &bull; UNIFIED 18-STAGE WORKFLOW</span>
         </div>
         <h1 className="font-serif text-3xl font-extrabold text-white">Client Registration</h1>
         <p className="text-xs text-slate-300">
-          Create your verified client portal account and begin your comprehensive onboarding dossier.
+          Minimal intake creates your internal Client ID and automatically initiates the Identity Verification Wizard.
         </p>
       </div>
 

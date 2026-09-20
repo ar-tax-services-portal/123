@@ -40,6 +40,7 @@ const ClientRegisterPage = lazy(() => import('./components/auth/AuthPages').then
 const StaffLoginPage = lazy(() => import('./components/auth/AuthPages').then(m => ({ default: m.StaffLoginPage })));
 
 // Lazy-loaded Portals & Workspaces
+const StageOneIdentityWizard = lazy(() => import('./components/portal/StageOneIdentityWizard').then(m => ({ default: m.StageOneIdentityWizard })));
 const ClientOnboardingWizard = lazy(() => import('./components/portal/ClientOnboardingWizard').then(m => ({ default: m.ClientOnboardingWizard })));
 const StaffOnboardingWizard = lazy(() => import('./components/workspace/StaffOnboardingWizard').then(m => ({ default: m.StaffOnboardingWizard })));
 const LiveCalendarModule = lazy(() => import('./components/calendar/LiveCalendarModule').then(m => ({ default: m.LiveCalendarModule })));
@@ -196,12 +197,18 @@ const AppContent: React.FC = () => {
       return null;
     }
 
-    // Client Onboarding protection
-    if (currentPage === 'onboarding' || currentPage === 'client_onboarding') {
-      if (!currentUser) {
-        return <ClientLoginPage />;
-      }
-      return <ClientOnboardingWizard />;
+    // Client Stage One Identity Verification & Onboarding (Unified 18-Stage Cycle)
+    if (currentPage === 'stage_one_onboard' || currentPage === 'onboarding' || currentPage === 'client_onboarding') {
+      return (
+        <StageOneIdentityWizard
+          onExitGatePassed={() => {
+            setCurrentPage('client_portal');
+          }}
+          onNavigateToDashboard={() => {
+            setCurrentPage('client_portal');
+          }}
+        />
+      );
     }
 
     // Staff Onboarding protection
@@ -270,6 +277,7 @@ const AppContent: React.FC = () => {
   };
 
   const PORTAL_ROUTES = new Set<string>([
+    'stage_one_onboard',
     'client_portal',
     'client_onboarding',
     'onboarding',

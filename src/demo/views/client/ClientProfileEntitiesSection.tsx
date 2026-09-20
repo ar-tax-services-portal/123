@@ -300,18 +300,15 @@ export const ClientProfileEntitiesSection: React.FC<ClientProfileEntitiesSection
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-mono uppercase text-[#667085]">Employer Identification Number (EIN)</label>
-                <button
-                  onClick={() => setShowTIN(!showTIN)}
-                  className="text-[11px] text-[#C99A32] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  {showTIN ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  <span>{showTIN ? 'Mask' : 'Reveal'}</span>
-                </button>
+                <span className="text-[10px] font-mono text-[#C99A32] flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Masked (IRC § 7216)</span>
+                </span>
               </div>
               <div className="text-sm font-mono font-bold text-[#061A2F]">
-                {showTIN ? currentEntity.ein : currentEntity.einMasked}
+                {currentEntity.einMasked}
               </div>
-              <div className="text-[10px] text-[#667085]">State Jurisdiction: {currentEntity.stateOfFormation}</div>
+              <div className="text-[10px] text-[#667085]">State Jurisdiction: {currentEntity.stateOfFormation} &bull; Full TIN never exposed</div>
             </div>
 
             <div className="space-y-1">
