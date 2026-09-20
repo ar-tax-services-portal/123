@@ -642,7 +642,7 @@ export class StageThreeValidationService {
               taxYear,
               collectionVersion: 1,
               documentVersion:
-  doc.intelligenceRecord?.versionRelationship?.versionNumber ?? 1, 
+  doc.intelligenceRecord?.versionIntelligence?.versionNumber ?? 1, 
               documentCategory: doc.claimedCategory,
               originalFilename: doc.originalFileName,
               sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -672,7 +672,7 @@ export class StageThreeValidationService {
             taxYear,
             collectionVersion: 1,
             documentVersion:
-  doc.intelligenceRecord?.versionRelationship?.versionNumber ?? 1,
+  doc.intelligenceRecord?.versionIntelligence?.versionNumber ?? 1,
             documentCategory: doc.claimedCategory,
             originalFilename: doc.originalFileName,
             sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
