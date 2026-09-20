@@ -40,7 +40,7 @@ export class TaxGuardAuditService {
     } catch {
       // fallback to in-memory
     }
-    return tenantId ? this.inMemoryLogs.filter(l => l.tenantId === tenantId) : this.inMemoryLogs;
+    return tenantId ? this.inMemoryLogs.filter(l => l.tenantId === tenantId) : [...this.inMemoryLogs];
   }
 
   public static logEvent(entry: Omit<TaxGuardAuditEntry, 'id' | 'timestamp' | 'correlationId'>): TaxGuardAuditEntry {
