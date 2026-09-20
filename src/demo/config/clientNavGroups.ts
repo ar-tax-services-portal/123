@@ -78,6 +78,7 @@ export const CLIENT_NAV_GROUPS: NavGroup[] = [
     label: 'Documents & Checklist',
     defaultExpanded: true,
     items: [
+      { id: 'collection_workspace', label: 'Stage 02 Collection Workspace', icon: CheckSquare },
       { id: 'checklist', label: 'Personalized Document Checklist', icon: CheckSquare },
       { id: 'vault', label: 'Document Vault', icon: FolderLock },
       { id: 'upload_center', label: 'Upload & Scan Center', icon: UploadCloud },
@@ -178,6 +179,7 @@ export const VALID_CLIENT_TABS = new Set([
   'organizer',
   'preferences',
   'settings',
+  'collection_workspace',
   'checklist',
   'vault',
   'upload_center',
@@ -224,6 +226,10 @@ export function normalizeClientTab(rawTab?: string | null): string {
   if (!rawTab) return 'overview';
   const aliasMap: Record<string, string> = {
     upload_scan: 'upload_center',
+    stage_two: 'collection_workspace',
+    stage2: 'collection_workspace',
+    collect: 'collection_workspace',
+    collection: 'collection_workspace',
     document_requests: 'requests',
     ai_processing: 'ai_pipeline',
     accountant_review: 'review_status',

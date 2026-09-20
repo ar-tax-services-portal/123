@@ -80,6 +80,7 @@ import { ClientAmendmentsClosureSection } from './client/ClientAmendmentsClosure
 import { ClientPriorArchiveSection } from './client/ClientPriorArchiveSection';
 import { ClientSettingsConsentSection } from './client/ClientSettingsConsentSection';
 import { ClientHelpSupportSection } from './client/ClientHelpSupportSection';
+import { StageTwoCollectionWorkspace } from '../../components/collection/StageTwoCollectionWorkspace';
 import { PersonalizedChecklistSection } from './client/PersonalizedChecklistSection';
 import { UploadScanCenterSection } from './client/UploadScanCenterSection';
 import { AiProcessingPipelineSection } from './client/AiProcessingPipelineSection';
@@ -503,6 +504,16 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         <ClientEngagementDetailsSection />
       )}
 
+      {/* TAB: STAGE 02 COLLECTION WORKSPACE (TG-COL-001) */}
+      {currentTab === 'collection_workspace' && (
+        <StageTwoCollectionWorkspace
+          clientId={client?.id || 'cli_perotti'}
+          selectedTaxYear={selectedTaxYear}
+          onTaxYearChange={setSelectedTaxYear}
+          onOpenAssistant={() => setAssistantModalOpen(true)}
+        />
+      )}
+
       {/* TAB: PERSONALIZED CHECKLIST */}
       {currentTab === 'checklist' && (
         <PersonalizedChecklistSection
@@ -511,6 +522,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
           onNavigateToUpload={() => setTab('upload_center')}
           onNavigateToVault={() => setTab('vault')}
           onOpenAssistant={() => setAssistantModalOpen(true)}
+          onNavigateToCollectionWorkspace={() => setTab('collection_workspace')}
         />
       )}
 

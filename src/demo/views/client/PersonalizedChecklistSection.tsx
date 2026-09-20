@@ -79,6 +79,7 @@ interface PersonalizedChecklistSectionProps {
   onNavigateToUpload: () => void;
   onNavigateToVault: () => void;
   onOpenAssistant: () => void;
+  onNavigateToCollectionWorkspace?: () => void;
 }
 
 export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSectionProps> = ({
@@ -86,7 +87,8 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
   selectedYear: externalSelectedYear,
   onNavigateToUpload,
   onNavigateToVault,
-  onOpenAssistant
+  onOpenAssistant,
+  onNavigateToCollectionWorkspace
 }) => {
   const [storeVersion, setStoreVersion] = useState<number>(0);
 
@@ -463,6 +465,26 @@ export const PersonalizedChecklistSection: React.FC<PersonalizedChecklistSection
 
   return (
     <div className="space-y-6">
+      {onNavigateToCollectionWorkspace && (
+        <div className="p-3 bg-neutral-900 text-white border border-neutral-700 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 bg-[#D7AC4A] text-[#061A2F] text-[10px] font-mono font-bold rounded">
+              Stage 02
+            </span>
+            <span className="text-neutral-200 font-medium">
+              Tax-Year Collection Workspace active (Client ID, Engagement, Tax Year, and Return Type context).
+            </span>
+          </div>
+          <button
+            onClick={onNavigateToCollectionWorkspace}
+            className="px-3 py-1 bg-[#D7AC4A] hover:bg-[#c49b3d] text-[#061A2F] rounded font-bold text-xs flex items-center gap-1 transition-colors self-start sm:self-auto"
+          >
+            <span>Open Stage 02 Workspace</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ------------------------------------------------------------------ */}
       {/* 1. CUSTOMER INFORMATION (AUTOMATIC STATE & ONBOARDING DETAILS)     */}
       {/* ------------------------------------------------------------------ */}
