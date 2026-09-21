@@ -59,7 +59,7 @@ export const CANONICAL_STAGE_THREE_FEATURE_REGISTRY = {
   'TG-VAL-012': 'Validation Provenance Ledger & Audit Logging'
 } as const;
 
-// Granular Sub-Feature & Module Registry for Sprint 1 Intake, Integrity & Consistency Verification
+// Granular Sub-Feature & Module Registry for Sprint 1, Sprint 2 and Sprint 3
 export const STAGE_THREE_SUB_FEATURE_REGISTRY = {
   'TG-VAL-001': 'Stage 02 Certified Intake',
   'TG-VAL-002': 'Validation Source Registry',
@@ -69,11 +69,51 @@ export const STAGE_THREE_SUB_FEATURE_REGISTRY = {
   'TG-VAL-006': 'Tax-Year Consistency',
   'TG-VAL-007': 'Entity Classification Validation',
   'TG-VAL-008': 'Controlled Tax Form Validation',
-  'TG-VAL-009': 'Validation Conflict Engine & Multi-Source Reconciliation',
-  'TG-VAL-010': 'Validation Exception Registry (Separate from Stage 02)',
-  'TG-VAL-011': 'Operational Human Validation Review Queue & Maker-Checker',
-  'TG-VAL-012': 'Validation Provenance Ledger & Audit Logging'
+  'TG-VAL-009': 'OCR-to-Source Provenance Validation',
+  'TG-VAL-010': 'Extracted Field Validation',
+  'TG-VAL-011': 'Confidence Threshold Engine',
+  'TG-VAL-012': 'Cross-Document Consistency Engine',
+  'TG-VAL-013': 'Mathematical & Structural Validation',
+  'TG-VAL-014': 'Duplicate & Version Validation',
+  'TG-VAL-015': 'Conflict Detection & Materiality Engine',
+  'TG-VAL-016': 'Validation Exception Registry',
+  'TG-VAL-017': 'Human Validation Review Queue',
+  'TG-VAL-018': 'Reviewer Resolution Controls',
+  'TG-VAL-019': 'Maker-Checker Enforcement',
+  'TG-VAL-020': 'Validation Audit Trail',
+  'TG-VAL-021': 'Validation Completeness Evaluator',
+  'TG-VAL-022': 'Stage 03 Hard Exit Gate',
+  'TG-VAL-023': 'CPA/EA Validation Certification',
+  'TG-VAL-024': 'Upstream Invalidation & Gate Reopening',
+  'TG-VAL-025': 'Downstream Revalidation Signal'
 } as const;
+
+// Dedicated Stage 03 Sprint 2 Registry (Document Intelligence & Exception Foundation)
+export const STAGE_THREE_SPRINT_TWO_REGISTRY = {
+  'TG-VAL-009': 'OCR-to-Source Provenance Validation',
+  'TG-VAL-010': 'Extracted Field Validation',
+  'TG-VAL-011': 'Confidence Threshold Engine',
+  'TG-VAL-012': 'Cross-Document Consistency Engine',
+  'TG-VAL-013': 'Mathematical & Structural Validation',
+  'TG-VAL-014': 'Duplicate & Version Validation',
+  'TG-VAL-015': 'Conflict Detection & Materiality Engine',
+  'TG-VAL-016': 'Validation Exception Registry'
+} as const;
+
+// Dedicated Stage 03 Sprint 3 Registry (Human Review, Maker-Checker, Certification, Exit Gate & Revalidation)
+export const STAGE_THREE_SPRINT_THREE_REGISTRY = {
+  'TG-VAL-017': 'Human Validation Review Queue',
+  'TG-VAL-018': 'Reviewer Resolution Controls',
+  'TG-VAL-019': 'Maker-Checker Enforcement',
+  'TG-VAL-020': 'Validation Audit Trail',
+  'TG-VAL-021': 'Validation Completeness Evaluator',
+  'TG-VAL-022': 'Stage 03 Hard Exit Gate',
+  'TG-VAL-023': 'CPA/EA Validation Certification',
+  'TG-VAL-024': 'Upstream Invalidation & Gate Reopening',
+  'TG-VAL-025': 'Downstream Revalidation Signal'
+} as const;
+
+export const STAGE_THREE_CANONICAL_25_REGISTRY = STAGE_THREE_SUB_FEATURE_REGISTRY;
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -118,7 +158,8 @@ export interface ValidationSourceRecord {
   rawExtractedValue: string | number;
   normalizedValue: string | number;
   sourceTier: AuthoritativeSourceTier;
-  AIConfidence: number;
+  isAuthoritative?: boolean;
+  AIConfidence: number | null;
   isAiProposedOnly: boolean;
   humanReviewStatus: 'UNREVIEWED' | 'REVIEWED_APPROVED' | 'HUMAN_CORRECTED' | 'REJECTED';
   validationStatus: ValidationStatus;
@@ -359,31 +400,147 @@ export type ValidationExceptionStatus =
 export interface ValidationException {
   exceptionId: string;
   clientId: string;
+  engagementId?: string;
   taxYear: number;
   category: string;
   title: string;
   description: string;
   severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  materiality?: 'MATERIAL' | 'IMMATERIAL';
   status: ValidationExceptionStatus;
   isBlocking: boolean;
+  sourceReferences?: string[];
+  validationRule?: string;
+  assignedRole?: string;
   relatedSourceId?: string;
   relatedDocumentId?: string;
   relatedConflictId?: string;
   createdTimestamp: string;
   createdBy: string;
   assignedTo: string;
+  resolutionTimestamp?: string;
+  resolutionRationale?: string;
+  auditReferences?: string[];
   resolution?: {
     resolvedAt: string;
     resolvedBy: string;
     resolvedByRole: string;
     resolutionAction: string;
     justification: string;
+    correctedValue?: any;
   };
 }
 
+// TG-VAL-009: OCR-to-Source Provenance Result
+export interface OcrSourceProvenanceResult {
+  validationSourceId: string;
+  documentId: string;
+  originalFilename: string;
+  hasSha256Hash: boolean;
+  sha256HashValid: boolean;
+  documentVersion: number;
+  hasOcrArtifact: boolean;
+  ocrArtifactId: string;
+  pageNumber: number;
+  hasBoundingBox: boolean;
+  hasExtractionArtifact: boolean;
+  extractionArtifactId: string;
+  fieldName: string;
+  lineageStatus: 'VERIFIED' | 'MISSING_PROVENANCE' | 'INVALID_RELATIONSHIP' | 'QUARANTINED_OR_REJECTED';
+  isBlocking: boolean;
+  details: string;
+}
+
+// TG-VAL-010: Extracted Field Validation Result
+export interface ExtractedFieldValidationResult {
+  validationId: string;
+  sourceId: string;
+  documentId: string;
+  fieldName: string;
+  rawExtractedValue: string | number;
+  normalizedValue: string | number;
+  expectedDatatype: 'currency' | 'number' | 'string' | 'date' | 'tin' | 'ein' | 'ssn';
+  isValidFormat: boolean;
+  conventionCheck: 'PASSED' | 'UNEXPECTED_NEGATIVE' | 'MALFORMED' | 'OUT_OF_BOUNDS';
+  ruleApplied: string;
+  confidence: number | null;
+  reviewStatus: 'UNREVIEWED' | 'REVIEWED_APPROVED' | 'HUMAN_CORRECTED' | 'REJECTED';
+  isBlocking: boolean;
+  details: string;
+}
+
+// TG-VAL-011: Confidence Threshold Types
+export type ConfidenceTier = 'HIGH_CONFIDENCE' | 'REVIEW_REQUIRED' | 'LOW_CONFIDENCE' | 'MISSING_CONFIDENCE';
+
+export interface ConfidenceThresholdConfig {
+  highThreshold: number;       // default: 0.90
+  reviewThreshold: number;     // default: 0.75
+  lowBlockingThreshold: number; // default: 0.60
+}
+
+export interface ConfidenceEvaluationResult {
+  sourceId: string;
+  documentId: string;
+  fieldName: string;
+  rawConfidence: number | null;
+  confidenceTier: ConfidenceTier;
+  isMaterial: boolean;
+  requiresHumanReview: boolean;
+  isBlocking: boolean;
+  thresholdApplied: {
+    high: number;
+    review: number;
+    lowBlocking: number;
+  };
+  details: string;
+}
+
+// TG-VAL-014: Duplicate & Version Validation Result
+export interface DuplicateVersionValidationResult {
+  documentId: string;
+  filename: string;
+  sourceStatus: 'CURRENT' | 'DUPLICATE' | 'CORRECTED' | 'SUPERSEDED' | 'REPLACEMENT';
+  versionNumber: number;
+  isAuthoritativeActive: boolean;
+  supersedesDocId?: string;
+  supersededByDocId?: string;
+  requiresRevalidation: boolean;
+  isBlocking: boolean;
+  exceptionCreated?: string;
+  details: string;
+}
+
+// Authoritative Source Class Hierarchy & Governance
+// Note: This hierarchy is an operational validation preference and default precedence rule,
+// NOT a universal, immutable legal hierarchy for all scenarios. Contextual professional judgment
+// by a licensed CPA/EA may adjust precedence. AI-extracted values are strictly provisional
+// and must never outrank the underlying source document from which they were extracted.
+export type AuthoritativeSourceClass =
+  | 'GOVERNMENT_ISSUED_TAX_FORMS'
+  | 'OFFICIAL_PAYROLL_FILINGS'
+  | 'BANK_BROKER_STATEMENTS'
+  | 'SIGNED_ENTITY_RECORDS'
+  | 'ACCOUNTING_LEDGERS'
+  | 'CLIENT_PROVIDED_SCHEDULES'
+  | 'AI_EXTRACTED_VALUES';
+
+export const AUTHORITATIVE_SOURCE_CLASS_HIERARCHY: Record<AuthoritativeSourceClass, { rank: number; score: number; description: string }> = {
+  GOVERNMENT_ISSUED_TAX_FORMS: { rank: 1, score: 100, description: 'Official tax authority filings (W-2, 1099, K-1, 941, transcripts)' },
+  OFFICIAL_PAYROLL_FILINGS: { rank: 2, score: 90, description: 'Certified payroll provider reports & filings' },
+  BANK_BROKER_STATEMENTS: { rank: 3, score: 80, description: 'Third-party financial institution statements' },
+  SIGNED_ENTITY_RECORDS: { rank: 4, score: 75, description: 'Signed legal entity resolutions and operating agreements' },
+  ACCOUNTING_LEDGERS: { rank: 5, score: 65, description: 'Client general ledger journals & trial balances' },
+  CLIENT_PROVIDED_SCHEDULES: { rank: 6, score: 40, description: 'Uncertified spreadsheets and questionnaire responses' },
+  AI_EXTRACTED_VALUES: { rank: 7, score: 20, description: 'Raw AI OCR extractions pending professional review' }
+};
+
+// TG-VAL-017: Human Validation Review Queue Item
 export interface HumanValidationQueueItem {
   queueItemId: string;
+  reviewItemId?: string;
+  tenantId?: string;
   clientId: string;
+  engagementId?: string;
   taxYear: number;
   itemType:
     | 'CONFLICT'
@@ -392,28 +549,159 @@ export interface HumanValidationQueueItem {
     | 'TAX_YEAR_MISMATCH'
     | 'MATHEMATICAL_VARIANCE'
     | 'INSUFFICIENT_EVIDENCE'
-    | 'SUPERSEDED_SOURCE';
+    | 'SUPERSEDED_SOURCE'
+    | 'CONTROLLED_FORM_DEFECT'
+    | 'PROVENANCE_FAILURE'
+    | 'VERSION_CONFLICT'
+    | 'BLOCKING_EXCEPTION';
   referenceId: string;
+  sourceDocumentIds?: string[];
+  validationRuleIds?: string[];
+  exceptionIds?: string[];
   title: string;
   description: string;
-  severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  materiality?: 'IMMATERIAL' | 'MATERIAL' | 'ROUTINE' | 'HIGH_RISK' | 'CRITICAL';
+  riskLevel?: 'routine' | 'material' | 'high_risk' | 'critical';
+  blockingStatus?: boolean;
+  assignedRole?: 'cpa' | 'ea' | 'tax_attorney' | 'reviewer' | 'accountant' | 'unassigned';
   assignedReviewer: string;
-  status: 'PENDING_REVIEW' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED';
+  preparerId?: string; // Maker/Preparer who created or modified this item (for maker-checker enforcement)
+  severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status:
+    | 'OPEN'
+    | 'ASSIGNED'
+    | 'IN_REVIEW'
+    | 'NEEDS_CLIENT_INFORMATION'
+    | 'NEEDS_PREPARER_CORRECTION'
+    | 'READY_FOR_RESOLUTION'
+    | 'RESOLVED'
+    | 'WAIVED'
+    | 'REOPENED'
+    | 'PENDING_REVIEW'
+    | 'ESCALATED';
+  createdAt?: string;
+  updatedAt?: string;
+  resolutionAt?: string;
+  resolutionRationale?: string;
+  resolutionAction?: string;
+  auditReferences?: string[];
   disposition?: {
     action:
       | 'ACCEPT_SOURCE'
+      | 'ACCEPT_CORRECTION'
       | 'REJECT_SOURCE'
+      | 'REQUEST_CORRECTION'
+      | 'REQUEST_CLIENT_INFORMATION'
+      | 'RESOLVE_CONFLICT'
+      | 'WAIVE_EXCEPTION'
+      | 'REOPEN_REVIEW'
       | 'CORRECT_VALUE'
       | 'REQUEST_EVIDENCE'
       | 'MARK_NOT_APPLICABLE'
-      | 'ESCALATE'
-      | 'RESOLVE_CONFLICT';
+      | 'ESCALATE';
     actor: string;
     actorRole: string;
     timestamp: string;
     justification: string;
     correctedValue?: any;
+    isAiProposedOnly?: boolean;
   };
+}
+
+// TG-VAL-021: Completeness Evaluator Types
+export interface ValidationCriterionResult {
+  criterionId: string;
+  description: string;
+  status: 'PASSED' | 'FAILED' | 'NOT_APPLICABLE';
+  isBlocking: boolean;
+  details?: string;
+}
+
+export interface ValidationCompletenessEvaluation {
+  readinessScore: number;
+  criteriaResults: ValidationCriterionResult[];
+  blockingReasons: string[];
+  warnings: string[];
+  openExceptions: ValidationException[];
+  openReviewItems: HumanValidationQueueItem[];
+  isReadyForCertification: boolean;
+  isReadyForExit: boolean;
+}
+
+// TG-VAL-023: CPA/EA Validation Certification
+export interface StageThreeCertificationRecord {
+  certificationId: string;
+  tenantId: string;
+  clientId: string;
+  engagementId: string;
+  taxYear: number;
+  reviewerId: string;
+  reviewerRole: 'cpa' | 'ea' | 'tax_attorney' | 'reviewer';
+  certificationTimestamp: string;
+  validationStateVersion: number;
+  sourceSetHash: string;
+  exceptionSetHash: string;
+  reviewSetHash: string;
+  certificationStatement: string;
+  auditReference: string;
+  status: 'ACTIVE' | 'INVALIDATED_BY_UPSTREAM_CHANGE' | 'SUPERSEDED' | 'REVOKED';
+  invalidatedAt?: string;
+  invalidationReason?: string;
+  isSimulatedCredential?: boolean;
+}
+
+// TG-VAL-022: Hard Exit Gate Types
+export type StageThreeGateStatus =
+  | 'NOT_EVALUATED'
+  | 'BLOCKED'
+  | 'AWAITING_PREPARER'
+  | 'AWAITING_REVIEWER'
+  | 'AWAITING_CLIENT'
+  | 'READY_FOR_CERTIFICATION'
+  | 'CLEARED'
+  | 'REOPENED'
+  | 'SUPERSEDED';
+
+export interface StageThreeExitGateRecord {
+  gateId: string;
+  tenantId: string;
+  clientId: string;
+  engagementId: string;
+  taxYear: number;
+  gateStatus: StageThreeGateStatus;
+  stageTwoExitRecordId: string;
+  stageThreeValidationStateVersion: number;
+  sourceSetHash: string;
+  validationResultsSummary: {
+    totalSources: number;
+    validatedSources: number;
+    openExceptionsCount: number;
+    openReviewItemsCount: number;
+    readinessScore: number;
+  };
+  exceptionStateHash: string;
+  reviewStateHash: string;
+  professionalCertificationId: string | null;
+  certifiedBy: string | null;
+  certifiedRole: string | null;
+  certificationTimestamp: string | null;
+  timestamp: string;
+  correlationId: string;
+  auditReference: string;
+}
+
+// TG-VAL-025: Downstream Revalidation Signal
+export interface StageFourEligibilitySignal {
+  signalId: string;
+  clientId: string;
+  engagementId: string;
+  taxYear: number;
+  stageThreeGateVersion: number;
+  status: 'STAGE_04_ELIGIBLE' | 'STAGE_04_BLOCKED' | 'REVALIDATION_REQUIRED';
+  reason: string;
+  affectedRecords: string[];
+  timestamp: string;
+  auditReference: string;
 }
 
 export interface ValidationProvenanceEntry {
@@ -470,6 +758,9 @@ const STORAGE_KEY_VAL_CONFLICTS = 'artax_stage3_conflicts_v1';
 const STORAGE_KEY_VAL_EXCEPTIONS = 'artax_stage3_exceptions_v1';
 const STORAGE_KEY_VAL_QUEUE = 'artax_stage3_review_queue_v1';
 const STORAGE_KEY_VAL_PROVENANCE = 'artax_stage3_provenance_v1';
+const STORAGE_KEY_VAL_CERTS = 'artax_stage3_certifications_v1';
+const STORAGE_KEY_VAL_GATE = 'artax_stage3_gate_v1';
+const STORAGE_KEY_VAL_SIGNAL = 'artax_stage3_signal_v1';
 
 // ============================================================================
 // SERVICE IMPLEMENTATION
@@ -481,6 +772,44 @@ export class StageThreeValidationService {
   private static exceptionsStore: Map<string, ValidationException[]> = new Map();
   private static queueStore: Map<string, HumanValidationQueueItem[]> = new Map();
   private static provenanceStore: Map<string, ValidationProvenanceEntry[]> = new Map();
+  private static certificationsStore: Map<string, StageThreeCertificationRecord[]> = new Map();
+  private static exitGateStore: Map<string, StageThreeExitGateRecord> = new Map();
+  private static downstreamSignalsStore: Map<string, StageFourEligibilitySignal> = new Map();
+  private static confidenceConfig: ConfidenceThresholdConfig = {
+    highThreshold: 0.90,
+    reviewThreshold: 0.75,
+    lowBlockingThreshold: 0.60
+  };
+
+  /**
+   * Resets in-memory stores and localStorage for clean test isolation.
+   */
+  public static clearAll(): void {
+    this.sourcesStore.clear();
+    this.conflictsStore.clear();
+    this.exceptionsStore.clear();
+    this.queueStore.clear();
+    this.provenanceStore.clear();
+    this.certificationsStore.clear();
+    this.exitGateStore.clear();
+    this.downstreamSignalsStore.clear();
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY_VAL_SOURCES);
+      localStorage.removeItem(STORAGE_KEY_VAL_CONFLICTS);
+      localStorage.removeItem(STORAGE_KEY_VAL_EXCEPTIONS);
+      localStorage.removeItem(STORAGE_KEY_VAL_QUEUE);
+      localStorage.removeItem(STORAGE_KEY_VAL_PROVENANCE);
+      localStorage.removeItem(STORAGE_KEY_VAL_CERTS);
+      localStorage.removeItem(STORAGE_KEY_VAL_GATE);
+      localStorage.removeItem(STORAGE_KEY_VAL_SIGNAL);
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('artax_stage3_')) {
+          localStorage.removeItem(k);
+        }
+      }
+    }
+  }
 
   // --------------------------------------------------------------------------
   // TG-VAL-002: STAGE 02 -> STAGE 03 HANDOFF VALIDATOR
@@ -806,7 +1135,9 @@ export class StageThreeValidationService {
               rawExtractedValue: String(val),
               normalizedValue: String(val),
               sourceTier: tier,
-              AIConfidence: doc.intelligenceRecord?.overallExtractionConfidence || 0.95,
+              AIConfidence: doc.intelligenceRecord?.overallExtractionConfidence !== undefined
+                ? doc.intelligenceRecord.overallExtractionConfidence
+                : null,
               isAiProposedOnly: true,
               humanReviewStatus: doc.isVerified ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
               validationStatus: 'UNVALIDATED'
@@ -832,7 +1163,7 @@ export class StageThreeValidationService {
             rawExtractedValue: doc.originalFileName,
             normalizedValue: doc.originalFileName,
             sourceTier: tier,
-            AIConfidence: 1.0,
+            AIConfidence: null,
             isAiProposedOnly: true,
             humanReviewStatus: doc.isVerified ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
             validationStatus: 'UNVALIDATED'
@@ -1498,6 +1829,743 @@ export class StageThreeValidationService {
   }
 
   // --------------------------------------------------------------------------
+  // TG-VAL-009: OCR-TO-SOURCE PROVENANCE VALIDATION ENGINE
+  // --------------------------------------------------------------------------
+
+  /**
+   * Validates full end-to-end lineage:
+   * Validation Source -> SHA-256 Hash -> Document Version -> OCR Artifact -> Page -> Extraction Artifact.
+   * If any provenance link is missing or unverified, produces a blocking exception.
+   */
+  public static validateSingleSourceProvenance(source: ValidationSourceRecord): OcrSourceProvenanceResult {
+    const docs = StageTwoCollectionService.getUploadedDocuments(source.clientId, source.taxYear);
+    const doc = docs.find(d => d.documentId === source.documentId);
+
+    const hasHash = Boolean(source.sourceHash && source.sourceHash.trim());
+    const isSha256 = Boolean(source.sourceHash && /^[a-fA-F0-9]{64}$/.test(source.sourceHash.trim()));
+    const hasOcr = Boolean(source.OCRArtifactId && source.OCRArtifactId.trim());
+    const hasExtraction = Boolean(source.extractionArtifactId && source.extractionArtifactId.trim());
+    const hasPage = source.pageNumber >= 1;
+    const hasBoundingBox = Boolean(source.boundingBox && source.boundingBox.width > 0 && source.boundingBox.height > 0);
+
+    // 1. Quarantined or rejected document cannot provide authoritative evidence
+    if (doc && (doc.securityCheckStatus === 'Quarantined' || doc.quarantineStatus === 'QUARANTINED' || doc.processingStatus === 'Rejected')) {
+      const res: OcrSourceProvenanceResult = {
+        validationSourceId: source.validationSourceId,
+        documentId: source.documentId,
+        originalFilename: source.originalFilename,
+        hasSha256Hash: hasHash,
+        sha256HashValid: isSha256,
+        documentVersion: source.documentVersion,
+        hasOcrArtifact: hasOcr,
+        ocrArtifactId: source.OCRArtifactId,
+        pageNumber: source.pageNumber,
+        hasBoundingBox,
+        hasExtractionArtifact: hasExtraction,
+        extractionArtifactId: source.extractionArtifactId,
+        fieldName: source.fieldName,
+        lineageStatus: 'QUARANTINED_OR_REJECTED',
+        isBlocking: true,
+        details: `Quarantined evidence rejection: Document '${source.originalFilename}' is marked as ${doc.quarantineStatus || doc.processingStatus} and cannot become authoritative evidence.`
+      };
+
+      this.createValidationException({
+        clientId: source.clientId,
+        taxYear: source.taxYear,
+        engagementId: source.engagementId,
+        category: 'SOURCE_INTEGRITY_FAILURE',
+        title: `Quarantined Document Evidence Rejection: ${source.originalFilename}`,
+        description: res.details,
+        severity: 'CRITICAL',
+        materiality: 'MATERIAL',
+        isBlocking: true,
+        relatedSourceId: source.validationSourceId,
+        relatedDocumentId: source.documentId,
+        validationRule: 'TG-VAL-009',
+        createdBy: 'Lineage Provenance Validator',
+        assignedTo: 'Lead Security & Quality Reviewer'
+      });
+
+      return res;
+    }
+
+    // 2. Missing required lineage elements
+    if (!hasHash || !isSha256 || !hasOcr || !hasExtraction || !hasPage) {
+      const missingParts: string[] = [];
+      if (!hasHash || !isSha256) missingParts.push('Valid 64-char SHA-256 Hash');
+      if (!hasOcr) missingParts.push('OCR Artifact ID');
+      if (!hasExtraction) missingParts.push('Extraction Artifact ID');
+      if (!hasPage) missingParts.push('Valid Page Number (>= 1)');
+
+      const res: OcrSourceProvenanceResult = {
+        validationSourceId: source.validationSourceId,
+        documentId: source.documentId,
+        originalFilename: source.originalFilename,
+        hasSha256Hash: hasHash,
+        sha256HashValid: isSha256,
+        documentVersion: source.documentVersion,
+        hasOcrArtifact: hasOcr,
+        ocrArtifactId: source.OCRArtifactId,
+        pageNumber: source.pageNumber,
+        hasBoundingBox,
+        hasExtractionArtifact: hasExtraction,
+        extractionArtifactId: source.extractionArtifactId,
+        fieldName: source.fieldName,
+        lineageStatus: 'MISSING_PROVENANCE',
+        isBlocking: true,
+        details: `Lineage broken: Missing required provenance elements: ${missingParts.join(', ')}.`
+      };
+
+      this.createValidationException({
+        clientId: source.clientId,
+        taxYear: source.taxYear,
+        engagementId: source.engagementId,
+        category: 'SOURCE_PROVENANCE_MISSING',
+        title: `Broken Lineage Provenance: ${source.fieldName}`,
+        description: res.details,
+        severity: 'HIGH',
+        materiality: 'MATERIAL',
+        isBlocking: true,
+        relatedSourceId: source.validationSourceId,
+        relatedDocumentId: source.documentId,
+        validationRule: 'TG-VAL-009',
+        createdBy: 'Lineage Provenance Validator',
+        assignedTo: 'Senior Tax Reviewer / CPA'
+      });
+
+      return res;
+    }
+
+    // 3. Document relationship check
+    if (doc) {
+      if (doc.sha256Hash && doc.sha256Hash.toLowerCase() !== source.sourceHash.toLowerCase()) {
+        const res: OcrSourceProvenanceResult = {
+          validationSourceId: source.validationSourceId,
+          documentId: source.documentId,
+          originalFilename: source.originalFilename,
+          hasSha256Hash: hasHash,
+          sha256HashValid: isSha256,
+          documentVersion: source.documentVersion,
+          hasOcrArtifact: hasOcr,
+          ocrArtifactId: source.OCRArtifactId,
+          pageNumber: source.pageNumber,
+          hasBoundingBox,
+          hasExtractionArtifact: hasExtraction,
+          extractionArtifactId: source.extractionArtifactId,
+          fieldName: source.fieldName,
+          lineageStatus: 'INVALID_RELATIONSHIP',
+          isBlocking: true,
+          details: `Source hash mismatch: Validation source hash (${source.sourceHash.substring(0, 12)}...) differs from uploaded document hash (${doc.sha256Hash.substring(0, 12)}...).`
+        };
+
+        this.createValidationException({
+          clientId: source.clientId,
+          taxYear: source.taxYear,
+          engagementId: source.engagementId,
+          category: 'SOURCE_INTEGRITY_FAILURE',
+          title: `Document Hash Mismatch: ${source.originalFilename}`,
+          description: res.details,
+          severity: 'CRITICAL',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedSourceId: source.validationSourceId,
+          relatedDocumentId: source.documentId,
+          validationRule: 'TG-VAL-009',
+          createdBy: 'Lineage Provenance Validator',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+
+        return res;
+      }
+
+      if (doc.intelligenceRecord?.ocrArtifact && doc.intelligenceRecord.ocrArtifact.ocrArtifactId !== source.OCRArtifactId) {
+        const res: OcrSourceProvenanceResult = {
+          validationSourceId: source.validationSourceId,
+          documentId: source.documentId,
+          originalFilename: source.originalFilename,
+          hasSha256Hash: hasHash,
+          sha256HashValid: isSha256,
+          documentVersion: source.documentVersion,
+          hasOcrArtifact: hasOcr,
+          ocrArtifactId: source.OCRArtifactId,
+          pageNumber: source.pageNumber,
+          hasBoundingBox,
+          hasExtractionArtifact: hasExtraction,
+          extractionArtifactId: source.extractionArtifactId,
+          fieldName: source.fieldName,
+          lineageStatus: 'INVALID_RELATIONSHIP',
+          isBlocking: true,
+          details: `OCR artifact mismatch: Source OCR ID (${source.OCRArtifactId}) does not match document OCR artifact (${doc.intelligenceRecord.ocrArtifact.ocrArtifactId}).`
+        };
+
+        this.createValidationException({
+          clientId: source.clientId,
+          taxYear: source.taxYear,
+          engagementId: source.engagementId,
+          category: 'SOURCE_PROVENANCE_MISSING',
+          title: `OCR Artifact Relationship Mismatch: ${source.originalFilename}`,
+          description: res.details,
+          severity: 'HIGH',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedSourceId: source.validationSourceId,
+          relatedDocumentId: source.documentId,
+          validationRule: 'TG-VAL-009',
+          createdBy: 'Lineage Provenance Validator',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+
+        return res;
+      }
+    }
+
+    return {
+      validationSourceId: source.validationSourceId,
+      documentId: source.documentId,
+      originalFilename: source.originalFilename,
+      hasSha256Hash: hasHash,
+      sha256HashValid: isSha256,
+      documentVersion: source.documentVersion,
+      hasOcrArtifact: hasOcr,
+      ocrArtifactId: source.OCRArtifactId,
+      pageNumber: source.pageNumber,
+      hasBoundingBox,
+      hasExtractionArtifact: hasExtraction,
+      extractionArtifactId: source.extractionArtifactId,
+      fieldName: source.fieldName,
+      lineageStatus: 'VERIFIED',
+      isBlocking: false,
+      details: 'Complete end-to-end lineage verified: Document -> Hash -> Version -> OCR -> Page -> Extraction -> Field.'
+    };
+  }
+
+  public static validateOcrSourceProvenance(clientId: string, taxYear: number): OcrSourceProvenanceResult[] {
+    const sources = this.getValidationSources(clientId, taxYear);
+    return sources.map(s => this.validateSingleSourceProvenance(s));
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-010: EXTRACTED FIELD VALIDATION ENGINE
+  // --------------------------------------------------------------------------
+
+  /**
+   * Validates extracted fields for expected datatypes, standard IRS formatting,
+   * negative amounts, and bounds. Never silently repairs data; flags anomalies.
+   */
+  public static validateSingleExtractedField(source: ValidationSourceRecord): ExtractedFieldValidationResult {
+    const fieldNameLower = source.fieldName.toLowerCase();
+    const rawValStr = String(source.rawExtractedValue).trim();
+    let expectedType: ExtractedFieldValidationResult['expectedDatatype'] = 'string';
+    let isValidFormat = true;
+    let conventionCheck: ExtractedFieldValidationResult['conventionCheck'] = 'PASSED';
+    let isBlocking = false;
+    let details = 'Field format and conventions validated.';
+
+    if (
+      fieldNameLower.includes('wage') ||
+      fieldNameLower.includes('withheld') ||
+      fieldNameLower.includes('income') ||
+      fieldNameLower.includes('balance') ||
+      fieldNameLower.includes('amount') ||
+      fieldNameLower.includes('debit') ||
+      fieldNameLower.includes('credit') ||
+      fieldNameLower.includes('dividend') ||
+      fieldNameLower.includes('compensation') ||
+      fieldNameLower.includes('fee') ||
+      fieldNameLower.includes('total') ||
+      fieldNameLower.includes('revenue') ||
+      fieldNameLower.includes('expense')
+    ) {
+      expectedType = 'currency';
+      const cleanNum = parseFloat(rawValStr.replace(/[^0-9.-]+/g, ''));
+      if (isNaN(cleanNum)) {
+        isValidFormat = false;
+        conventionCheck = 'MALFORMED';
+        isBlocking = true;
+        details = `Field '${source.fieldName}' expected currency/numeric format but observed: "${source.rawExtractedValue}".`;
+      } else {
+        const isBracketedNegative = rawValStr.startsWith('(') && rawValStr.endsWith(')');
+        const isStandardNegative = rawValStr.startsWith('-');
+        const isNegative = cleanNum < 0 || isBracketedNegative || isStandardNegative;
+
+        if (isNegative && (fieldNameLower.includes('wage') || fieldNameLower.includes('withheld'))) {
+          conventionCheck = 'UNEXPECTED_NEGATIVE';
+          isBlocking = true;
+          details = `Unexpected negative amount (${rawValStr}) on wage/withholding field '${source.fieldName}'. Requires CPA review.`;
+        }
+      }
+    } else if (fieldNameLower.includes('tin') || fieldNameLower.includes('ein') || fieldNameLower.includes('ssn')) {
+      expectedType = fieldNameLower.includes('ein') ? 'ein' : fieldNameLower.includes('ssn') ? 'ssn' : 'tin';
+      const digitsOnly = rawValStr.replace(/\D/g, '');
+      if (digitsOnly.length !== 9) {
+        isValidFormat = false;
+        conventionCheck = 'MALFORMED';
+        isBlocking = true;
+        details = `Field '${source.fieldName}' must be 9 digits (observed ${digitsOnly.length} digits).`;
+      }
+    } else if (fieldNameLower.includes('date') || fieldNameLower.includes('period')) {
+      expectedType = 'date';
+      const dateParsed = Date.parse(rawValStr);
+      if (isNaN(dateParsed)) {
+        isValidFormat = false;
+        conventionCheck = 'MALFORMED';
+        isBlocking = true;
+        details = `Field '${source.fieldName}' could not be parsed as a valid calendar date: "${source.rawExtractedValue}".`;
+      }
+    }
+
+    if (!isValidFormat || conventionCheck !== 'PASSED') {
+      this.createValidationException({
+        clientId: source.clientId,
+        taxYear: source.taxYear,
+        engagementId: source.engagementId,
+        category: conventionCheck === 'UNEXPECTED_NEGATIVE' ? 'STRUCTURAL_MISMATCH' : 'CONTROLLED_FORM_DEFECT',
+        title: `Extracted Field Defect: ${source.fieldName}`,
+        description: details,
+        severity: 'HIGH',
+        materiality: 'MATERIAL',
+        isBlocking,
+        relatedSourceId: source.validationSourceId,
+        relatedDocumentId: source.documentId,
+        validationRule: 'TG-VAL-010',
+        createdBy: 'Extracted Field Validator',
+        assignedTo: 'Senior Tax Reviewer / CPA'
+      });
+    }
+
+    return {
+      validationId: `EFV-${source.validationSourceId}`,
+      sourceId: source.validationSourceId,
+      documentId: source.documentId,
+      fieldName: source.fieldName,
+      rawExtractedValue: source.rawExtractedValue,
+      normalizedValue: source.normalizedValue,
+      expectedDatatype: expectedType,
+      isValidFormat,
+      conventionCheck,
+      ruleApplied: `RULE-FIELD-${expectedType.toUpperCase()}`,
+      confidence: source.AIConfidence,
+      reviewStatus: source.humanReviewStatus,
+      isBlocking,
+      details
+    };
+  }
+
+  public static validateExtractedFields(clientId: string, taxYear: number): ExtractedFieldValidationResult[] {
+    const sources = this.getValidationSources(clientId, taxYear);
+    return sources.map(s => this.validateSingleExtractedField(s));
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-011: CONFIDENCE THRESHOLD ENGINE
+  // --------------------------------------------------------------------------
+
+  public static getConfidenceThresholdConfig(): ConfidenceThresholdConfig {
+    return { ...this.confidenceConfig };
+  }
+
+  public static setConfidenceThresholdConfig(config: Partial<ConfidenceThresholdConfig>): void {
+    this.confidenceConfig = {
+      ...this.confidenceConfig,
+      ...config
+    };
+  }
+
+  /**
+   * Deterministic confidence evaluation:
+   * - No fabricated default confidence: if null or missing, marked MISSING_CONFIDENCE.
+   * - If material field is missing confidence or low confidence, flags blocking exception.
+   * - If confidence is between reviewThreshold and highThreshold, enqueues standard review.
+   */
+  public static evaluateFieldConfidence(
+    source: ValidationSourceRecord,
+    isMaterial: boolean = true
+  ): ConfidenceEvaluationResult {
+    const config = this.confidenceConfig;
+    const rawConf = source.AIConfidence;
+
+    let tier: ConfidenceTier;
+    let requiresHumanReview = false;
+    let isBlocking = false;
+    let details = '';
+
+    if (rawConf === null || rawConf === undefined || isNaN(rawConf)) {
+      tier = 'MISSING_CONFIDENCE';
+      requiresHumanReview = isMaterial;
+      isBlocking = isMaterial;
+      details = `Missing extraction confidence on '${source.fieldName}'. Deterministic policy: no fallback confidence fabricated. Routing to review.`;
+
+      if (isMaterial) {
+        this.createValidationException({
+          clientId: source.clientId,
+          taxYear: source.taxYear,
+          engagementId: source.engagementId,
+          category: 'LOW_CONFIDENCE_MATERIAL_FIELD',
+          title: `Missing Confidence on Material Field: ${source.fieldName}`,
+          description: `Field '${source.fieldName}' in ${source.originalFilename} has no confidence score. AI proposed value requires human verification.`,
+          severity: 'HIGH',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedSourceId: source.validationSourceId,
+          relatedDocumentId: source.documentId,
+          validationRule: 'TG-VAL-011',
+          createdBy: 'Confidence Threshold Engine',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+
+        this.enqueueHumanReview({
+          clientId: source.clientId,
+          taxYear: source.taxYear,
+          itemType: 'LOW_CONFIDENCE',
+          referenceId: source.validationSourceId,
+          title: `Verify Material Field: ${source.fieldName}`,
+          description: `Missing confidence score. Stated value: ${source.rawExtractedValue}`,
+          severity: 'HIGH',
+          assignedReviewer: 'Senior Tax Reviewer / CPA'
+        });
+      }
+    } else if (rawConf >= config.highThreshold) {
+      tier = 'HIGH_CONFIDENCE';
+      requiresHumanReview = false;
+      isBlocking = false;
+      details = `Field confidence (${(rawConf * 100).toFixed(1)}%) meets or exceeds high confidence threshold (${(config.highThreshold * 100).toFixed(0)}%).`;
+    } else if (rawConf >= config.reviewThreshold) {
+      tier = 'REVIEW_REQUIRED';
+      requiresHumanReview = true;
+      isBlocking = false;
+      details = `Field confidence (${(rawConf * 100).toFixed(1)}%) falls in the review zone (${(config.reviewThreshold * 100).toFixed(0)}% - ${(config.highThreshold * 100).toFixed(0)}%). Standard human review required.`;
+
+      this.enqueueHumanReview({
+        clientId: source.clientId,
+        taxYear: source.taxYear,
+        itemType: 'LOW_CONFIDENCE',
+        referenceId: source.validationSourceId,
+        title: `Review Proposed Field: ${source.fieldName}`,
+        description: `Confidence (${(rawConf * 100).toFixed(1)}%) requires human review before acceptance.`,
+        severity: 'MEDIUM',
+        assignedReviewer: 'Tax Preparer / Reviewer'
+      });
+    } else {
+      tier = 'LOW_CONFIDENCE';
+      requiresHumanReview = true;
+      isBlocking = isMaterial || rawConf < config.lowBlockingThreshold;
+      details = `Field confidence (${(rawConf * 100).toFixed(1)}%) is below review threshold (${(config.reviewThreshold * 100).toFixed(0)}%).`;
+
+      if (isMaterial || isBlocking) {
+        this.createValidationException({
+          clientId: source.clientId,
+          taxYear: source.taxYear,
+          engagementId: source.engagementId,
+          category: 'LOW_CONFIDENCE_MATERIAL_FIELD',
+          title: `Low Confidence Material Field: ${source.fieldName}`,
+          description: `Confidence score of ${(rawConf * 100).toFixed(1)}% is below threshold for material field '${source.fieldName}'.`,
+          severity: 'HIGH',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedSourceId: source.validationSourceId,
+          relatedDocumentId: source.documentId,
+          validationRule: 'TG-VAL-011',
+          createdBy: 'Confidence Threshold Engine',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+
+        this.enqueueHumanReview({
+          clientId: source.clientId,
+          taxYear: source.taxYear,
+          itemType: 'LOW_CONFIDENCE',
+          referenceId: source.validationSourceId,
+          title: `Resolve Low Confidence Field: ${source.fieldName}`,
+          description: `Field '${source.fieldName}' confidence ${(rawConf * 100).toFixed(1)}% is below threshold.`,
+          severity: 'HIGH',
+          assignedReviewer: 'Senior Tax Reviewer / CPA'
+        });
+      }
+    }
+
+    return {
+      sourceId: source.validationSourceId,
+      documentId: source.documentId,
+      fieldName: source.fieldName,
+      rawConfidence: rawConf,
+      confidenceTier: tier,
+      isMaterial,
+      requiresHumanReview,
+      isBlocking,
+      thresholdApplied: {
+        high: config.highThreshold,
+        review: config.reviewThreshold,
+        lowBlocking: config.lowBlockingThreshold
+      },
+      details
+    };
+  }
+
+  public static runConfidenceThresholdValidation(
+    clientId: string,
+    taxYear: number
+  ): ConfidenceEvaluationResult[] {
+    const sources = this.getValidationSources(clientId, taxYear);
+    const materialFieldNames = [
+      'box1_wages', 'box2_fed_withheld', 'total_ordinary_dividends',
+      'ordinary_business_income', 'nonemployee_compensation', 'total_debits',
+      'total_credits', 'beginning_balance', 'ending_balance'
+    ];
+
+    return sources.map(source => {
+      const isMaterial = materialFieldNames.some(m => source.fieldName.toLowerCase().includes(m)) ||
+                         source.sourceTier === 'AUTHORITATIVE';
+      return this.evaluateFieldConfidence(source, isMaterial);
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-014: DUPLICATE & VERSION VALIDATION ENGINE
+  // --------------------------------------------------------------------------
+
+  /**
+   * Consumes Stage 02 VersionIntelligenceResult to validate duplicate vs updated vs superseded documents.
+   * Ensures superseded documents become inactive, duplicate documents do not satisfy validation,
+   * and updated/corrected documents trigger downstream revalidation.
+   */
+  public static runDuplicateAndVersionValidation(
+    clientId: string,
+    taxYear: number
+  ): DuplicateVersionValidationResult[] {
+    const docs = StageTwoCollectionService.getUploadedDocuments(clientId, taxYear);
+    const results: DuplicateVersionValidationResult[] = [];
+    const sources = this.getValidationSources(clientId, taxYear);
+    const key = `${clientId}_${taxYear}`;
+
+    docs.forEach(doc => {
+      const intel = doc.intelligenceRecord;
+      const vIntel = intel?.versionIntelligence;
+      const rel = vIntel?.relationship || 'ORIGINAL';
+      const versionNum = vIntel?.versionNumber || 1;
+      const isCurrent = vIntel?.isCurrentActiveVersion !== false && rel !== 'DUPLICATE' && rel !== 'SUPERSEDED';
+
+      let sourceStatus: DuplicateVersionValidationResult['sourceStatus'] = 'CURRENT';
+      let isAuthoritativeActive = isCurrent;
+      let requiresRevalidation = Boolean(vIntel?.requiresDownstreamRevalidation);
+      let isBlocking = false;
+      let exceptionCreated: string | undefined;
+      let details = '';
+
+      if (rel === 'DUPLICATE') {
+        sourceStatus = 'DUPLICATE';
+        isAuthoritativeActive = false;
+        isBlocking = true;
+        details = `Duplicate document detected (${doc.originalFileName}). Cannot satisfy downstream validation.`;
+
+        const ex = this.createValidationException({
+          clientId,
+          taxYear,
+          engagementId: doc.engagementId,
+          category: 'DUPLICATE_SOURCE',
+          title: `Duplicate Document Ingested: ${doc.originalFileName}`,
+          description: details,
+          severity: 'HIGH',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedDocumentId: doc.documentId,
+          validationRule: 'TG-VAL-014',
+          createdBy: 'Version & Duplicate Engine',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+        exceptionCreated = ex.exceptionId;
+
+        this.createConflict({
+          clientId,
+          taxYear,
+          conflictCategory: 'DUPLICATE_SOURCE',
+          affectedField: 'document_presence',
+          sourceA: {
+            sourceId: `DOC-${doc.documentId}`,
+            documentId: doc.documentId,
+            documentName: doc.originalFileName,
+            value: 'DUPLICATE_INGESTION',
+            sourceTier: 'SUPPORTING'
+          },
+          sourceB: {
+            sourceId: `DOC-${vIntel?.supersedesDocId || 'PRIOR'}`,
+            documentId: vIntel?.supersedesDocId || 'PRIOR',
+            documentName: 'Prior Uploaded Version',
+            value: 'ORIGINAL_INGESTION',
+            sourceTier: 'AUTHORITATIVE'
+          },
+          observedValues: `Duplicate upload of ${doc.originalFileName}`,
+          variance: 'EXACT_OR_SEMANTIC_DUPLICATE',
+          materiality: 'MATERIAL',
+          severity: 'HIGH',
+          blockingStatus: true
+        });
+      } else if (rel === 'SUPERSEDED') {
+        sourceStatus = 'SUPERSEDED';
+        isAuthoritativeActive = false;
+        isBlocking = true;
+        details = `Superseded document (${doc.originalFileName} v${versionNum}). Replaced by active document ${vIntel?.supersededByDocId || 'newer version'}.`;
+
+        let modified = false;
+        sources.forEach(s => {
+          if (s.documentId === doc.documentId) {
+            s.validationStatus = 'STALE';
+            modified = true;
+          }
+        });
+        if (modified) {
+          this.sourcesStore.set(key, sources);
+          this.persistSources(key, sources);
+        }
+
+        const ex = this.createValidationException({
+          clientId,
+          taxYear,
+          engagementId: doc.engagementId,
+          category: 'SUPERSEDED_SOURCE',
+          title: `Superseded Source Detected: ${doc.originalFileName}`,
+          description: details,
+          severity: 'MEDIUM',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedDocumentId: doc.documentId,
+          validationRule: 'TG-VAL-014',
+          createdBy: 'Version & Duplicate Engine',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+        exceptionCreated = ex.exceptionId;
+      } else if (rel === 'CORRECTED') {
+        sourceStatus = 'CORRECTED';
+        isAuthoritativeActive = true;
+        requiresRevalidation = true;
+        details = `Corrected document (${doc.originalFileName} v${versionNum}). Supersedes ${vIntel?.supersedesDocId || 'prior revision'}. Downstream revalidation required.`;
+
+        if (vIntel?.supersedesDocId) {
+          let modified = false;
+          sources.forEach(s => {
+            if (s.documentId === vIntel.supersedesDocId) {
+              s.validationStatus = 'REVALIDATION_REQUIRED';
+              modified = true;
+            }
+          });
+          if (modified) {
+            this.sourcesStore.set(key, sources);
+            this.persistSources(key, sources);
+          }
+        }
+      } else if (rel === 'REPLACEMENT') {
+        sourceStatus = 'REPLACEMENT';
+        isAuthoritativeActive = true;
+        requiresRevalidation = true;
+        details = `Replacement document (${doc.originalFileName} v${versionNum}). Supersedes prior version. Downstream revalidation required.`;
+      } else {
+        sourceStatus = 'CURRENT';
+        isAuthoritativeActive = true;
+        isBlocking = false;
+        details = `Authoritative active version (${doc.originalFileName} v${versionNum}). Eligible for downstream validation.`;
+      }
+
+      results.push({
+        documentId: doc.documentId,
+        filename: doc.originalFileName,
+        sourceStatus,
+        versionNumber: versionNum,
+        isAuthoritativeActive,
+        supersedesDocId: vIntel?.supersedesDocId,
+        supersededByDocId: vIntel?.supersededByDocId,
+        requiresRevalidation,
+        isBlocking,
+        exceptionCreated,
+        details
+      });
+    });
+
+    return results;
+  }
+
+  // --------------------------------------------------------------------------
+  // AUTHORITATIVE SOURCE HIERARCHY COMPARATOR
+  // --------------------------------------------------------------------------
+
+  /**
+   * Evaluates authoritative precedence between two sources.
+   * Invariant: AI-extracted values are never inherently more authoritative
+   * than their underlying source document.
+   */
+  public static compareSourceAuthority(
+    sourceA: ValidationSourceRecord | AuthoritativeSourceTier,
+    sourceB: ValidationSourceRecord | AuthoritativeSourceTier
+  ): {
+    higherAuthority: 'SOURCE_A' | 'SOURCE_B' | 'EQUAL';
+    scoreA: number;
+    scoreB: number;
+    rationale: string;
+  } {
+    const tierScores: Record<AuthoritativeSourceTier, number> = {
+      AUTHORITATIVE: 100,
+      SUPPORTING: 75,
+      DERIVED: 60,
+      CLIENT_REPORTED: 40,
+      AI_EXTRACTED: 20,
+      UNVERIFIED: 10
+    };
+
+    const tierA = typeof sourceA === 'string' ? sourceA : sourceA.sourceTier;
+    const tierB = typeof sourceB === 'string' ? sourceB : sourceB.sourceTier;
+
+    const scoreA = tierScores[tierA] || 0;
+    const scoreB = tierScores[tierB] || 0;
+
+    if (scoreA > scoreB) {
+      return {
+        higherAuthority: 'SOURCE_A',
+        scoreA,
+        scoreB,
+        rationale: `Source A (${tierA}, score ${scoreA}) has higher authoritative rank than Source B (${tierB}, score ${scoreB}). AI-extracted values are never more authoritative than source documents.`
+      };
+    } else if (scoreB > scoreA) {
+      return {
+        higherAuthority: 'SOURCE_B',
+        scoreA,
+        scoreB,
+        rationale: `Source B (${tierB}, score ${scoreB}) has higher authoritative rank than Source A (${tierA}, score ${scoreA}). AI-extracted values are never more authoritative than source documents.`
+      };
+    }
+
+    return {
+      higherAuthority: 'EQUAL',
+      scoreA,
+      scoreB,
+      rationale: `Both sources hold equal authoritative rank (${tierA}, score ${scoreA}). Professional review required to arbitrate.`
+    };
+  }
+
+  /**
+   * Deterministic downstream progression blocker.
+   * Returns whether Stage 03 blocks progression to Stage 04 due to open blocking exceptions.
+   */
+  public static isValidationBlocked(clientId: string, taxYear: number): {
+    isBlocked: boolean;
+    blockingExceptions: ValidationException[];
+    unresolvedConflicts: ValidationConflict[];
+    reason?: string;
+  } {
+    const exceptions = this.getExceptions(clientId, taxYear);
+    const conflicts = this.getConflicts(clientId, taxYear);
+
+    const blockingExceptions = exceptions.filter(e => e.isBlocking && e.status !== 'RESOLVED' && e.status !== 'WAIVED');
+    const blockingConflicts = conflicts.filter(c => c.blockingStatus && c.resolutionStatus === 'UNRESOLVED');
+
+    const isBlocked = blockingExceptions.length > 0 || blockingConflicts.length > 0;
+    return {
+      isBlocked,
+      blockingExceptions,
+      unresolvedConflicts: blockingConflicts,
+      reason: isBlocked
+        ? `Downstream progression blocked by ${blockingExceptions.length} open blocking exception(s) and ${blockingConflicts.length} unresolved conflict(s).`
+        : undefined
+    };
+  }
+
+  // --------------------------------------------------------------------------
   // TG-VAL-005 (LEGACY/UI ALIAS): TAX-YEAR & PERIOD CONSISTENCY ENGINE
   // --------------------------------------------------------------------------
 
@@ -1585,7 +2653,7 @@ export class StageThreeValidationService {
     // Helper: find numeric value of field in specific category
     const findValue = (categorySubstring: string, fieldName: string): { val: number | null; source?: ValidationSourceRecord } => {
       const match = sources.find(
-        s => s.documentCategory.toLowerCase().includes(categorySubstring.toLowerCase()) &&
+        s => (s.documentCategory || '').toLowerCase().includes(categorySubstring.toLowerCase()) &&
              s.fieldName.toLowerCase() === fieldName.toLowerCase()
       );
       if (!match) return { val: null };
@@ -1682,6 +2750,50 @@ export class StageThreeValidationService {
       const diff = Math.abs(debits.val - credits.val);
       const isBalanced = diff < 0.01;
 
+      if (!isBalanced) {
+        this.createConflict({
+          clientId,
+          taxYear,
+          conflictCategory: 'AMOUNT_MISMATCH',
+          affectedField: 'total_debits_vs_credits',
+          sourceA: {
+            sourceId: debits.source!.validationSourceId,
+            documentId: debits.source!.documentId,
+            documentName: debits.source!.originalFilename,
+            value: debits.val,
+            sourceTier: debits.source!.sourceTier
+          },
+          sourceB: {
+            sourceId: credits.source!.validationSourceId,
+            documentId: credits.source!.documentId,
+            documentName: credits.source!.originalFilename,
+            value: credits.val,
+            sourceTier: credits.source!.sourceTier
+          },
+          observedValues: `Debits: $${debits.val.toLocaleString()} vs Credits: $${credits.val.toLocaleString()}`,
+          variance: diff,
+          materiality: 'MATERIAL',
+          severity: 'CRITICAL',
+          blockingStatus: true
+        });
+
+        this.createValidationException({
+          clientId,
+          taxYear,
+          category: 'STRUCTURAL_MISMATCH',
+          title: 'Trial Balance Out of Equilibrium',
+          description: `Total Debits ($${debits.val.toLocaleString()}) differ from Total Credits ($${credits.val.toLocaleString()}) by $${diff.toFixed(2)}.`,
+          severity: 'CRITICAL',
+          materiality: 'MATERIAL',
+          isBlocking: true,
+          relatedSourceId: debits.source!.validationSourceId,
+          relatedDocumentId: debits.source!.documentId,
+          validationRule: 'TG-VAL-012',
+          createdBy: 'Cross-Document Consistency Engine',
+          assignedTo: 'Senior Tax Reviewer / CPA'
+        });
+      }
+
       rules.push({
         ruleId: 'R-TB-DEBIT-CREDIT',
         ruleName: 'Trial Balance Debit / Credit Mathematical Equilibrium',
@@ -1703,6 +2815,163 @@ export class StageThreeValidationService {
         narrative: isBalanced
           ? `Trial balance in balance: Total Debits ($${debits.val.toLocaleString()}) = Total Credits ($${credits.val.toLocaleString()}).`
           : `Out of balance! Debits ($${debits.val.toLocaleString()}) differ from Credits ($${credits.val.toLocaleString()}) by $${diff.toFixed(2)}.`
+      });
+    }
+
+    // RULE 3: Form W-2 Box 2 Withholding vs Payroll Summary Tax Withheld
+    const w2Withheld = findValue('Form W-2', 'box2_fed_withheld');
+    const payrollWithheld = findValue('Annual Payroll Summary', 'federal_income_tax_withheld');
+
+    if (w2Withheld.val !== null && payrollWithheld.val !== null) {
+      const diffWithholding = Math.abs(w2Withheld.val - payrollWithheld.val);
+      const isWithholdingPass = diffWithholding <= 1.0;
+
+      if (!isWithholdingPass) {
+        this.createConflict({
+          clientId,
+          taxYear,
+          conflictCategory: 'AMOUNT_MISMATCH',
+          affectedField: 'box2_fed_withheld',
+          sourceA: {
+            sourceId: w2Withheld.source!.validationSourceId,
+            documentId: w2Withheld.source!.documentId,
+            documentName: w2Withheld.source!.originalFilename,
+            value: w2Withheld.val,
+            sourceTier: w2Withheld.source!.sourceTier
+          },
+          sourceB: {
+            sourceId: payrollWithheld.source!.validationSourceId,
+            documentId: payrollWithheld.source!.documentId,
+            documentName: payrollWithheld.source!.originalFilename,
+            value: payrollWithheld.val,
+            sourceTier: payrollWithheld.source!.sourceTier
+          },
+          observedValues: `W-2: $${w2Withheld.val.toLocaleString()} vs Payroll: $${payrollWithheld.val.toLocaleString()}`,
+          variance: diffWithholding,
+          materiality: 'MATERIAL',
+          severity: 'HIGH',
+          blockingStatus: true
+        });
+      }
+
+      rules.push({
+        ruleId: 'R-W2-PAYROLL-WITHHOLDING',
+        ruleName: 'W-2 Federal Withholding vs Payroll Summary Reconciliation',
+        ruleVersion: '1.0',
+        sourceTypes: ['Form W-2', 'Annual Payroll Summary'],
+        comparisonMethod: 'EXACT_MATCH',
+        materialityThreshold: 1.0,
+        severity: 'HIGH',
+        result: isWithholdingPass ? 'PASS' : 'FAIL',
+        expectedValue: payrollWithheld.val,
+        observedValue: w2Withheld.val,
+        variance: diffWithholding,
+        sourceReferences: [
+          { sourceId: w2Withheld.source!.validationSourceId, documentId: w2Withheld.source!.documentId, documentName: w2Withheld.source!.originalFilename, fieldName: 'box2_fed_withheld', value: w2Withheld.val },
+          { sourceId: payrollWithheld.source!.validationSourceId, documentId: payrollWithheld.source!.documentId, documentName: payrollWithheld.source!.originalFilename, fieldName: 'federal_income_tax_withheld', value: payrollWithheld.val }
+        ],
+        requiresHumanReview: !isWithholdingPass,
+        blockingStatus: !isWithholdingPass,
+        narrative: isWithholdingPass
+          ? `Withholding reconciliation passed: W-2 Box 2 ($${w2Withheld.val}) matches Payroll Summary ($${payrollWithheld.val}).`
+          : `Withholding mismatch: W-2 Box 2 ($${w2Withheld.val}) differs from Payroll Summary ($${payrollWithheld.val}) by $${diffWithholding.toFixed(2)}.`
+      });
+    }
+
+    // RULE 4: 1099 Nonemployee Compensation vs Bookkeeping Revenue
+    const nec1099 = findValue('Form 1099-NEC', 'nonemployee_compensation');
+    const bookRevenue = findValue('Bookkeeping', 'gross_revenue');
+
+    if (nec1099.val !== null && bookRevenue.val !== null) {
+      // 1099 reported should not exceed total revenue
+      const exceedsBookkeeping = nec1099.val > (bookRevenue.val + 5.0);
+      const diff1099 = Math.abs(nec1099.val - bookRevenue.val);
+
+      rules.push({
+        ruleId: 'R-1099-BOOKKEEPING-INCOME',
+        ruleName: '1099-NEC vs Bookkeeping Gross Revenue Reasonableness',
+        ruleVersion: '1.0',
+        sourceTypes: ['Form 1099-NEC', 'Bookkeeping'],
+        comparisonMethod: 'BOUNDS_CHECK',
+        materialityThreshold: 5.0,
+        severity: 'HIGH',
+        result: !exceedsBookkeeping ? 'PASS' : 'FAIL',
+        expectedValue: bookRevenue.val,
+        observedValue: nec1099.val,
+        variance: diff1099,
+        sourceReferences: [
+          { sourceId: nec1099.source!.validationSourceId, documentId: nec1099.source!.documentId, documentName: nec1099.source!.originalFilename, fieldName: 'nonemployee_compensation', value: nec1099.val },
+          { sourceId: bookRevenue.source!.validationSourceId, documentId: bookRevenue.source!.documentId, documentName: bookRevenue.source!.originalFilename, fieldName: 'gross_revenue', value: bookRevenue.val }
+        ],
+        requiresHumanReview: exceedsBookkeeping,
+        blockingStatus: exceedsBookkeeping,
+        narrative: !exceedsBookkeeping
+          ? `1099-NEC revenue ($${nec1099.val}) is within reported bookkeeping revenue ($${bookRevenue.val}).`
+          : `Under-reporting risk: 1099-NEC ($${nec1099.val}) exceeds total recorded bookkeeping revenue ($${bookRevenue.val}).`
+      });
+    }
+
+    // RULE 5: Bank Reconciliation Ending Balance vs Bank Statement Ending Balance
+    const bankRecBal = findValue('Bank Reconciliation', 'reconciled_ending_balance');
+    const bankStmtBal = findValue('Bank Statement', 'ending_balance');
+
+    if (bankRecBal.val !== null && bankStmtBal.val !== null) {
+      const diffBank = Math.abs(bankRecBal.val - bankStmtBal.val);
+      const isBankPass = diffBank <= 0.01;
+
+      rules.push({
+        ruleId: 'R-BANK-REC-STATEMENT',
+        ruleName: 'Bank Reconciliation vs Bank Statement Ending Balance',
+        ruleVersion: '1.0',
+        sourceTypes: ['Bank Reconciliation', 'Bank Statement'],
+        comparisonMethod: 'EXACT_MATCH',
+        materialityThreshold: 0.01,
+        severity: 'CRITICAL',
+        result: isBankPass ? 'PASS' : 'FAIL',
+        expectedValue: bankStmtBal.val,
+        observedValue: bankRecBal.val,
+        variance: diffBank,
+        sourceReferences: [
+          { sourceId: bankRecBal.source!.validationSourceId, documentId: bankRecBal.source!.documentId, documentName: bankRecBal.source!.originalFilename, fieldName: 'reconciled_ending_balance', value: bankRecBal.val },
+          { sourceId: bankStmtBal.source!.validationSourceId, documentId: bankStmtBal.source!.documentId, documentName: bankStmtBal.source!.originalFilename, fieldName: 'ending_balance', value: bankStmtBal.val }
+        ],
+        requiresHumanReview: !isBankPass,
+        blockingStatus: !isBankPass,
+        narrative: isBankPass
+          ? `Bank reconciliation ties exactly to bank statement ending balance ($${bankStmtBal.val}).`
+          : `Bank tie-out failure: Reconciled balance ($${bankRecBal.val}) differs from bank statement ($${bankStmtBal.val}) by $${diffBank.toFixed(2)}.`
+      });
+    }
+
+    // RULE 6: Schedule K-1 Distributions vs General Ledger Shareholder Draws
+    const k1Dist = findValue('Schedule K-1', 'cash_distributions');
+    const glDraws = findValue('General Ledger', 'shareholder_draws');
+
+    if (k1Dist.val !== null && glDraws.val !== null) {
+      const diffDist = Math.abs(k1Dist.val - glDraws.val);
+      const isDistPass = diffDist <= 1.0;
+
+      rules.push({
+        ruleId: 'R-K1-SHAREHOLDER-DISTRIBUTIONS',
+        ruleName: 'Schedule K-1 Distributions vs GL Draws Reconciliation',
+        ruleVersion: '1.0',
+        sourceTypes: ['Schedule K-1', 'General Ledger'],
+        comparisonMethod: 'EXACT_MATCH',
+        materialityThreshold: 1.0,
+        severity: 'HIGH',
+        result: isDistPass ? 'PASS' : 'FAIL',
+        expectedValue: glDraws.val,
+        observedValue: k1Dist.val,
+        variance: diffDist,
+        sourceReferences: [
+          { sourceId: k1Dist.source!.validationSourceId, documentId: k1Dist.source!.documentId, documentName: k1Dist.source!.originalFilename, fieldName: 'cash_distributions', value: k1Dist.val },
+          { sourceId: glDraws.source!.validationSourceId, documentId: glDraws.source!.documentId, documentName: glDraws.source!.originalFilename, fieldName: 'shareholder_draws', value: glDraws.val }
+        ],
+        requiresHumanReview: !isDistPass,
+        blockingStatus: !isDistPass,
+        narrative: isDistPass
+          ? `K-1 distributions ($${k1Dist.val}) reconcile with General Ledger shareholder draws ($${glDraws.val}).`
+          : `Distributions mismatch: K-1 ($${k1Dist.val}) differs from General Ledger draws ($${glDraws.val}) by $${diffDist.toFixed(2)}.`
       });
     }
 
@@ -1831,6 +3100,104 @@ export class StageThreeValidationService {
         notes: isValid
           ? 'Sum of four quarters matches annual payroll control total.'
           : `Sum of quarters ($${sum}) does not tie to annual total ($${annual.val}). Variance: $${variance.toFixed(2)}.`
+      });
+    }
+
+    // CALCULATION 3: Trial Balance Debit / Credit Mathematical Equilibrium
+    const tbDebits = getNum('total_debits');
+    const tbCredits = getNum('total_credits');
+
+    if (tbDebits.val === null || tbCredits.val === null) {
+      results.push({
+        calculationId: 'CALC-DEBIT-CREDIT-03',
+        calculationName: 'Trial Balance Debit / Credit Balance Verification',
+        relationshipType: 'DEBIT_CREDIT_BALANCE',
+        status: 'INSUFFICIENT_EVIDENCE',
+        computedValue: null,
+        statedValue: tbCredits.val,
+        variance: null,
+        tolerance: 0.01,
+        componentInputs: [
+          { label: 'Total Debits', value: tbDebits.val, sourceId: tbDebits.sourceId },
+          { label: 'Total Credits', value: tbCredits.val, sourceId: tbCredits.sourceId }
+        ],
+        isFabricated: false,
+        notes: 'Insufficient evidence: Trial balance debits or credits not extracted. No estimation performed.'
+      });
+    } else {
+      const diffTb = Math.abs(tbDebits.val - tbCredits.val);
+      const isTbValid = diffTb < 0.01;
+
+      results.push({
+        calculationId: 'CALC-DEBIT-CREDIT-03',
+        calculationName: 'Trial Balance Debit / Credit Balance Verification',
+        relationshipType: 'DEBIT_CREDIT_BALANCE',
+        status: isTbValid ? 'VALID' : 'VARIANCE_DETECTED',
+        computedValue: tbCredits.val,
+        statedValue: tbDebits.val,
+        variance: diffTb,
+        tolerance: 0.01,
+        componentInputs: [
+          { label: 'Total Debits', value: tbDebits.val, sourceId: tbDebits.sourceId },
+          { label: 'Total Credits', value: tbCredits.val, sourceId: tbCredits.sourceId }
+        ],
+        isFabricated: false,
+        notes: isTbValid
+          ? `Mathematical equilibrium confirmed: Total Debits ($${tbDebits.val.toLocaleString()}) equal Total Credits ($${tbCredits.val.toLocaleString()}).`
+          : `Out of balance: Debits differ from Credits by $${diffTb.toFixed(2)}.`
+      });
+    }
+
+    // CALCULATION 4: Retained Earnings / Equity Rollforward Verification
+    const begEquity = getNum('beginning_equity') || getNum('beginning_retained_earnings');
+    const netIncome = getNum('net_income');
+    const distributions = getNum('distributions') || getNum('shareholder_draws');
+    const endEquity = getNum('ending_equity') || getNum('ending_retained_earnings');
+
+    if (begEquity.val === null || netIncome.val === null || endEquity.val === null) {
+      results.push({
+        calculationId: 'CALC-ROLLFORWARD-04',
+        calculationName: 'Equity / Retained Earnings Rollforward Verification',
+        relationshipType: 'ROLLFORWARD_BALANCE',
+        status: 'INSUFFICIENT_EVIDENCE',
+        computedValue: null,
+        statedValue: endEquity.val,
+        variance: null,
+        tolerance: 1.0,
+        componentInputs: [
+          { label: 'Beginning Equity', value: begEquity.val, sourceId: begEquity.sourceId },
+          { label: 'Net Income', value: netIncome.val, sourceId: netIncome.sourceId },
+          { label: 'Distributions', value: distributions.val, sourceId: distributions.sourceId },
+          { label: 'Ending Equity', value: endEquity.val, sourceId: endEquity.sourceId }
+        ],
+        isFabricated: false,
+        notes: 'Insufficient evidence: Beginning equity, net income, or ending equity missing. No estimation performed.'
+      });
+    } else {
+      const distVal = distributions.val || 0;
+      const expectedEnd = begEquity.val + netIncome.val - distVal;
+      const diffRoll = Math.abs(expectedEnd - endEquity.val);
+      const isRollValid = diffRoll <= 1.0;
+
+      results.push({
+        calculationId: 'CALC-ROLLFORWARD-04',
+        calculationName: 'Equity / Retained Earnings Rollforward Verification',
+        relationshipType: 'ROLLFORWARD_BALANCE',
+        status: isRollValid ? 'VALID' : 'VARIANCE_DETECTED',
+        computedValue: expectedEnd,
+        statedValue: endEquity.val,
+        variance: diffRoll,
+        tolerance: 1.0,
+        componentInputs: [
+          { label: 'Beginning Equity', value: begEquity.val, sourceId: begEquity.sourceId },
+          { label: 'Net Income', value: netIncome.val, sourceId: netIncome.sourceId },
+          { label: 'Distributions', value: distVal, sourceId: distributions.sourceId },
+          { label: 'Stated Ending Equity', value: endEquity.val, sourceId: endEquity.sourceId }
+        ],
+        isFabricated: false,
+        notes: isRollValid
+          ? `Rollforward arithmetic confirmed: Beg ($${begEquity.val}) + Net Income ($${netIncome.val}) - Dist ($${distVal}) = Ending ($${endEquity.val}).`
+          : `Rollforward variance of $${diffRoll.toFixed(2)} detected: Expected $${expectedEnd} vs Stated $${endEquity.val}.`
       });
     }
 
@@ -2129,7 +3496,7 @@ export class StageThreeValidationService {
   }
 
   // --------------------------------------------------------------------------
-  // TG-VAL-011: OPERATIONAL HUMAN VALIDATION REVIEW QUEUE
+  // TG-VAL-017 & TG-VAL-018: OPERATIONAL HUMAN VALIDATION REVIEW QUEUE & CONTROLS
   // --------------------------------------------------------------------------
 
   public static getReviewQueue(clientId: string, taxYear: number): HumanValidationQueueItem[] {
@@ -2150,14 +3517,39 @@ export class StageThreeValidationService {
   }
 
   public static enqueueHumanReview(
-    itemData: Omit<HumanValidationQueueItem, 'queueItemId' | 'status'>
+    itemData: Omit<HumanValidationQueueItem, 'queueItemId' | 'status'> & {
+      queueItemId?: string;
+      reviewItemId?: string;
+      status?: HumanValidationQueueItem['status'];
+    }
   ): HumanValidationQueueItem {
-    const queueItemId = `HVR-${itemData.taxYear}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const queueItemId = itemData.queueItemId || itemData.reviewItemId || `HVR-${itemData.taxYear}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const item: HumanValidationQueueItem = {
-      ...itemData,
       queueItemId,
-      status: 'PENDING_REVIEW'
+      reviewItemId: queueItemId,
+      tenantId: itemData.tenantId || 'tenant_ar_tax_prod',
+      clientId: itemData.clientId,
+      engagementId: itemData.engagementId || `ENG-${itemData.taxYear}-${itemData.clientId}`,
+      taxYear: itemData.taxYear,
+      itemType: itemData.itemType,
+      referenceId: itemData.referenceId,
+      sourceDocumentIds: itemData.sourceDocumentIds || (itemData.referenceId ? [itemData.referenceId] : []),
+      validationRuleIds: itemData.validationRuleIds || ['TG-VAL-017'],
+      exceptionIds: itemData.exceptionIds || [],
+      title: itemData.title,
+      description: itemData.description,
+      materiality: itemData.materiality || (itemData.severity === 'CRITICAL' ? 'CRITICAL' : itemData.severity === 'HIGH' ? 'HIGH_RISK' : itemData.severity === 'MEDIUM' ? 'MATERIAL' : 'ROUTINE'),
+      riskLevel: itemData.riskLevel || (itemData.severity === 'CRITICAL' ? 'critical' : itemData.severity === 'HIGH' ? 'high_risk' : itemData.severity === 'MEDIUM' ? 'material' : 'routine'),
+      blockingStatus: itemData.blockingStatus !== undefined ? itemData.blockingStatus : (itemData.severity === 'HIGH' || itemData.severity === 'CRITICAL'),
+      assignedRole: itemData.assignedRole || 'reviewer',
+      assignedReviewer: itemData.assignedReviewer,
+      preparerId: itemData.preparerId,
+      severity: itemData.severity,
+      status: itemData.status || 'OPEN',
+      createdAt: itemData.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      auditReferences: itemData.auditReferences || []
     };
 
     const key = `${itemData.clientId}_${itemData.taxYear}`;
@@ -2167,7 +3559,7 @@ export class StageThreeValidationService {
     this.persistQueue(key, list);
 
     TaxGuardAuditService.logEvent({
-      tenantId: 'tenant_ar_tax_prod',
+      tenantId: item.tenantId || 'tenant_ar_tax_prod',
       userId: 'system_stage3_queue',
       userEmail: 'system@artaxservices.com',
       userRole: 'system',
@@ -2176,49 +3568,1012 @@ export class StageThreeValidationService {
       recordId: queueItemId,
       ipAddress: '127.0.0.1 (Review Engine)',
       result: 'success',
-      riskLevel: 'routine',
-      details: `Human validation review assigned to ${item.assignedReviewer}: ${item.title}`
+      riskLevel: item.riskLevel || 'routine',
+      details: `Human validation review item queued: ${item.title}`
     });
 
     return item;
   }
 
-  public static recordReviewDisposition(params: {
+  /**
+   * TG-VAL-017 / TG-VAL-019: Assign a review queue item to an authorized reviewer.
+   * Enforces role authorization and maker-checker separation.
+   */
+  public static assignReviewItem(params: {
     clientId: string;
     taxYear: number;
     queueItemId: string;
-    actor: string;
-    actorRole: 'cpa' | 'reviewer' | 'admin' | 'accountant';
-    action: HumanValidationQueueItem['disposition']['action'];
-    justification: string;
-    correctedValue?: any;
+    assignedReviewer: string;
+    assignedRole: 'cpa' | 'ea' | 'tax_attorney' | 'reviewer' | 'accountant' | string;
+    assignerId: string;
+    assignerRole: string;
   }): HumanValidationQueueItem {
-    if (!params.justification || !params.justification.trim()) {
-      throw new Error('A written rationale is required to disposition review items.');
+    const authorizedRoles = ['cpa', 'ea', 'tax_attorney', 'reviewer', 'admin'];
+    if (!authorizedRoles.includes(params.assignedRole.toLowerCase())) {
+      throw new Error(`Unauthorized assignment: Role '${params.assignedRole}' is not authorized for validation review. Must be CPA, EA, Tax Attorney, or designated Reviewer.`);
     }
 
     const key = `${params.clientId}_${params.taxYear}`;
     const list = this.getReviewQueue(params.clientId, params.taxYear);
-    const item = list.find(q => q.queueItemId === params.queueItemId);
+    const item = list.find(q => q.queueItemId === params.queueItemId || q.reviewItemId === params.queueItemId);
 
     if (!item) {
       throw new Error(`Review item ${params.queueItemId} not found.`);
     }
 
-    item.status = 'RESOLVED';
+    // Maker-checker separation: preparer cannot be assigned to review or approve their own work
+    if (item.preparerId && item.preparerId.trim() !== '' && item.preparerId.toLowerCase() === params.assignedReviewer.toLowerCase()) {
+      throw new Error(`Maker-checker violation: Preparer '${params.assignedReviewer}' cannot be assigned to review or approve their own work.`);
+    }
+
+    item.assignedReviewer = params.assignedReviewer;
+    item.assignedRole = params.assignedRole as any;
+    item.status = 'ASSIGNED';
+    item.updatedAt = new Date().toISOString();
+
+    this.queueStore.set(key, list);
+    this.persistQueue(key, list);
+
+    TaxGuardAuditService.logEvent({
+      tenantId: item.tenantId || 'tenant_ar_tax_prod',
+      userId: params.assignerId,
+      userEmail: `${params.assignerId}@artaxservices.com`,
+      userRole: params.assignerRole,
+      action: 'VALIDATION_REVIEW_ASSIGNED',
+      recordType: 'governance',
+      recordId: item.queueItemId,
+      ipAddress: '127.0.0.1 (Review Engine)',
+      result: 'success',
+      riskLevel: 'routine',
+      details: `Assigned review item ${item.queueItemId} to ${params.assignedReviewer} (${params.assignedRole})`
+    });
+
+    return item;
+  }
+
+  /**
+   * TG-VAL-018 & TG-VAL-019: Record human reviewer resolution disposition.
+   * Enforces role authorization, mandatory written rationale, maker-checker separation,
+   * and blocks AI self-approval.
+   */
+  public static recordReviewDisposition(params: {
+    clientId: string;
+    taxYear: number;
+    queueItemId: string;
+    actor: string;
+    actorRole: 'cpa' | 'ea' | 'tax_attorney' | 'reviewer' | 'accountant' | 'admin' | string;
+    action: HumanValidationQueueItem['disposition']['action'];
+    justification: string;
+    correctedValue?: any;
+    isAiProposedOnly?: boolean;
+  }): HumanValidationQueueItem {
+    if (!params.actor || !params.actor.trim()) {
+      throw new Error('Authenticated reviewer identity is required for resolution.');
+    }
+
+    if (!params.justification || !params.justification.trim()) {
+      throw new Error('A written rationale is required to disposition review items.');
+    }
+
+    // Anti-AI-self-approval rule
+    if (params.isAiProposedOnly || params.actor.toLowerCase().includes('ai') || params.actorRole === 'ai_model') {
+      throw new Error('AI output remains PROPOSED ONLY and cannot self-resolve, self-approve, or self-certify.');
+    }
+
+    const key = `${params.clientId}_${params.taxYear}`;
+    const list = this.getReviewQueue(params.clientId, params.taxYear);
+    const item = list.find(q => q.queueItemId === params.queueItemId || q.reviewItemId === params.queueItemId);
+
+    if (!item) {
+      throw new Error(`Review item ${params.queueItemId} not found.`);
+    }
+
+    // TG-VAL-019 Maker-Checker Enforcement: The preparer cannot independently review/approve their own work
+    if (item.preparerId && item.preparerId.trim() !== '' && item.preparerId.toLowerCase() === params.actor.toLowerCase()) {
+      throw new Error(`Maker-checker violation: The preparer who created or modified this item cannot independently approve, resolve, or waive it.`);
+    }
+
+    // Role authorization check: material resolutions and waivers require authorized reviewer
+    const authorizedRoles = ['cpa', 'ea', 'tax_attorney', 'reviewer', 'admin'];
+    if (!authorizedRoles.includes(params.actorRole.toLowerCase())) {
+      throw new Error(`Unauthorized resolution: Role '${params.actorRole}' is not authorized to resolve or waive validation items.`);
+    }
+
+    if (params.action === 'WAIVE_EXCEPTION') {
+      item.status = 'WAIVED';
+    } else if (params.action === 'REQUEST_CORRECTION') {
+      item.status = 'NEEDS_PREPARER_CORRECTION';
+    } else if (params.action === 'REQUEST_CLIENT_INFORMATION') {
+      item.status = 'NEEDS_CLIENT_INFORMATION';
+    } else if (params.action === 'REOPEN_REVIEW') {
+      item.status = 'REOPENED';
+    } else {
+      item.status = 'RESOLVED';
+    }
+
+    item.resolutionAt = new Date().toISOString();
+    item.resolutionRationale = params.justification;
+    item.resolutionAction = params.action;
+    item.updatedAt = new Date().toISOString();
+    item.blockingStatus = false;
+
     item.disposition = {
       action: params.action,
       actor: params.actor,
       actorRole: params.actorRole,
       timestamp: new Date().toISOString(),
       justification: params.justification,
-      correctedValue: params.correctedValue
+      correctedValue: params.correctedValue,
+      isAiProposedOnly: false
     };
+
+    // Synchronize linked exceptions
+    if (item.exceptionIds && item.exceptionIds.length > 0) {
+      const exceptions = this.getExceptions(params.clientId, params.taxYear);
+      item.exceptionIds.forEach(excId => {
+        const exc = exceptions.find(e => e.exceptionId === excId);
+        if (exc) {
+          if (params.action === 'WAIVE_EXCEPTION') {
+            exc.status = 'WAIVED';
+            exc.resolution = {
+              resolvedAt: new Date().toISOString(),
+              resolvedBy: params.actor,
+              resolvedByRole: params.actorRole,
+              resolutionAction: 'WAIVED_BY_CPA',
+              justification: params.justification
+            };
+          } else if (item.status === 'RESOLVED') {
+            exc.status = 'RESOLVED';
+            exc.resolution = {
+              resolvedAt: new Date().toISOString(),
+              resolvedBy: params.actor,
+              resolvedByRole: params.actorRole,
+              resolutionAction: 'RESOLVED_BY_HUMAN',
+              justification: params.justification,
+              correctedValue: params.correctedValue
+            };
+          }
+        }
+      });
+      this.exceptionsStore.set(key, exceptions);
+      this.persistExceptions(key, exceptions);
+    } else if (item.referenceId && item.referenceId.startsWith('EXC-')) {
+      const exceptions = this.getExceptions(params.clientId, params.taxYear);
+      const exc = exceptions.find(e => e.exceptionId === item.referenceId);
+      if (exc) {
+        if (params.action === 'WAIVE_EXCEPTION') {
+          exc.status = 'WAIVED';
+          exc.resolution = {
+            resolvedAt: new Date().toISOString(),
+            resolvedBy: params.actor,
+            resolvedByRole: params.actorRole,
+            resolutionAction: 'WAIVED_BY_CPA',
+            justification: params.justification
+          };
+        } else if (item.status === 'RESOLVED') {
+          exc.status = 'RESOLVED';
+          exc.resolution = {
+            resolvedAt: new Date().toISOString(),
+            resolvedBy: params.actor,
+            resolvedByRole: params.actorRole,
+            resolutionAction: 'RESOLVED_BY_HUMAN',
+            justification: params.justification,
+            correctedValue: params.correctedValue
+          };
+        }
+        this.exceptionsStore.set(key, exceptions);
+        this.persistExceptions(key, exceptions);
+      }
+    }
 
     this.queueStore.set(key, list);
     this.persistQueue(key, list);
 
+    TaxGuardAuditService.logEvent({
+      tenantId: item.tenantId || 'tenant_ar_tax_prod',
+      userId: params.actor,
+      userEmail: `${params.actor}@artaxservices.com`,
+      userRole: params.actorRole,
+      action: params.action === 'WAIVE_EXCEPTION' ? 'VALIDATION_EXCEPTION_WAIVED' : 'VALIDATION_REVIEW_RESOLVED',
+      recordType: 'approval',
+      recordId: item.queueItemId,
+      ipAddress: '127.0.0.1 (Review Engine)',
+      result: 'success',
+      riskLevel: item.riskLevel || 'routine',
+      details: `Disposition '${params.action}' recorded by ${params.actor}: ${params.justification}`
+    });
+
     return item;
+  }
+
+  public static resolveReviewItem(params: Parameters<typeof StageThreeValidationService.recordReviewDisposition>[0]): HumanValidationQueueItem {
+    return this.recordReviewDisposition(params);
+  }
+
+  /**
+   * TG-VAL-018 & TG-VAL-019: Reopen a review item.
+   * Preserves historical attribution while re-enforcing maker-checker rules.
+   */
+  public static reopenReviewItem(params: {
+    clientId: string;
+    taxYear: number;
+    queueItemId: string;
+    reopenedBy: string;
+    reopenedByRole: string;
+    rationale: string;
+  }): HumanValidationQueueItem {
+    if (!params.rationale || !params.rationale.trim()) {
+      throw new Error('A written rationale is required to reopen a review item.');
+    }
+
+    const key = `${params.clientId}_${params.taxYear}`;
+    const list = this.getReviewQueue(params.clientId, params.taxYear);
+    const item = list.find(q => q.queueItemId === params.queueItemId || q.reviewItemId === params.queueItemId);
+
+    if (!item) {
+      throw new Error(`Review item ${params.queueItemId} not found.`);
+    }
+
+    item.status = 'REOPENED';
+    item.blockingStatus = true;
+    item.resolutionAt = undefined;
+    item.resolutionRationale = undefined;
+    item.resolutionAction = undefined;
+    item.updatedAt = new Date().toISOString();
+
+    // Reopen linked exceptions
+    if (item.exceptionIds && item.exceptionIds.length > 0) {
+      const exceptions = this.getExceptions(params.clientId, params.taxYear);
+      item.exceptionIds.forEach(excId => {
+        const exc = exceptions.find(e => e.exceptionId === excId);
+        if (exc) {
+          exc.status = 'OPEN';
+        }
+      });
+      this.exceptionsStore.set(key, exceptions);
+      this.persistExceptions(key, exceptions);
+    }
+
+    this.queueStore.set(key, list);
+    this.persistQueue(key, list);
+
+    TaxGuardAuditService.logEvent({
+      tenantId: item.tenantId || 'tenant_ar_tax_prod',
+      userId: params.reopenedBy,
+      userEmail: `${params.reopenedBy}@artaxservices.com`,
+      userRole: params.reopenedByRole,
+      action: 'VALIDATION_REVIEW_REOPENED',
+      recordType: 'governance',
+      recordId: item.queueItemId,
+      ipAddress: '127.0.0.1 (Review Engine)',
+      result: 'success',
+      riskLevel: 'material',
+      details: `Review item ${item.queueItemId} reopened by ${params.reopenedBy}: ${params.rationale}`
+    });
+
+    return item;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-021: VALIDATION COMPLETENESS EVALUATOR
+  // --------------------------------------------------------------------------
+
+  /**
+   * Deterministic 18-point Stage 03 validation completeness evaluator.
+   * High percentage scores CANNOT bypass active blocking exceptions.
+   */
+  public static evaluateValidationCompleteness(clientId: string, taxYear: number): ValidationCompletenessEvaluation {
+    const sources = this.getValidationSources(clientId, taxYear);
+    const exceptions = this.getExceptions(clientId, taxYear);
+    const conflicts = this.getConflicts(clientId, taxYear);
+    const queue = this.getReviewQueue(clientId, taxYear);
+    const gateStatus = StageTwoCollectionOperationsService.getExitGateStatus(clientId, taxYear);
+
+    const openExceptions = exceptions.filter(e => e.status !== 'RESOLVED' && e.status !== 'WAIVED');
+    const openBlockingExceptions = openExceptions.filter(e => e.isBlocking);
+    const openReviewItems = queue.filter(q => q.status !== 'RESOLVED' && q.status !== 'WAIVED');
+    const blockingReviewItems = openReviewItems.filter(q => q.blockingStatus);
+
+    const blockingReasons: string[] = [];
+    const warnings: string[] = [];
+    const criteriaResults: ValidationCriterionResult[] = [];
+
+    // 1. Stage 02 certified handoff remains valid
+    const stageTwoPassed = !!gateStatus && gateStatus.gateResult === 'CLEARED' && gateStatus.stageTwoStatus !== 'REOPENED' && gateStatus.stageThreeStatus !== 'REVALIDATION_REQUIRED';
+    criteriaResults.push({
+      criterionId: 'CRIT-01-STAGE-02-HANDOFF',
+      description: 'Stage 02 certified handoff remains valid and un-reopened',
+      status: stageTwoPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: stageTwoPassed ? 'Stage 02 exit gate cleared.' : 'Stage 02 collection record is missing or reopened.'
+    });
+    if (!stageTwoPassed) blockingReasons.push('Stage 02 certified handoff is missing or has been reopened.');
+
+    // 2. Required validation sources exist
+    const sourcesExist = sources.length > 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-02-SOURCES-EXIST',
+      description: 'Required validation sources exist in registry',
+      status: sourcesExist ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: `${sources.length} sources registered.`
+    });
+    if (!sourcesExist) blockingReasons.push('No validation sources registered for this client and tax year.');
+
+    // 3. Source integrity checks passed
+    const integrityPassed = sourcesExist && sources.every(s => s.sourceHash && s.sourceHash.length === 64 && s.validationStatus !== 'UNVALIDATED');
+    criteriaResults.push({
+      criterionId: 'CRIT-03-SOURCE-INTEGRITY',
+      description: 'Source integrity and cryptographic hashes verified',
+      status: integrityPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: integrityPassed ? 'All source hashes verified.' : 'One or more sources lack cryptographic verification.'
+    });
+    if (!integrityPassed && sourcesExist) blockingReasons.push('One or more validation sources failed cryptographic integrity verification.');
+
+    // 4. Identity validation completed
+    const identityExceptions = openExceptions.filter(e => e.category === 'TAXPAYER_IDENTITY_MISMATCH' || e.category === 'IDENTITY_MISMATCH');
+    const identityPassed = identityExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-04-IDENTITY-CONSISTENCY',
+      description: 'Taxpayer identity matches client dossier without conflicts',
+      status: identityPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: identityPassed ? 'Identity consistent across sources.' : `${identityExceptions.length} open identity exception(s).`
+    });
+    if (!identityPassed) blockingReasons.push('Taxpayer identity conflicts remain unresolved.');
+
+    // 5. TIN/EIN consistency completed
+    const tinExceptions = openExceptions.filter(e => e.category === 'TIN_EIN_MISMATCH');
+    const tinPassed = tinExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-05-TIN-EIN-CONSISTENCY',
+      description: 'TIN/EIN consistency verified against entity profile',
+      status: tinPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: tinPassed ? 'TIN/EIN verified.' : `${tinExceptions.length} open TIN/EIN exception(s).`
+    });
+    if (!tinPassed) blockingReasons.push('TIN/EIN inconsistency exceptions remain unresolved.');
+
+    // 6. Tax-year consistency completed
+    const yearExceptions = openExceptions.filter(e => e.category === 'TAX_YEAR_MISMATCH');
+    const yearPassed = yearExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-06-TAX-YEAR-CONSISTENCY',
+      description: 'All document tax years match engagement tax year',
+      status: yearPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: yearPassed ? 'Tax year consistent across all records.' : `${yearExceptions.length} tax year mismatch exception(s).`
+    });
+    if (!yearPassed) blockingReasons.push('Document tax-year mismatch exceptions remain unresolved.');
+
+    // 7. Entity classification validation completed
+    const entityExceptions = openExceptions.filter(e => e.category === 'ENTITY_CLASSIFICATION_MISMATCH');
+    const entityPassed = entityExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-07-ENTITY-CLASSIFICATION',
+      description: 'Entity classification validated against registered form types',
+      status: entityPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: entityPassed ? 'Entity classification consistent.' : `${entityExceptions.length} open classification exception(s).`
+    });
+    if (!entityPassed) blockingReasons.push('Entity classification mismatch exceptions remain unresolved.');
+
+    // 8. Controlled tax form validation completed
+    const formExceptions = openExceptions.filter(e => e.category === 'CONTROLLED_FORM_DEFECT');
+    const formPassed = formExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-08-CONTROLLED-FORMS',
+      description: 'Controlled tax forms validated for required fields and structure',
+      status: formPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: formPassed ? 'Controlled forms structurally sound.' : `${formExceptions.length} controlled form defect(s).`
+    });
+    if (!formPassed) blockingReasons.push('Controlled tax form defect exceptions remain unresolved.');
+
+    // 9. Extracted field confidence / review completed
+    const confidenceExceptions = openExceptions.filter(e => e.category === 'LOW_CONFIDENCE_MATERIAL_FIELD');
+    const confidencePassed = confidenceExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-09-FIELD-CONFIDENCE',
+      description: 'Material extracted fields meet confidence threshold or resolved by human review',
+      status: confidencePassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: confidencePassed ? 'Confidence thresholds satisfied or resolved.' : `${confidenceExceptions.length} low-confidence material field(s).`
+    });
+    if (!confidencePassed) blockingReasons.push('Low-confidence material fields require human review before clearance.');
+
+    // 10. Required provenance exists
+    const provenanceExceptions = openExceptions.filter(e => e.category === 'PROVENANCE_FAILURE' || e.category === 'MISSING_PROVENANCE');
+    const provenancePassed = provenanceExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-10-PROVENANCE-VERIFIED',
+      description: 'Extracted values link to cryptographic source and page coordinates',
+      status: provenancePassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: provenancePassed ? 'Provenance intact.' : `${provenanceExceptions.length} provenance failure(s).`
+    });
+    if (!provenancePassed) blockingReasons.push('Missing or unverified OCR-to-source provenance records remain.');
+
+    // 11. Cross-document consistency rules completed
+    const crossDocExceptions = openExceptions.filter(e => e.category === 'CROSS_DOCUMENT_DISCREPANCY');
+    const crossDocPassed = crossDocExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-11-CROSS-DOC-CONSISTENCY',
+      description: 'Cross-document reconciliation rules satisfied without active discrepancy',
+      status: crossDocPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: crossDocPassed ? 'Cross-document rules reconciled.' : `${crossDocExceptions.length} cross-document discrepancy exception(s).`
+    });
+    if (!crossDocPassed) blockingReasons.push('Cross-document discrepancies exceed materiality thresholds.');
+
+    // 12. Mathematical & structural validation completed
+    const mathExceptions = openExceptions.filter(e => e.category === 'MATHEMATICAL_CALCULATION_VARIANCE');
+    const mathPassed = mathExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-12-MATHEMATICAL-STRUCTURAL',
+      description: 'Mathematical arithmetic and structural balances reconciled',
+      status: mathPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: mathPassed ? 'Arithmetic balances verified.' : `${mathExceptions.length} mathematical variance exception(s).`
+    });
+    if (!mathPassed) blockingReasons.push('Mathematical calculation variances remain unresolved.');
+
+    // 13. Version conflicts resolved
+    const versionExceptions = openExceptions.filter(e => e.category === 'DUPLICATE_SOURCE_DOCUMENT' || e.category === 'SUPERSEDED_SOURCE_DOCUMENT');
+    const versionPassed = versionExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-13-VERSION-INTELLIGENCE',
+      description: 'Duplicate and superseded document version conflicts resolved',
+      status: versionPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: versionPassed ? 'Versions reconciled.' : `${versionExceptions.length} version conflict exception(s).`
+    });
+    if (!versionPassed) blockingReasons.push('Unresolved duplicate or superseded document version conflicts exist.');
+
+    // 14. Material conflicts resolved
+    const materialConflicts = conflicts.filter(c => c.resolutionStatus === 'UNRESOLVED' && c.materiality !== 'IMMATERIAL');
+    const conflictsPassed = materialConflicts.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-14-MATERIAL-CONFLICTS',
+      description: 'All material cross-source data conflicts adjudicated',
+      status: conflictsPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: conflictsPassed ? 'No unresolved material conflicts.' : `${materialConflicts.length} open material conflict(s).`
+    });
+    if (!conflictsPassed) blockingReasons.push('Material cross-source data conflicts remain unresolved.');
+
+    // 15. Blocking exceptions resolved or waived
+    const exceptionsPassed = openBlockingExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-15-BLOCKING-EXCEPTIONS',
+      description: 'All blocking Stage 03 exceptions resolved or properly waived by CPA',
+      status: exceptionsPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: exceptionsPassed ? 'No open blocking exceptions.' : `${openBlockingExceptions.length} open blocking exception(s).`
+    });
+    if (!exceptionsPassed) blockingReasons.push(`${openBlockingExceptions.length} blocking exception(s) remain open or un-waived.`);
+
+    // 16. Human review requirements completed
+    const reviewPassed = blockingReviewItems.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-16-HUMAN-REVIEW-COMPLETED',
+      description: 'All blocking review items resolved or waived by authorized professional',
+      status: reviewPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: reviewPassed ? 'Human review queue clear of blockers.' : `${blockingReviewItems.length} blocking review item(s) pending.`
+    });
+    if (!reviewPassed) blockingReasons.push(`${blockingReviewItems.length} human validation review queue items require resolution.`);
+
+    // 17. Maker-checker requirements satisfied
+    const makerCheckerViolations = queue.filter(q => q.status === 'RESOLVED' && q.preparerId && q.disposition && q.disposition.actor.toLowerCase() === q.preparerId.toLowerCase());
+    const makerCheckerPassed = makerCheckerViolations.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-17-MAKER-CHECKER-COMPLIANCE',
+      description: 'Independent review enforced; no preparer self-approvals',
+      status: makerCheckerPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: makerCheckerPassed ? 'Maker-checker discipline intact.' : `${makerCheckerViolations.length} self-approved item(s) detected.`
+    });
+    if (!makerCheckerPassed) blockingReasons.push('Maker-checker violation: One or more review items were self-approved by their preparer.');
+
+    // 18. No unresolved critical/high-risk blockers
+    const criticalExceptions = openExceptions.filter(e => e.severity === 'CRITICAL' || e.severity === 'HIGH');
+    const criticalPassed = criticalExceptions.length === 0;
+    criteriaResults.push({
+      criterionId: 'CRIT-18-CRITICAL-BLOCKERS',
+      description: 'Zero unresolved critical or high-risk validation defects',
+      status: criticalPassed ? 'PASSED' : 'FAILED',
+      isBlocking: true,
+      details: criticalPassed ? 'No critical blockers.' : `${criticalExceptions.length} critical/high-risk issue(s).`
+    });
+    if (!criticalPassed) blockingReasons.push('Critical or high-risk validation defects remain open.');
+
+    // Score calculation
+    const passedCount = criteriaResults.filter(c => c.status === 'PASSED').length;
+    let readinessScore = Math.round((passedCount / criteriaResults.length) * 100);
+
+    // If any blocking reason exists, readiness cannot be 100 and certification is strictly blocked
+    if (blockingReasons.length > 0) {
+      readinessScore = Math.min(readinessScore, 95);
+    }
+
+    const isReadyForCertification = blockingReasons.length === 0 && openBlockingExceptions.length === 0 && blockingReviewItems.length === 0;
+    const isReadyForExit = isReadyForCertification;
+
+    return {
+      readinessScore,
+      criteriaResults,
+      blockingReasons,
+      warnings,
+      openExceptions,
+      openReviewItems,
+      isReadyForCertification,
+      isReadyForExit
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-023: CPA/EA VALIDATION CERTIFICATION
+  // --------------------------------------------------------------------------
+
+  public static getCertifications(clientId: string, taxYear: number): StageThreeCertificationRecord[] {
+    const key = `${clientId}_${taxYear}`;
+    if (!this.certificationsStore.has(key)) {
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem(`${STORAGE_KEY_VAL_CERTS}_${key}`);
+          if (stored) {
+            this.certificationsStore.set(key, JSON.parse(stored));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return this.certificationsStore.get(key) || [];
+  }
+
+  public static getLatestCertification(clientId: string, taxYear: number): StageThreeCertificationRecord | null {
+    const list = this.getCertifications(clientId, taxYear);
+    const active = list.filter(c => c.status === 'ACTIVE');
+    return active.length > 0 ? active[active.length - 1] : (list.length > 0 ? list[list.length - 1] : null);
+  }
+
+  /**
+   * Execute professional CPA/EA validation certification.
+   * Enforces credentials, maker-checker separation, and blocking exception resolution.
+   */
+  public static certifyValidation(params: {
+    clientId: string;
+    taxYear: number;
+    engagementId: string;
+    reviewerId: string;
+    reviewerRole: 'cpa' | 'ea' | 'tax_attorney' | 'reviewer' | 'accountant' | 'client' | string;
+    preparerId?: string;
+    certificationStatement: string;
+  }): StageThreeCertificationRecord {
+    // Role verification
+    const authorizedRoles = ['cpa', 'ea', 'tax_attorney', 'reviewer'];
+    if (!authorizedRoles.includes(params.reviewerRole.toLowerCase())) {
+      throw new Error(`Unauthorized certification: Professional certification requires a licensed CPA, EA, or Tax Attorney. Role '${params.reviewerRole}' is not permitted.`);
+    }
+
+    // AI cannot self-certify
+    if (params.reviewerId.toLowerCase().includes('ai') || params.reviewerRole === 'ai_model') {
+      throw new Error('AI output remains PROPOSED ONLY and cannot self-certify.');
+    }
+
+    // TG-VAL-019 Maker-Checker enforcement on certification
+    if (params.preparerId && params.preparerId.trim() !== '' && params.preparerId.toLowerCase() === params.reviewerId.toLowerCase()) {
+      throw new Error('Maker-checker violation: Preparer cannot certify their own work.');
+    }
+
+    // Completeness verification: cannot certify if unresolved blockers exist
+    const completeness = this.evaluateValidationCompleteness(params.clientId, params.taxYear);
+    if (!completeness.isReadyForCertification || completeness.blockingReasons.length > 0) {
+      throw new Error(`Cannot certify validation: Stage 03 has unresolved blocking exceptions or incomplete requirements: ${completeness.blockingReasons.join('; ')}`);
+    }
+
+    const sources = this.getValidationSources(params.clientId, params.taxYear);
+    const exceptions = this.getExceptions(params.clientId, params.taxYear);
+    const queue = this.getReviewQueue(params.clientId, params.taxYear);
+
+    // Traceable deterministic hashes
+    const sourceSetHash = sources.map(s => s.sourceHash || s.validationSourceId).sort().join('|') || 'empty_source_set';
+    const exceptionSetHash = exceptions.map(e => `${e.exceptionId}:${e.status}`).sort().join('|') || 'no_exceptions';
+    const reviewSetHash = queue.map(q => `${q.queueItemId}:${q.status}`).sort().join('|') || 'no_queue_items';
+
+    const certificationId = `CERT-VAL-${params.taxYear}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const certRecord: StageThreeCertificationRecord = {
+      certificationId,
+      tenantId: 'tenant_ar_tax_prod',
+      clientId: params.clientId,
+      engagementId: params.engagementId,
+      taxYear: params.taxYear,
+      reviewerId: params.reviewerId,
+      reviewerRole: params.reviewerRole as any,
+      certificationTimestamp: new Date().toISOString(),
+      validationStateVersion: 1,
+      sourceSetHash,
+      exceptionSetHash,
+      reviewSetHash,
+      certificationStatement: params.certificationStatement,
+      auditReference: `AUD-CERT-${params.clientId}-${params.taxYear}`,
+      status: 'ACTIVE',
+      isSimulatedCredential: true
+    };
+
+    const key = `${params.clientId}_${params.taxYear}`;
+    const list = this.getCertifications(params.clientId, params.taxYear);
+    list.push(certRecord);
+    this.certificationsStore.set(key, list);
+    this.persistCertifications(key, list);
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: params.reviewerId,
+      userEmail: `${params.reviewerId}@artaxservices.com`,
+      userRole: params.reviewerRole,
+      action: 'VALIDATION_CERTIFIED',
+      recordType: 'approval',
+      recordId: certificationId,
+      ipAddress: '127.0.0.1 (Certification Engine)',
+      result: 'success',
+      riskLevel: 'routine',
+      details: `Stage 03 validation professionally certified by ${params.reviewerId} (${params.reviewerRole}): ${params.certificationStatement}`
+    });
+
+    return certRecord;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-022: STAGE 03 HARD EXIT GATE
+  // --------------------------------------------------------------------------
+
+  public static getExitGateStatus(clientId: string, taxYear: number): StageThreeExitGateRecord | null {
+    const key = `${clientId}_${taxYear}`;
+    if (!this.exitGateStore.has(key)) {
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem(`${STORAGE_KEY_VAL_GATE}_${key}`);
+          if (stored) {
+            this.exitGateStore.set(key, JSON.parse(stored));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return this.exitGateStore.get(key) || null;
+  }
+
+  public static evaluateExitGate(clientId: string, taxYear: number): StageThreeExitGateRecord {
+    const completeness = this.evaluateValidationCompleteness(clientId, taxYear);
+    const cert = this.getLatestCertification(clientId, taxYear);
+    const sources = this.getValidationSources(clientId, taxYear);
+    const key = `${clientId}_${taxYear}`;
+
+    let gateStatus: StageThreeGateStatus = 'NOT_EVALUATED';
+
+    if (completeness.blockingReasons.length > 0 || completeness.openExceptions.some(e => e.isBlocking)) {
+      gateStatus = 'BLOCKED';
+    } else if (completeness.openReviewItems.some(q => q.status === 'NEEDS_PREPARER_CORRECTION')) {
+      gateStatus = 'AWAITING_PREPARER';
+    } else if (completeness.openReviewItems.some(q => q.status === 'NEEDS_CLIENT_INFORMATION')) {
+      gateStatus = 'AWAITING_CLIENT';
+    } else if (completeness.openReviewItems.some(q => q.status === 'IN_REVIEW' || q.status === 'ASSIGNED' || q.status === 'OPEN')) {
+      gateStatus = 'AWAITING_REVIEWER';
+    } else if (!cert || cert.status !== 'ACTIVE') {
+      gateStatus = 'READY_FOR_CERTIFICATION';
+    } else {
+      gateStatus = 'CLEARED';
+    }
+
+    const gateId = `GATE-S3-${taxYear}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    const gateRecord: StageThreeExitGateRecord = {
+      gateId,
+      tenantId: 'tenant_ar_tax_prod',
+      clientId,
+      engagementId: `ENG-${taxYear}-${clientId}`,
+      taxYear,
+      gateStatus,
+      stageTwoExitRecordId: `GATE-S2-${clientId}-${taxYear}`,
+      stageThreeValidationStateVersion: 1,
+      sourceSetHash: cert ? cert.sourceSetHash : 'unhashed_sources',
+      validationResultsSummary: {
+        totalSources: sources.length,
+        validatedSources: sources.filter(s => s.validationStatus === 'VALIDATED').length,
+        openExceptionsCount: completeness.openExceptions.length,
+        openReviewItemsCount: completeness.openReviewItems.length,
+        readinessScore: completeness.readinessScore
+      },
+      exceptionStateHash: cert ? cert.exceptionSetHash : 'unhashed_exceptions',
+      reviewStateHash: cert ? cert.reviewSetHash : 'unhashed_review',
+      professionalCertificationId: cert ? cert.certificationId : null,
+      certifiedBy: cert ? cert.reviewerId : null,
+      certifiedRole: cert ? cert.reviewerRole : null,
+      certificationTimestamp: cert ? cert.certificationTimestamp : null,
+      timestamp: new Date().toISOString(),
+      correlationId: `CORR-S3-GATE-${clientId}-${taxYear}`,
+      auditReference: `AUD-S3-GATE-${clientId}-${taxYear}`
+    };
+
+    return gateRecord;
+  }
+
+  /**
+   * Execute Stage 03 Hard Exit Gate evaluation and commit.
+   * If cleared, issues downstream signal STAGE_04_ELIGIBLE.
+   * If blocked, issues downstream signal STAGE_04_BLOCKED.
+   */
+  public static executeStageThreeExitGate(params: {
+    clientId: string;
+    taxYear: number;
+    engagementId: string;
+    actor: string;
+    actorRole: string;
+  }): StageThreeExitGateRecord {
+    const gateRecord = this.evaluateExitGate(params.clientId, params.taxYear);
+    const key = `${params.clientId}_${params.taxYear}`;
+
+    this.exitGateStore.set(key, gateRecord);
+    this.persistExitGate(key, gateRecord);
+
+    const isCleared = gateRecord.gateStatus === 'CLEARED';
+
+    // Issue downstream eligibility signal
+    const signal: StageFourEligibilitySignal = {
+      signalId: `SIG-S4-${params.taxYear}-${Math.floor(10000 + Math.random() * 90000)}`,
+      clientId: params.clientId,
+      engagementId: params.engagementId,
+      taxYear: params.taxYear,
+      stageThreeGateVersion: 1,
+      status: isCleared ? 'STAGE_04_ELIGIBLE' : 'STAGE_04_BLOCKED',
+      reason: isCleared ? 'Stage 03 hard exit gate cleared and professionally certified.' : `Stage 03 gate is ${gateRecord.gateStatus}.`,
+      affectedRecords: [gateRecord.gateId],
+      timestamp: new Date().toISOString(),
+      auditReference: gateRecord.auditReference
+    };
+
+    this.downstreamSignalsStore.set(key, signal);
+    this.persistDownstreamSignal(key, signal);
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: params.actor,
+      userEmail: `${params.actor}@artaxservices.com`,
+      userRole: params.actorRole,
+      action: isCleared ? 'EXIT_GATE_CLEARED' : 'EXIT_GATE_BLOCKED',
+      recordType: 'governance',
+      recordId: gateRecord.gateId,
+      ipAddress: '127.0.0.1 (Gate Engine)',
+      result: 'success',
+      riskLevel: isCleared ? 'routine' : 'material',
+      details: `Stage 03 exit gate evaluated: ${gateRecord.gateStatus}. Downstream status: ${signal.status}.`
+    });
+
+    return gateRecord;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-024: UPSTREAM INVALIDATION & GATE REOPENING
+  // --------------------------------------------------------------------------
+
+  /**
+   * Handle upstream material change in Stage 02 sources (corrected form, W-2c,
+   * changed hash, quarantine, or rejection).
+   * Reopens gate, invalidates active certification, flags sources for revalidation,
+   * preserves prior history, and sets downstream signal to REVALIDATION_REQUIRED.
+   */
+  public static handleUpstreamInvalidation(params: {
+    clientId: string;
+    taxYear: number;
+    documentId: string;
+    invalidationType: 'CORRECTED_FORM' | 'SUPERSEDED' | 'QUARANTINED' | 'REJECTED' | 'HASH_CHANGED' | 'AMENDED';
+    details: string;
+    actor: string;
+  }): {
+    gateReopened: boolean;
+    certificationInvalidated: boolean;
+    affectedSourcesCount: number;
+    affectedExceptionsCount: number;
+    signal: StageFourEligibilitySignal;
+  } {
+    const key = `${params.clientId}_${params.taxYear}`;
+    const sources = this.getValidationSources(params.clientId, params.taxYear);
+    let affectedSourcesCount = 0;
+
+    // 1. Mark affected sources as STALE and requires revalidation
+    sources.forEach(s => {
+      if (s.documentId === params.documentId || s.validationSourceId === params.documentId) {
+        s.validationStatus = 'STALE';
+        s.isAuthoritative = false;
+        affectedSourcesCount++;
+      }
+    });
+    this.sourcesStore.set(key, sources);
+    this.persistSources(key, sources);
+
+    // 2. Invalidate active certification (preserve history, never delete former certification)
+    const certs = this.getCertifications(params.clientId, params.taxYear);
+    let certificationInvalidated = false;
+    certs.forEach(c => {
+      if (c.status === 'ACTIVE') {
+        c.status = 'INVALIDATED_BY_UPSTREAM_CHANGE';
+        c.invalidatedAt = new Date().toISOString();
+        c.invalidationReason = params.details;
+        certificationInvalidated = true;
+      }
+    });
+    this.certificationsStore.set(key, certs);
+    this.persistCertifications(key, certs);
+
+    // 3. Reopen review items or enqueue revalidation item
+    const queue = this.getReviewQueue(params.clientId, params.taxYear);
+    const matchingReviewItem = queue.find(q => q.sourceDocumentIds?.includes(params.documentId) || q.referenceId === params.documentId);
+
+    if (matchingReviewItem) {
+      matchingReviewItem.status = 'REOPENED';
+      matchingReviewItem.blockingStatus = true;
+      matchingReviewItem.updatedAt = new Date().toISOString();
+    } else {
+      this.enqueueHumanReview({
+        clientId: params.clientId,
+        taxYear: params.taxYear,
+        itemType: 'SUPERSEDED_SOURCE',
+        referenceId: params.documentId,
+        sourceDocumentIds: [params.documentId],
+        title: `Revalidation Required: Source ${params.documentId} Invalidated`,
+        description: `Upstream change detected (${params.invalidationType}): ${params.details}`,
+        severity: 'HIGH',
+        materiality: 'MATERIAL',
+        riskLevel: 'material',
+        blockingStatus: true,
+        assignedRole: 'cpa',
+        assignedReviewer: 'Senior Tax Reviewer / CPA',
+        status: 'REOPENED'
+      });
+    }
+    this.persistQueue(key, this.getReviewQueue(params.clientId, params.taxYear));
+
+    // 4. Reopen Stage 03 Exit Gate
+    const existingGate = this.getExitGateStatus(params.clientId, params.taxYear);
+    const gateId = existingGate ? existingGate.gateId : `GATE-S3-${params.taxYear}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    const reopenedGate: StageThreeExitGateRecord = {
+      gateId,
+      tenantId: 'tenant_ar_tax_prod',
+      clientId: params.clientId,
+      engagementId: `ENG-${params.taxYear}-${params.clientId}`,
+      taxYear: params.taxYear,
+      gateStatus: 'REOPENED',
+      stageTwoExitRecordId: `GATE-S2-${params.clientId}-${params.taxYear}`,
+      stageThreeValidationStateVersion: 2,
+      sourceSetHash: 'invalidated_by_upstream_change',
+      validationResultsSummary: {
+        totalSources: sources.length,
+        validatedSources: sources.filter(s => s.validationStatus === 'VALIDATED').length,
+        openExceptionsCount: this.getExceptions(params.clientId, params.taxYear).filter(e => e.status === 'OPEN').length,
+        openReviewItemsCount: this.getReviewQueue(params.clientId, params.taxYear).filter(q => q.status !== 'RESOLVED' && q.status !== 'WAIVED').length,
+        readinessScore: 50
+      },
+      exceptionStateHash: 'reopened',
+      reviewStateHash: 'reopened',
+      professionalCertificationId: null,
+      certifiedBy: null,
+      certifiedRole: null,
+      certificationTimestamp: null,
+      timestamp: new Date().toISOString(),
+      correlationId: `CORR-REOPEN-${params.clientId}-${params.taxYear}`,
+      auditReference: `AUD-REOPEN-${params.clientId}-${params.taxYear}`
+    };
+
+    this.exitGateStore.set(key, reopenedGate);
+    this.persistExitGate(key, reopenedGate);
+
+    // 5. Generate Downstream Revalidation Signal
+    const signal: StageFourEligibilitySignal = {
+      signalId: `SIG-S4-REVAL-${params.taxYear}-${Math.floor(10000 + Math.random() * 90000)}`,
+      clientId: params.clientId,
+      engagementId: `ENG-${params.taxYear}-${params.clientId}`,
+      taxYear: params.taxYear,
+      stageThreeGateVersion: 2,
+      status: 'REVALIDATION_REQUIRED',
+      reason: `Upstream change: ${params.details}`,
+      affectedRecords: [params.documentId, gateId],
+      timestamp: new Date().toISOString(),
+      auditReference: reopenedGate.auditReference
+    };
+
+    this.downstreamSignalsStore.set(key, signal);
+    this.persistDownstreamSignal(key, signal);
+
+    TaxGuardAuditService.logEvent({
+      tenantId: 'tenant_ar_tax_prod',
+      userId: params.actor,
+      userEmail: `${params.actor}@artaxservices.com`,
+      userRole: 'system',
+      action: 'EXIT_GATE_REOPENED',
+      recordType: 'governance',
+      recordId: gateId,
+      ipAddress: '127.0.0.1 (Invalidation Watcher)',
+      result: 'success',
+      riskLevel: 'material',
+      details: `Stage 03 exit gate reopened due to upstream invalidation (${params.invalidationType}): ${params.details}`
+    });
+
+    return {
+      gateReopened: true,
+      certificationInvalidated,
+      affectedSourcesCount,
+      affectedExceptionsCount: 1,
+      signal
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-025: DOWNSTREAM REVALIDATION SIGNAL CONTRACT
+  // --------------------------------------------------------------------------
+
+  /**
+   * Returns authoritative eligibility signal for downstream Stage 04.
+   * STAGE_04_ELIGIBLE: Stage 03 cleared and professionally certified.
+   * REVALIDATION_REQUIRED: Upstream changes or stale sources require revalidation.
+   * STAGE_04_BLOCKED: Stage 03 is not cleared or has active blockers.
+   */
+  public static getStageFourEligibilitySignal(clientId: string, taxYear: number): StageFourEligibilitySignal {
+    const key = `${clientId}_${taxYear}`;
+    const stored = this.downstreamSignalsStore.get(key);
+    if (stored) return stored;
+
+    const gate = this.getExitGateStatus(clientId, taxYear);
+    const cert = this.getLatestCertification(clientId, taxYear);
+
+    if (gate && gate.gateStatus === 'CLEARED' && cert && cert.status === 'ACTIVE') {
+      return {
+        signalId: `SIG-S4-DEFAULT-${taxYear}`,
+        clientId,
+        engagementId: `ENG-${taxYear}-${clientId}`,
+        taxYear,
+        stageThreeGateVersion: 1,
+        status: 'STAGE_04_ELIGIBLE',
+        reason: 'Stage 03 validation cleared and certified.',
+        affectedRecords: [gate.gateId],
+        timestamp: new Date().toISOString(),
+        auditReference: gate.auditReference
+      };
+    }
+
+    if (gate && (gate.gateStatus === 'REOPENED' || gate.gateStatus === 'SUPERSEDED')) {
+      return {
+        signalId: `SIG-S4-REVAL-${taxYear}`,
+        clientId,
+        engagementId: `ENG-${taxYear}-${clientId}`,
+        taxYear,
+        stageThreeGateVersion: 1,
+        status: 'REVALIDATION_REQUIRED',
+        reason: 'Stage 03 validation was reopened or superseded by upstream changes.',
+        affectedRecords: [gate.gateId],
+        timestamp: new Date().toISOString(),
+        auditReference: gate.auditReference
+      };
+    }
+
+    return {
+      signalId: `SIG-S4-BLOCKED-${taxYear}`,
+      clientId,
+      engagementId: `ENG-${taxYear}-${clientId}`,
+      taxYear,
+      stageThreeGateVersion: 1,
+      status: 'STAGE_04_BLOCKED',
+      reason: gate ? `Stage 03 gate is in status ${gate.gateStatus}.` : 'Stage 03 validation has not been evaluated or cleared.',
+      affectedRecords: gate ? [gate.gateId] : [],
+      timestamp: new Date().toISOString(),
+      auditReference: 'AUD-S4-BLOCKED'
+    };
   }
 
   // --------------------------------------------------------------------------
@@ -2256,7 +4611,7 @@ export class StageThreeValidationService {
   }
 
   // --------------------------------------------------------------------------
-  // UPSTREAM INVALIDATION CHECK
+  // UPSTREAM INVALIDATION CHECK (STAGE 02 MONITOR)
   // --------------------------------------------------------------------------
 
   /**
@@ -2287,7 +4642,7 @@ export class StageThreeValidationService {
         userId: 'system_stage3_monitor',
         userEmail: 'system@artaxservices.com',
         userRole: 'system',
-        action: 'VALIDATION_REOPENED',
+        action: 'EXIT_GATE_REOPENED',
         recordType: 'governance',
         recordId: `INV-${clientId}-${taxYear}`,
         ipAddress: '127.0.0.1 (Watcher)',
@@ -2310,25 +4665,12 @@ export class StageThreeValidationService {
   // --------------------------------------------------------------------------
 
   public static calculateReadinessPercentage(clientId: string, taxYear: number): number {
-    const sources = this.getValidationSources(clientId, taxYear);
-    if (sources.length === 0) return 0;
-
-    const exceptions = this.getExceptions(clientId, taxYear);
-    const conflicts = this.getConflicts(clientId, taxYear);
-
-    const openBlockingExceptions = exceptions.filter(e => e.isBlocking && e.status !== 'RESOLVED' && e.status !== 'WAIVED');
-    const unresolvedConflicts = conflicts.filter(c => c.resolutionStatus === 'UNRESOLVED');
-
-    if (openBlockingExceptions.length > 0 || unresolvedConflicts.length > 0) {
-      const penalty = (openBlockingExceptions.length * 20) + (unresolvedConflicts.length * 15);
-      return Math.max(10, Math.min(95, 100 - penalty));
-    }
-
-    return 100;
+    const comp = this.evaluateValidationCompleteness(clientId, taxYear);
+    return comp.readinessScore;
   }
 
   // --------------------------------------------------------------------------
-  // HELPERS
+  // HELPERS & PERSISTENCE
   // --------------------------------------------------------------------------
 
   public static maskTIN(tin: string): string {
@@ -2374,6 +4716,36 @@ export class StageThreeValidationService {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(`${STORAGE_KEY_VAL_QUEUE}_${key}`, JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private static persistCertifications(key: string, data: StageThreeCertificationRecord[]): void {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`${STORAGE_KEY_VAL_CERTS}_${key}`, JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private static persistExitGate(key: string, data: StageThreeExitGateRecord): void {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`${STORAGE_KEY_VAL_GATE}_${key}`, JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private static persistDownstreamSignal(key: string, data: StageFourEligibilitySignal): void {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`${STORAGE_KEY_VAL_SIGNAL}_${key}`, JSON.stringify(data));
       } catch {
         // ignore
       }

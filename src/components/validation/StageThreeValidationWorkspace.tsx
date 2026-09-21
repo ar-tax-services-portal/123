@@ -814,9 +814,13 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
                           </span>
                         </td>
                         <td className="py-3 px-3 font-mono">
-                          <span className={source.AIConfidence >= 0.9 ? 'text-emerald-700 font-bold' : 'text-amber-700'}>
-                            {(source.AIConfidence * 100).toFixed(0)}%
-                          </span>
+                          {source.AIConfidence != null ? (
+                            <span className={source.AIConfidence >= 0.9 ? 'text-emerald-700 font-bold' : 'text-amber-700'}>
+                              {(source.AIConfidence * 100).toFixed(0)}%
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Unscored</span>
+                          )}
                         </td>
                         <td className="py-3 px-3">
                           <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-xs font-mono text-[10px]">
@@ -889,7 +893,7 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
                     <div className="text-right">
                       <div className="text-[10px] text-slate-400 font-mono">Confidence</div>
                       <div className="text-xs font-mono font-bold text-emerald-700">
-                        {(source.AIConfidence * 100).toFixed(0)}%
+                        {source.AIConfidence != null ? `${(source.AIConfidence * 100).toFixed(0)}%` : 'Unscored'}
                       </div>
                     </div>
                   </div>
@@ -1459,7 +1463,9 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
                 </div>
                 <div className="p-2 border border-slate-200 rounded-md">
                   <div className="text-[10px] text-slate-400 uppercase font-mono">AI Confidence</div>
-                  <div className="font-bold text-emerald-700">{(selectedSourceDetail.AIConfidence * 100).toFixed(1)}%</div>
+                  <div className="font-bold text-emerald-700">
+                    {selectedSourceDetail.AIConfidence != null ? `${(selectedSourceDetail.AIConfidence * 100).toFixed(1)}%` : 'Unscored'}
+                  </div>
                 </div>
               </div>
             </div>
