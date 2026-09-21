@@ -902,4 +902,579 @@ describe('Stage 03: Validate — Sprint 1 (Validation Foundation & Integrity)', 
     // Returns null or record without throwing runtime errors
     expect(status === null || typeof status === 'object').toBe(true);
   });
+
+  // ==========================================================================
+  // FOCUSED SPRINT 1 FEATURE TEST SUITE: TG-VAL-001 THROUGH TG-VAL-008
+  // ==========================================================================
+
+  describe('Sprint 1 Core Engines (TG-VAL-001 through TG-VAL-008)', () => {
+    const FOCUSED_CLIENT_ID = 'cli_sprint1_verified';
+    const FOCUSED_TAX_YEAR = 2025;
+    const FOCUSED_ENGAGEMENT_ID = 'ENG-2025-SP1';
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-001 — Stage 02 Certified Intake
+    // ------------------------------------------------------------------------
+    it('TG-VAL-001: Stage 02 Certified Intake blocks uncertified intake and requires CLEARED exit gate with tenant match', () => {
+      // 1. Missing gate rejects
+      const missingResult = StageThreeValidationService.validateStageTwoHandoff('unseen_client', 2025);
+      expect(missingResult.isValid).toBe(false);
+      expect(missingResult.status).toBe('BLOCKED_BY_STAGE_02');
+
+      // 2. Gate with BLOCKED status rejects
+      const blockedGate: StageTwoExitGateRecord = {
+        gateId: 'GATE-BLOCKED-01',
+        clientId: FOCUSED_CLIENT_ID,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        evaluationTimestamp: new Date().toISOString(),
+        collectionVersion: 1,
+        gateResult: 'BLOCKED',
+        stageTwoStatus: 'IN_PROGRESS',
+        stageThreeStatus: 'INELIGIBLE',
+        evaluatedConditions: { hasUnverifiedDocs: true },
+        actor: 'Staff Reviewer',
+        actorRole: 'accountant',
+        certificationStatement: 'Blocked due to unverified docs',
+        correlationId: 'CORR-BLK-1'
+      };
+      (StageTwoCollectionOperationsService as any).exitGateStore.set(
+        `${FOCUSED_CLIENT_ID}_${FOCUSED_TAX_YEAR}`,
+        blockedGate
+      );
+      const blockedHandoff = StageThreeValidationService.validateStageTwoHandoff(FOCUSED_CLIENT_ID, FOCUSED_TAX_YEAR);
+      expect(blockedHandoff.isValid).toBe(false);
+
+      // 3. Fully certified CLEARED gate permits intake and populates context
+      const clearedGate: StageTwoExitGateRecord = {
+        gateId: 'GATE-CLEARED-01',
+        clientId: FOCUSED_CLIENT_ID,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        evaluationTimestamp: new Date().toISOString(),
+        collectionVersion: 1,
+        gateResult: 'CLEARED',
+        stageTwoStatus: 'COMPLETED',
+        stageThreeStatus: 'ELIGIBLE',
+        evaluatedConditions: { allPassed: true },
+        actor: 'Desmond Hinds, CPA',
+        actorRole: 'cpa',
+        certificationStatement: 'Certified for Stage 03 handoff',
+        correlationId: 'CORR-CLR-1'
+      };
+      (StageTwoCollectionOperationsService as any).exitGateStore.set(
+        `${FOCUSED_CLIENT_ID}_${FOCUSED_TAX_YEAR}`,
+        clearedGate
+      );
+      const clearedHandoff = StageThreeValidationService.validateStageTwoHandoff(
+        FOCUSED_CLIENT_ID,
+        FOCUSED_TAX_YEAR,
+        FOCUSED_ENGAGEMENT_ID
+      );
+      expect(clearedHandoff.isValid).toBe(true);
+      expect(clearedHandoff.status).toBe('ELIGIBLE');
+
+      const ctx = StageThreeValidationService.getWorkspaceContext(
+        FOCUSED_CLIENT_ID,
+        FOCUSED_TAX_YEAR,
+        FOCUSED_ENGAGEMENT_ID
+      );
+      expect(ctx.isHandoffVerified).toBe(true);
+      expect(ctx.stageTwoGateId).toBe('GATE-CLEARED-01');
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-002 — Validation Source Registry
+    // ------------------------------------------------------------------------
+    it('TG-VAL-002: Validation Source Registry preserves provenance, tiers, and enforces isAiProposedOnly: true', () => {
+      const source = StageThreeValidationService.registerValidationSource({
+        documentId: 'DOC-SP1-REG',
+        clientId: FOCUSED_CLIENT_ID,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        collectionVersion: 1,
+        documentVersion: 1,
+        documentCategory: 'Form W-2',
+        originalFilename: 'W2_2025_Verified.pdf',
+        sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        OCRArtifactId: 'OCR-SP1-W2',
+        extractionArtifactId: 'EXT-SP1-W2',
+        pageNumber: 1,
+        fieldName: 'box1_wages',
+        rawExtractedValue: '$115,000.00',
+        normalizedValue: '115000.00',
+        sourceTier: 'AUTHORITATIVE',
+        AIConfidence: 0.99,
+        isAiProposedOnly: true,
+        humanReviewStatus: 'REVIEWED_APPROVED',
+        validationStatus: 'VALIDATED'
+      });
+
+      expect(source.validationSourceId).toMatch(/^VSR-2025-\d+/);
+      expect(source.isAiProposedOnly).toBe(true);
+      expect(source.sourceTier).toBe('AUTHORITATIVE');
+      expect(source.OCRArtifactId).toBe('OCR-SP1-W2');
+
+      const retrieved = StageThreeValidationService.getValidationSources(FOCUSED_CLIENT_ID, FOCUSED_TAX_YEAR);
+      const match = retrieved.find(s => s.documentId === 'DOC-SP1-REG');
+      expect(match).toBeDefined();
+      expect(match?.normalizedValue).toBe('115000.00');
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-003 — Source Integrity Verification
+    // ------------------------------------------------------------------------
+    it('TG-VAL-003: Source Integrity Verification verifies valid SHA-256 hashes and flags corrupted or quarantined files', () => {
+      // 1. Valid document with valid 64-character SHA-256 hash and passed security status
+      const validDoc = {
+        documentId: 'DOC-INT-01',
+        clientId: FOCUSED_CLIENT_ID,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        uploaderSource: 'client_portal' as const,
+        uploadedBy: 'Client User',
+        originalFileName: 'Legit_Document.pdf',
+        fileSizeBytes: 45000,
+        mimeType: 'application/pdf',
+        claimedCategory: 'Form W-2',
+        sha256Hash: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+        uploadTimestamp: new Date().toISOString(),
+        processingStatus: 'Accepted' as const,
+        isVerified: true,
+        securityCheckStatus: 'Passed (SHA-256 Validated)' as const
+      };
+      const validCheck = StageThreeValidationService.verifyDocumentIntegrity(validDoc);
+      expect(validCheck.integrityStatus).toBe('VERIFIED');
+      expect(validCheck.isHashFormatValid).toBe(true);
+
+      // 2. Corrupted/tampered hash (not 64-char hex)
+      const tamperedDoc = {
+        ...validDoc,
+        documentId: 'DOC-INT-02',
+        originalFileName: 'Tampered_Document.pdf',
+        sha256Hash: 'invalid-corrupted-hash-123'
+      };
+      const tamperedCheck = StageThreeValidationService.verifyDocumentIntegrity(tamperedDoc);
+      expect(tamperedCheck.integrityStatus).toBe('TAMPERED_OR_INVALID');
+      expect(tamperedCheck.isHashFormatValid).toBe(false);
+
+      // 3. Quarantined document
+      const quarantinedDoc = {
+        ...validDoc,
+        documentId: 'DOC-INT-03',
+        originalFileName: 'Malicious_Document.pdf',
+        securityCheckStatus: 'Quarantined' as const
+      };
+      const quarantineCheck = StageThreeValidationService.verifyDocumentIntegrity(quarantinedDoc);
+      expect(quarantineCheck.integrityStatus).toBe('QUARANTINED');
+      expect(quarantineCheck.isQuarantined).toBe(true);
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-004 — Taxpayer Identity Consistency
+    // ------------------------------------------------------------------------
+    it('TG-VAL-004: Taxpayer Identity Consistency verifies exact matches, detects partial matches, and blocks identity mismatches', () => {
+      const IDENTITY_CLIENT = 'cli_val_identity_test';
+      const MASTER_LEGAL_NAME = 'Perotti Consulting Services, LLC';
+
+      // 1. Exact match source
+      StageThreeValidationService.registerValidationSource({
+        documentId: 'DOC-ID-EXACT',
+        clientId: IDENTITY_CLIENT,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        collectionVersion: 1,
+        documentVersion: 1,
+        documentCategory: 'Form W-2',
+        originalFilename: 'W2_Matching.pdf',
+        sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        OCRArtifactId: 'OCR-ID-1',
+        extractionArtifactId: 'EXT-ID-1',
+        pageNumber: 1,
+        fieldName: 'business_name',
+        rawExtractedValue: 'Perotti Consulting Services, LLC',
+        normalizedValue: 'Perotti Consulting Services, LLC',
+        sourceTier: 'AUTHORITATIVE',
+        AIConfidence: 0.99,
+        isAiProposedOnly: true,
+        humanReviewStatus: 'REVIEWED_APPROVED',
+        validationStatus: 'VALIDATED'
+      });
+
+      const exactFindings = StageThreeValidationService.runTaxpayerIdentityValidation(
+        IDENTITY_CLIENT,
+        FOCUSED_TAX_YEAR,
+        { legalName: MASTER_LEGAL_NAME }
+      );
+      expect(exactFindings.length).toBe(1);
+      expect(exactFindings[0].matchResult).toBe('EXACT_MATCH');
+      expect(exactFindings[0].isBlocking).toBe(false);
+
+      // 2. Mismatch source
+      StageThreeValidationService.registerValidationSource({
+        documentId: 'DOC-ID-MISMATCH',
+        clientId: IDENTITY_CLIENT,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        collectionVersion: 1,
+        documentVersion: 1,
+        documentCategory: 'Form 1099-NEC',
+        originalFilename: '1099_Wrong_Entity.pdf',
+        sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        OCRArtifactId: 'OCR-ID-2',
+        extractionArtifactId: 'EXT-ID-2',
+        pageNumber: 1,
+        fieldName: 'recipient_name',
+        rawExtractedValue: 'Acme Heavy Industries, Inc.',
+        normalizedValue: 'Acme Heavy Industries, Inc.',
+        sourceTier: 'AUTHORITATIVE',
+        AIConfidence: 0.98,
+        isAiProposedOnly: true,
+        humanReviewStatus: 'UNREVIEWED',
+        validationStatus: 'UNVALIDATED'
+      });
+
+      const allFindings = StageThreeValidationService.runTaxpayerIdentityValidation(
+        IDENTITY_CLIENT,
+        FOCUSED_TAX_YEAR,
+        { legalName: MASTER_LEGAL_NAME }
+      );
+      const mismatch = allFindings.find(f => f.documentId === 'DOC-ID-MISMATCH');
+      expect(mismatch).toBeDefined();
+      expect(mismatch?.matchResult).toBe('MISMATCH');
+      expect(mismatch?.isBlocking).toBe(true);
+
+      const conflicts = StageThreeValidationService.getConflicts(IDENTITY_CLIENT, FOCUSED_TAX_YEAR);
+      expect(conflicts.some(c => c.conflictCategory === 'IDENTITY_MISMATCH')).toBe(true);
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-005 — TIN/EIN Consistency
+    // ------------------------------------------------------------------------
+    it('TG-VAL-005: TIN/EIN Consistency validates tax ID formats, masks output, and detects profile mismatches', () => {
+      const TIN_CLIENT = 'cli_val_tin_test';
+      const MASTER_EIN = '84-1928374';
+
+      // 1. Matching EIN source
+      StageThreeValidationService.registerValidationSource({
+        documentId: 'DOC-TIN-MATCH',
+        clientId: TIN_CLIENT,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        collectionVersion: 1,
+        documentVersion: 1,
+        documentCategory: 'Form 1120-S',
+        originalFilename: '1120S_Return.pdf',
+        sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        OCRArtifactId: 'OCR-TIN-1',
+        extractionArtifactId: 'EXT-TIN-1',
+        pageNumber: 1,
+        fieldName: 'ein',
+        rawExtractedValue: '84-1928374',
+        normalizedValue: '84-1928374',
+        sourceTier: 'AUTHORITATIVE',
+        AIConfidence: 0.99,
+        isAiProposedOnly: true,
+        humanReviewStatus: 'REVIEWED_APPROVED',
+        validationStatus: 'VALIDATED'
+      });
+
+      // 2. Mismatched EIN source
+      StageThreeValidationService.registerValidationSource({
+        documentId: 'DOC-TIN-MISMATCH',
+        clientId: TIN_CLIENT,
+        engagementId: FOCUSED_ENGAGEMENT_ID,
+        taxYear: FOCUSED_TAX_YEAR,
+        collectionVersion: 1,
+        documentVersion: 1,
+        documentCategory: 'Form 941',
+        originalFilename: '941_Wrong_EIN.pdf',
+        sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        OCRArtifactId: 'OCR-TIN-2',
+        extractionArtifactId: 'EXT-TIN-2',
+        pageNumber: 1,
+        fieldName: 'employer_ein',
+        rawExtractedValue: '12-3456789',
+        normalizedValue: '12-3456789',
+        sourceTier: 'AUTHORITATIVE',
+        AIConfidence: 0.99,
+        isAiProposedOnly: true,
+        humanReviewStatus: 'UNREVIEWED',
+        validationStatus: 'UNVALIDATED'
+      });
+
+      const findings = StageThreeValidationService.runTinEinValidation(
+        TIN_CLIENT,
+        FOCUSED_TAX_YEAR,
+        { einTin: MASTER_EIN }
+      );
+
+      const matchingFinding = findings.find(f => f.documentId === 'DOC-TIN-MATCH');
+      expect(matchingFinding).toBeDefined();
+      expect(matchingFinding?.matchResult).toBe('EXACT_MATCH');
+      expect(matchingFinding?.maskedObservedTin).toBe('***-**-8374');
+      expect(matchingFinding?.isBlocking).toBe(false);
+
+      const mismatchFinding = findings.find(f => f.documentId === 'DOC-TIN-MISMATCH');
+      expect(mismatchFinding).toBeDefined();
+      expect(mismatchFinding?.matchResult).toBe('MISMATCH');
+      expect(mismatchFinding?.maskedObservedTin).toBe('***-**-6789');
+      expect(mismatchFinding?.isBlocking).toBe(true);
+
+      const conflicts = StageThreeValidationService.getConflicts(TIN_CLIENT, FOCUSED_TAX_YEAR);
+      expect(conflicts.some(c => c.conflictCategory === 'TIN_MISMATCH')).toBe(true);
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-006 — Tax-Year Consistency
+    // ------------------------------------------------------------------------
+    it('TG-VAL-006: Tax-Year Consistency confirms active tax year, detects prior-year documents, and flags corrected forms', () => {
+      const YEAR_CLIENT = 'cli_val_year_engine';
+
+      (StageTwoCollectionService as any).inMemoryUploads.set(`${YEAR_CLIENT}_2025`, [
+        {
+          documentId: 'DOC-YR-CURR',
+          clientId: YEAR_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'Payroll_Summary_2025.pdf',
+          fileSizeBytes: 30000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Payroll Summary',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        },
+        {
+          documentId: 'DOC-YR-PRIOR',
+          clientId: YEAR_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'W2_PriorYear_2023.pdf',
+          fileSizeBytes: 28000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Form W-2',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        },
+        {
+          documentId: 'DOC-YR-CORR',
+          clientId: YEAR_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'W2c_Corrected_2025.pdf',
+          fileSizeBytes: 32000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Form W-2c',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        }
+      ]);
+
+      const findings = StageThreeValidationService.runTaxYearConsistencyValidation(YEAR_CLIENT, 2025);
+      expect(findings.length).toBe(3);
+
+      const currFinding = findings.find(f => f.documentId === 'DOC-YR-CURR');
+      expect(currFinding?.isCorrectTaxYear).toBe(true);
+      expect(currFinding?.isBlocking).toBe(false);
+
+      const priorFinding = findings.find(f => f.documentId === 'DOC-YR-PRIOR');
+      expect(priorFinding?.isCorrectTaxYear).toBe(false);
+      expect(priorFinding?.isPriorYear).toBe(true);
+      expect(priorFinding?.isBlocking).toBe(true);
+
+      const corrFinding = findings.find(f => f.documentId === 'DOC-YR-CORR');
+      expect(corrFinding?.isCorrectedForm).toBe(true);
+      expect(corrFinding?.isCorrectTaxYear).toBe(true);
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-007 — Entity Classification Validation
+    // ------------------------------------------------------------------------
+    it('TG-VAL-007: Entity Classification Validation verifies compatible documents and flags incompatible entity tax returns', () => {
+      const ENTITY_CLIENT = 'cli_val_entity_class';
+
+      (StageTwoCollectionService as any).inMemoryUploads.set(`${ENTITY_CLIENT}_2025`, [
+        {
+          documentId: 'DOC-ENT-COMPAT',
+          clientId: ENTITY_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'Form_1120S_Draft.pdf',
+          fileSizeBytes: 55000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Form 1120-S',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        },
+        {
+          documentId: 'DOC-ENT-INCOMPAT',
+          clientId: ENTITY_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'Partnership_Form_1065.pdf',
+          fileSizeBytes: 60000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Form 1065',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        }
+      ]);
+
+      const findings = StageThreeValidationService.runEntityClassificationValidation(
+        ENTITY_CLIENT,
+        2025,
+        'S-Corporation'
+      );
+
+      const compat = findings.find(f => f.documentId === 'DOC-ENT-COMPAT');
+      expect(compat?.compatibilityStatus).toBe('COMPATIBLE');
+      expect(compat?.isBlocking).toBe(false);
+
+      const incompat = findings.find(f => f.documentId === 'DOC-ENT-INCOMPAT');
+      expect(incompat?.compatibilityStatus).toBe('INCOMPATIBLE');
+      expect(incompat?.isBlocking).toBe(true);
+
+      const conflicts = StageThreeValidationService.getConflicts(ENTITY_CLIENT, 2025);
+      expect(conflicts.some(c => c.conflictCategory === 'ENTITY_TYPE_MISMATCH')).toBe(true);
+    });
+
+    // ------------------------------------------------------------------------
+    // TG-VAL-008 — Controlled Tax Form Validation
+    // ------------------------------------------------------------------------
+    it('TG-VAL-008: Controlled Tax Form Validation verifies mandatory IRS fields and raises exceptions for missing required items', () => {
+      const FORM_CLIENT = 'cli_val_controlled_form';
+
+      (StageTwoCollectionService as any).inMemoryUploads.set(`${FORM_CLIENT}_2025`, [
+        {
+          documentId: 'DOC-FORM-W2-COMPLETE',
+          clientId: FORM_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'Complete_W2.pdf',
+          fileSizeBytes: 35000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Form W-2',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        },
+        {
+          documentId: 'DOC-FORM-W2-DEFECTIVE',
+          clientId: FORM_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          uploaderSource: 'client_portal',
+          uploadedBy: 'Client User',
+          originalFileName: 'Defective_W2.pdf',
+          fileSizeBytes: 31000,
+          mimeType: 'application/pdf',
+          claimedCategory: 'Form W-2',
+          sha256Hash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          uploadTimestamp: new Date().toISOString(),
+          processingStatus: 'Accepted',
+          isVerified: true,
+          securityCheckStatus: 'Passed (SHA-256 Validated)'
+        }
+      ]);
+
+      // Complete W-2 has all mandatory fields
+      ['employer_name', 'employer_ein', 'employee_ssn', 'box1_wages', 'box2_fed_withheld'].forEach(field => {
+        StageThreeValidationService.registerValidationSource({
+          documentId: 'DOC-FORM-W2-COMPLETE',
+          clientId: FORM_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          collectionVersion: 1,
+          documentVersion: 1,
+          documentCategory: 'Form W-2',
+          originalFilename: 'Complete_W2.pdf',
+          sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          OCRArtifactId: 'OCR-W2-C',
+          extractionArtifactId: 'EXT-W2-C',
+          pageNumber: 1,
+          fieldName: field,
+          rawExtractedValue: field === 'employer_name' ? 'Acme Corp' : '50000',
+          normalizedValue: field === 'employer_name' ? 'Acme Corp' : '50000',
+          sourceTier: 'AUTHORITATIVE',
+          AIConfidence: 0.99,
+          isAiProposedOnly: true,
+          humanReviewStatus: 'REVIEWED_APPROVED',
+          validationStatus: 'VALIDATED'
+        });
+      });
+
+      // Defective W-2 is missing employee_ssn and box2_fed_withheld
+      ['employer_name', 'employer_ein', 'box1_wages'].forEach(field => {
+        StageThreeValidationService.registerValidationSource({
+          documentId: 'DOC-FORM-W2-DEFECTIVE',
+          clientId: FORM_CLIENT,
+          engagementId: FOCUSED_ENGAGEMENT_ID,
+          taxYear: 2025,
+          collectionVersion: 1,
+          documentVersion: 1,
+          documentCategory: 'Form W-2',
+          originalFilename: 'Defective_W2.pdf',
+          sourceHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          OCRArtifactId: 'OCR-W2-D',
+          extractionArtifactId: 'EXT-W2-D',
+          pageNumber: 1,
+          fieldName: field,
+          rawExtractedValue: 'Data',
+          normalizedValue: 'Data',
+          sourceTier: 'AUTHORITATIVE',
+          AIConfidence: 0.95,
+          isAiProposedOnly: true,
+          humanReviewStatus: 'UNREVIEWED',
+          validationStatus: 'UNVALIDATED'
+        });
+      });
+
+      const results = StageThreeValidationService.runControlledTaxFormValidation(FORM_CLIENT, 2025);
+      expect(results.length).toBe(2);
+
+      const completeResult = results.find(r => r.documentId === 'DOC-FORM-W2-COMPLETE');
+      expect(completeResult?.status).toBe('VALID');
+      expect(completeResult?.isBlocking).toBe(false);
+      expect(completeResult?.missingFields.length).toBe(0);
+
+      const defectiveResult = results.find(r => r.documentId === 'DOC-FORM-W2-DEFECTIVE');
+      expect(defectiveResult?.status).toBe('MISSING_MANDATORY_FIELDS');
+      expect(defectiveResult?.isBlocking).toBe(true);
+      expect(defectiveResult?.missingFields).toContain('Employee SSN');
+      expect(defectiveResult?.missingFields).toContain('Box 2 Federal Tax Withheld');
+
+      const exceptions = StageThreeValidationService.getExceptions(FORM_CLIENT, 2025);
+      expect(exceptions.some(e => e.category === 'CONTROLLED_FORM_DEFECT')).toBe(true);
+    });
+  });
 });
+

@@ -280,8 +280,8 @@ export const ClientMessagesTasksSection: React.FC<ClientMessagesTasksSectionProp
                   {activeThread.assignedTo.includes('Desmond') && (
                     <div className="w-10 h-10 rounded-full border border-[#D7AC4A] overflow-hidden flex-shrink-0 bg-[#061A2F]">
                       <img
-                        src="/images/Desmond-CEO-PROFILE.png"
-                        alt="Desmond Hinds, CEO"
+                        src="/ceo/123456789-desmond.png"
+                        alt="Desmond Hinds, Founder and Chief Executive Officer of A/R Tax Services, LLC"
                         className="w-full h-full object-cover object-top"
                       />
                     </div>

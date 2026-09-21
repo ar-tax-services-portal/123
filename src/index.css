@@ -162,3 +162,21 @@
   outline: 2px solid #C99A3D;
   outline-offset: 2px;
 }
+
+/* CEO Portrait display specification */
+.ceo-photo {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Homepage Hero CEO Image specification */
+.home-ceo-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}

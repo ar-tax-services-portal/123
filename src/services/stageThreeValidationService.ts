@@ -43,14 +43,32 @@ import {
 // ============================================================================
 
 export const CANONICAL_STAGE_THREE_FEATURE_REGISTRY = {
+  // Canonical Stage 03 Validation Architecture Registry (TG-VAL-001 through TG-VAL-012)
   'TG-VAL-001': 'Centralized Stage 03 Validation Workspace Context',
   'TG-VAL-002': 'Stage 02 -> Stage 03 Handoff Validator',
   'TG-VAL-003': 'Validation Source Registry with Immutable Provenance',
   'TG-VAL-004': 'Identity & Entity Consistency Engine',
   'TG-VAL-005': 'Tax-Year & Period Consistency Engine',
   'TG-VAL-006': 'Cross-Document Consistency Engine (Multi-Rule Reconciler)',
-  'TG-VAL-007': 'Mathematical & Structural Validation Engine (Arithmetic & Balance Checks)',
+  'TG-VAL-007': 'Mathematical & Structural Validation Engine',
   'TG-VAL-008': 'Authoritative Source Hierarchy & Conflict Arbitrator',
+  // Preserved Downstream Features
+  'TG-VAL-009': 'Validation Conflict Engine & Multi-Source Reconciliation',
+  'TG-VAL-010': 'Validation Exception Registry (Separate from Stage 02)',
+  'TG-VAL-011': 'Operational Human Validation Review Queue & Maker-Checker',
+  'TG-VAL-012': 'Validation Provenance Ledger & Audit Logging'
+} as const;
+
+// Granular Sub-Feature & Module Registry for Sprint 1 Intake, Integrity & Consistency Verification
+export const STAGE_THREE_SUB_FEATURE_REGISTRY = {
+  'TG-VAL-001': 'Stage 02 Certified Intake',
+  'TG-VAL-002': 'Validation Source Registry',
+  'TG-VAL-003': 'Source Integrity Verification',
+  'TG-VAL-004': 'Taxpayer Identity Consistency',
+  'TG-VAL-005': 'TIN/EIN Consistency',
+  'TG-VAL-006': 'Tax-Year Consistency',
+  'TG-VAL-007': 'Entity Classification Validation',
+  'TG-VAL-008': 'Controlled Tax Form Validation',
   'TG-VAL-009': 'Validation Conflict Engine & Multi-Source Reconciliation',
   'TG-VAL-010': 'Validation Exception Registry (Separate from Stage 02)',
   'TG-VAL-011': 'Operational Human Validation Review Queue & Maker-Checker',
@@ -107,6 +125,93 @@ export interface ValidationSourceRecord {
   createdAt: string;
   updatedAt: string;
   correlationId: string;
+}
+
+// TG-VAL-003: Source Integrity Result
+export interface SourceIntegrityResult {
+  documentId: string;
+  fileName: string;
+  sha256Hash: string;
+  isHashFormatValid: boolean;
+  securityCheckStatus: string;
+  processingStatus: string;
+  isQuarantined: boolean;
+  integrityStatus: 'VERIFIED' | 'TAMPERED_OR_INVALID' | 'QUARANTINED' | 'UNPROCESSED';
+  details: string;
+}
+
+// TG-VAL-004: Taxpayer Identity Finding
+export interface TaxpayerIdentityFinding {
+  findingId: string;
+  documentId: string;
+  documentName: string;
+  fieldName: string;
+  profileLegalName: string;
+  observedName: string;
+  matchResult: 'EXACT_MATCH' | 'PARTIAL_MATCH' | 'MISMATCH';
+  isBlocking: boolean;
+  details: string;
+}
+
+// TG-VAL-005: TIN/EIN Validation Finding
+export interface TinEinValidationFinding {
+  findingId: string;
+  documentId: string;
+  documentName: string;
+  fieldName: string;
+  tinType: 'SSN' | 'EIN' | 'ITIN' | 'UNKNOWN';
+  profileTin: string;
+  observedTin: string;
+  maskedObservedTin: string;
+  isFormatValid: boolean;
+  matchResult: 'EXACT_MATCH' | 'MISMATCH' | 'INVALID_FORMAT';
+  isBlocking: boolean;
+  details: string;
+}
+
+// TG-VAL-006: Tax-Year Consistency Finding
+export interface TaxYearConsistencyFinding {
+  findingId: string;
+  documentId: string;
+  documentName: string;
+  expectedTaxYear: number;
+  observedTaxYear: number;
+  periodType: 'ANNUAL' | 'QUARTERLY' | 'MONTHLY' | 'FISCAL';
+  isCorrectTaxYear: boolean;
+  isCorrectedForm: boolean;
+  isPriorYear: boolean;
+  details: string;
+  isBlocking: boolean;
+}
+
+// TG-VAL-007: Entity Classification Finding
+export interface EntityClassificationFinding {
+  findingId: string;
+  documentId: string;
+  documentName: string;
+  documentCategory: string;
+  clientEntityClassification: string;
+  compatibilityStatus: 'COMPATIBLE' | 'INCOMPATIBLE' | 'REQUIRES_EXPLANATION';
+  isBlocking: boolean;
+  details: string;
+}
+
+// TG-VAL-008: Controlled Tax Form Validation Result
+export interface ControlledTaxFormValidationResult {
+  validationId: string;
+  documentId: string;
+  documentName: string;
+  formType: string;
+  status: 'VALID' | 'MISSING_MANDATORY_FIELDS' | 'INVALID_STRUCTURE';
+  mandatoryFieldsEvaluated: Array<{
+    fieldName: string;
+    label: string;
+    isPresent: boolean;
+    value: any;
+  }>;
+  missingFields: string[];
+  isBlocking: boolean;
+  details: string;
 }
 
 export type IdentityFindingType =
@@ -575,7 +680,7 @@ export class StageThreeValidationService {
       userEmail: 'system@artaxservices.com',
       userRole: 'system',
       action: 'VALIDATION_SOURCE_REGISTERED',
-      recordType: 'verification',
+      recordType: 'document',
       recordId: validationSourceId,
       ipAddress: '127.0.0.1 (Validation Service)',
       result: 'success',
@@ -604,6 +709,58 @@ export class StageThreeValidationService {
     return record;
   }
 
+  // --------------------------------------------------------------------------
+  // TG-VAL-003: SOURCE INTEGRITY VERIFICATION
+  // --------------------------------------------------------------------------
+
+  /**
+   * Verifies SHA-256 cryptographic hash integrity and security check status
+   * for a specific uploaded document before or during validation intake.
+   */
+  public static verifyDocumentIntegrity(doc: StageTwoUploadedDocument): SourceIntegrityResult {
+    const isHashFormatValid = /^[a-f0-9]{64}$/i.test(doc.sha256Hash || '');
+    const isSecurityPassed = doc.securityCheckStatus === 'Passed (SHA-256 Validated)';
+    const isQuarantined = doc.securityCheckStatus === 'Quarantined' || doc.quarantineStatus === 'QUARANTINED';
+    const isNotRejected = doc.processingStatus !== 'Rejected';
+
+    let integrityStatus: SourceIntegrityResult['integrityStatus'] = 'VERIFIED';
+    let details = 'Source document cryptographic SHA-256 integrity and security clearance verified.';
+
+    if (!isHashFormatValid) {
+      integrityStatus = 'TAMPERED_OR_INVALID';
+      details = `Invalid SHA-256 hash structure for '${doc.originalFileName}'. Potential corruption or tampering.`;
+    } else if (isQuarantined) {
+      integrityStatus = 'QUARANTINED';
+      details = `Document '${doc.originalFileName}' is quarantined and blocked from validation intake.`;
+    } else if (!isSecurityPassed) {
+      integrityStatus = 'TAMPERED_OR_INVALID';
+      details = `Security check status is '${doc.securityCheckStatus}'. Cryptographic verification required.`;
+    } else if (!isNotRejected) {
+      integrityStatus = 'TAMPERED_OR_INVALID';
+      details = `Document '${doc.originalFileName}' was rejected in Stage 02 and cannot be admitted to Stage 03.`;
+    }
+
+    return {
+      documentId: doc.documentId,
+      fileName: doc.originalFileName,
+      sha256Hash: doc.sha256Hash,
+      isHashFormatValid,
+      securityCheckStatus: doc.securityCheckStatus,
+      processingStatus: doc.processingStatus,
+      isQuarantined,
+      integrityStatus,
+      details
+    };
+  }
+
+  /**
+   * Performs source integrity verification across all uploaded documents for the client and tax year.
+   */
+  public static verifySourceIntegrity(clientId: string, taxYear: number): SourceIntegrityResult[] {
+    const docs = StageTwoCollectionService.getUploadedDocuments(clientId, taxYear);
+    return docs.map(doc => this.verifyDocumentIntegrity(doc));
+  }
+
   /**
    * Synchronizes sources from Stage 02 accepted documents and tie-outs into Stage 03.
    */
@@ -616,10 +773,7 @@ export class StageThreeValidationService {
 
     docs.forEach(doc => {
       // Invariant: Only cleared, non-quarantined, non-rejected documents sync into validation
-     if (
-  doc.securityCheckStatus === 'Quarantined' ||
-  doc.processingStatus === 'Rejected'
-) {
+      if (doc.securityCheckStatus === 'Quarantined' || doc.quarantineStatus === 'QUARANTINED' || doc.processingStatus === 'Rejected') {
         return;
       }
 
@@ -641,22 +795,18 @@ export class StageThreeValidationService {
               engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
               taxYear,
               collectionVersion: 1,
-              documentVersion:
-  doc.intelligenceRecord?.versionIntelligence?.versionNumber ?? 1, 
+              documentVersion: doc.intelligenceRecord?.versionIntelligence?.versionNumber || 1,
               documentCategory: doc.claimedCategory,
               originalFilename: doc.originalFileName,
               sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-             OCRArtifactId:
-  doc.intelligenceRecord?.ocrArtifact?.ocrArtifactId ??
-  `OCR-${doc.documentId}`,
+              OCRArtifactId: doc.intelligenceRecord?.ocrArtifact?.ocrArtifactId || `OCR-${doc.documentId}`,
               extractionArtifactId: `EXT-${doc.documentId}`,
               pageNumber: 1,
               fieldName: field,
               rawExtractedValue: String(val),
               normalizedValue: String(val),
               sourceTier: tier,
-              AIConfidence:
-  doc.intelligenceRecord?.overallExtractionConfidence ?? 0,
+              AIConfidence: doc.intelligenceRecord?.overallExtractionConfidence || 0.95,
               isAiProposedOnly: true,
               humanReviewStatus: doc.isVerified ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
               validationStatus: 'UNVALIDATED'
@@ -671,8 +821,7 @@ export class StageThreeValidationService {
             engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
             taxYear,
             collectionVersion: 1,
-            documentVersion:
-  doc.intelligenceRecord?.versionIntelligence?.versionNumber ?? 1,
+            documentVersion: doc.intelligenceRecord?.versionIntelligence?.versionNumber || 1,
             documentCategory: doc.claimedCategory,
             originalFilename: doc.originalFileName,
             sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
@@ -697,7 +846,214 @@ export class StageThreeValidationService {
   }
 
   // --------------------------------------------------------------------------
-  // TG-VAL-004: IDENTITY & ENTITY CONSISTENCY ENGINE
+  // TG-VAL-004: TAXPAYER IDENTITY CONSISTENCY
+  // --------------------------------------------------------------------------
+
+  /**
+   * Compares taxpayer legal name and DBA across sources against client profile.
+   * Categorizes as EXACT_MATCH, PARTIAL_MATCH, or MISMATCH, raising blocking conflicts on mismatch.
+   */
+  public static runTaxpayerIdentityValidation(
+    clientId: string,
+    taxYear: number,
+    expectedProfile?: {
+      legalName: string;
+      dba?: string;
+    }
+  ): TaxpayerIdentityFinding[] {
+    const sources = this.getValidationSources(clientId, taxYear);
+    const findings: TaxpayerIdentityFinding[] = [];
+
+    const ctx = StageTwoCollectionService.getWorkspaceContext(clientId, taxYear);
+    const legalName = expectedProfile?.legalName || ctx.entityName;
+    const dba = expectedProfile?.dba;
+
+    sources.forEach(source => {
+      const field = source.fieldName.toLowerCase();
+      if (
+        field === 'employee_name' ||
+        field === 'taxpayer_name' ||
+        field === 'business_name' ||
+        field === 'legal_name' ||
+        field === 'recipient_name' ||
+        field === 'payer_name'
+      ) {
+        const observed = String(source.normalizedValue).trim();
+        const obsLower = observed.toLowerCase();
+        const expLower = legalName.trim().toLowerCase();
+        const dbaLower = dba?.trim().toLowerCase();
+
+        let matchResult: 'EXACT_MATCH' | 'PARTIAL_MATCH' | 'MISMATCH' = 'EXACT_MATCH';
+        let isBlocking = false;
+        let details = `Taxpayer identity match: observed name '${observed}' matches client legal name.`;
+
+        if (obsLower === expLower || (dbaLower && obsLower === dbaLower)) {
+          matchResult = 'EXACT_MATCH';
+        } else if (obsLower.includes(expLower) || expLower.includes(obsLower) || (dbaLower && obsLower.includes(dbaLower))) {
+          matchResult = 'PARTIAL_MATCH';
+          details = `Partial identity match: observed '${observed}' shares common root with '${legalName}'.`;
+        } else {
+          matchResult = 'MISMATCH';
+          isBlocking = true;
+          details = `Taxpayer identity mismatch! Document gives '${observed}', but profile specifies '${legalName}'.`;
+
+          this.createConflict({
+            clientId,
+            taxYear,
+            conflictCategory: 'IDENTITY_MISMATCH',
+            affectedField: source.fieldName,
+            sourceA: {
+              sourceId: source.validationSourceId,
+              documentId: source.documentId,
+              documentName: source.originalFilename,
+              value: source.normalizedValue,
+              sourceTier: source.sourceTier
+            },
+            sourceB: {
+              sourceId: 'SYS_ENGAGEMENT_PROFILE',
+              documentId: 'PROFILE',
+              documentName: 'Engagement Master Profile',
+              value: legalName,
+              sourceTier: 'AUTHORITATIVE'
+            },
+            observedValues: `Doc: "${observed}" vs Profile: "${legalName}"`,
+            variance: 'NAME_DIFFERENCE',
+            materiality: 'MATERIAL',
+            severity: 'HIGH',
+            blockingStatus: true
+          });
+        }
+
+        findings.push({
+          findingId: `IDF-${Math.random().toString(36).substring(2, 9)}`,
+          documentId: source.documentId,
+          documentName: source.originalFilename,
+          fieldName: source.fieldName,
+          profileLegalName: legalName,
+          observedName: observed,
+          matchResult,
+          isBlocking,
+          details
+        });
+      }
+    });
+
+    return findings;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-005: TIN/EIN CONSISTENCY
+  // --------------------------------------------------------------------------
+
+  /**
+   * Evaluates SSN / EIN / ITIN format validity and consistency across source documents against profile.
+   * Masks tax IDs in findings and raises critical blocking conflicts on TIN mismatch.
+   */
+  public static runTinEinValidation(
+    clientId: string,
+    taxYear: number,
+    expectedProfile?: {
+      einTin: string;
+    }
+  ): TinEinValidationFinding[] {
+    const sources = this.getValidationSources(clientId, taxYear);
+    const findings: TinEinValidationFinding[] = [];
+
+    const expectedTin = expectedProfile?.einTin || '84-1928374';
+    const cleanExpected = expectedTin.replace(/\D/g, '');
+
+    sources.forEach(source => {
+      const field = source.fieldName.toLowerCase();
+      if (
+        field === 'ein' ||
+        field === 'ssn' ||
+        field === 'tin' ||
+        field === 'employer_ein' ||
+        field === 'employee_ssn' ||
+        field === 'recipient_tin' ||
+        field === 'payer_tin'
+      ) {
+        const rawVal = String(source.normalizedValue).trim();
+        const cleanVal = rawVal.replace(/\D/g, '');
+
+        let tinType: 'SSN' | 'EIN' | 'ITIN' | 'UNKNOWN' = 'UNKNOWN';
+        let isFormatValid = false;
+
+        if (cleanVal.length === 9) {
+          if (field.includes('ssn') || cleanVal.startsWith('9')) {
+            isFormatValid = !cleanVal.startsWith('000') && !cleanVal.startsWith('666');
+            tinType = cleanVal.startsWith('9') ? 'ITIN' : 'SSN';
+          } else {
+            isFormatValid = true;
+            tinType = 'EIN';
+          }
+        }
+
+        const isMatch = cleanVal === cleanExpected;
+        let matchResult: 'EXACT_MATCH' | 'MISMATCH' | 'INVALID_FORMAT' = isMatch ? 'EXACT_MATCH' : 'MISMATCH';
+        if (!isFormatValid) {
+          matchResult = 'INVALID_FORMAT';
+        }
+
+        let isBlocking = false;
+        let details = `Federal tax ID verified: matches profile (${this.maskTIN(cleanExpected)}).`;
+
+        if (!isFormatValid) {
+          isBlocking = true;
+          details = `Invalid TIN/EIN structure on '${source.fieldName}': expected 9 digits, observed '${rawVal}'.`;
+        } else if (!isMatch) {
+          isBlocking = true;
+          details = `TIN/EIN mismatch: document has ${this.maskTIN(cleanVal)}, expected profile ${this.maskTIN(cleanExpected)}.`;
+
+          this.createConflict({
+              clientId,
+              taxYear,
+              conflictCategory: 'TIN_MISMATCH',
+              affectedField: source.fieldName,
+              sourceA: {
+                sourceId: source.validationSourceId,
+                documentId: source.documentId,
+                documentName: source.originalFilename,
+                value: this.maskTIN(cleanVal),
+                sourceTier: source.sourceTier
+              },
+              sourceB: {
+                sourceId: 'SYS_ENGAGEMENT_PROFILE',
+                documentId: 'PROFILE',
+                documentName: 'Engagement Master Profile',
+                value: this.maskTIN(cleanExpected),
+                sourceTier: 'AUTHORITATIVE'
+              },
+              observedValues: `${this.maskTIN(cleanVal)} vs ${this.maskTIN(cleanExpected)}`,
+              variance: 'TIN_DIFFERENCE',
+              materiality: 'MATERIAL',
+              severity: 'CRITICAL',
+              blockingStatus: true
+            });
+        }
+
+        findings.push({
+          findingId: `TIN-${Math.random().toString(36).substring(2, 9)}`,
+          documentId: source.documentId,
+          documentName: source.originalFilename,
+          fieldName: source.fieldName,
+          tinType,
+          profileTin: this.maskTIN(cleanExpected),
+          observedTin: rawVal,
+          maskedObservedTin: this.maskTIN(cleanVal),
+          isFormatValid,
+          matchResult,
+          isBlocking,
+          details
+        });
+      }
+    });
+
+    return findings;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-004 (LEGACY/UI ALIAS): IDENTITY & ENTITY CONSISTENCY ENGINE
   // --------------------------------------------------------------------------
 
   public static runIdentityEntityValidation(
@@ -849,7 +1205,300 @@ export class StageThreeValidationService {
   }
 
   // --------------------------------------------------------------------------
-  // TG-VAL-005: TAX-YEAR & PERIOD CONSISTENCY ENGINE
+  // TG-VAL-006: TAX-YEAR CONSISTENCY
+  // --------------------------------------------------------------------------
+
+  /**
+   * Evaluates tax year across source documents against the engagement tax year.
+   * Detects prior-year documents and amended/corrected forms, logging blocking conflicts on mismatch.
+   */
+  public static runTaxYearConsistencyValidation(
+    clientId: string,
+    expectedTaxYear: number
+  ): TaxYearConsistencyFinding[] {
+    const docs = StageTwoCollectionService.getUploadedDocuments(clientId, expectedTaxYear);
+    const findings: TaxYearConsistencyFinding[] = [];
+
+    docs.forEach(doc => {
+      let detectedYear = expectedTaxYear;
+      const yearMatch = doc.originalFileName.match(/(?:^|\D)(20[12]\d)(?:\D|$)/);
+      if (yearMatch) {
+        detectedYear = parseInt(yearMatch[1], 10);
+      }
+
+      const isCorrect = detectedYear === expectedTaxYear;
+      const isPrior = detectedYear < expectedTaxYear;
+      const isCorrected = /c\b|corr|amend/i.test(doc.originalFileName);
+
+      let isBlocking = false;
+      let details = `Tax year verified: ${expectedTaxYear}.`;
+
+      if (!isCorrect) {
+        isBlocking = true;
+        details = `Tax Year Mismatch! File indicates tax year ${detectedYear}, but active engagement is for ${expectedTaxYear}.`;
+
+        this.createConflict({
+          clientId,
+          taxYear: expectedTaxYear,
+          conflictCategory: 'TAX_YEAR_MISMATCH',
+          affectedField: 'tax_year',
+          sourceA: {
+            sourceId: `DOC-${doc.documentId}`,
+            documentId: doc.documentId,
+            documentName: doc.originalFileName,
+            value: detectedYear,
+            sourceTier: 'SUPPORTING'
+          },
+          sourceB: {
+            sourceId: 'SYS_WORKSPACE_YEAR',
+            documentId: 'WORKSPACE',
+            documentName: 'Current Filing Tax Year',
+            value: expectedTaxYear,
+            sourceTier: 'AUTHORITATIVE'
+          },
+          observedValues: `Doc Year: ${detectedYear} vs Required Year: ${expectedTaxYear}`,
+          variance: Math.abs(detectedYear - expectedTaxYear),
+          materiality: 'MATERIAL',
+          severity: 'HIGH',
+          blockingStatus: true
+        });
+      }
+
+      findings.push({
+        findingId: `PER-${Math.random().toString(36).substring(2, 9)}`,
+        documentId: doc.documentId,
+        documentName: doc.originalFileName,
+        expectedTaxYear,
+        observedTaxYear: detectedYear,
+        periodType: 'ANNUAL',
+        isCorrectTaxYear: isCorrect,
+        isCorrectedForm: isCorrected,
+        isPriorYear: isPrior,
+        details,
+        isBlocking
+      });
+    });
+
+    return findings;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-007: ENTITY CLASSIFICATION VALIDATION
+  // --------------------------------------------------------------------------
+
+  /**
+   * Validates that uploaded documents match the client's tax entity classification
+   * (e.g. Individual 1040, S-Corporation 1120-S, Partnership 1065, C-Corporation 1120).
+   * Generates critical blocking conflicts on incompatible returns or schedules.
+   */
+  public static runEntityClassificationValidation(
+    clientId: string,
+    taxYear: number,
+    expectedEntityType?: string
+  ): EntityClassificationFinding[] {
+    const ctx = StageTwoCollectionService.getWorkspaceContext(clientId, taxYear);
+    const entityType = expectedEntityType || ctx.entityType;
+    const docs = StageTwoCollectionService.getUploadedDocuments(clientId, taxYear);
+    const findings: EntityClassificationFinding[] = [];
+
+    docs.forEach(doc => {
+      const cat = doc.claimedCategory.toLowerCase();
+      let compatibilityStatus: 'COMPATIBLE' | 'INCOMPATIBLE' | 'REQUIRES_EXPLANATION' = 'COMPATIBLE';
+      let isBlocking = false;
+      let details = `Document category '${doc.claimedCategory}' is compatible with entity classification '${entityType}'.`;
+
+      if (entityType === 'S-Corporation') {
+        if (cat.includes('1065') || cat.includes('schedule c')) {
+          compatibilityStatus = 'INCOMPATIBLE';
+          isBlocking = true;
+          details = `Entity classification mismatch! Client is an S-Corporation, but received '${doc.claimedCategory}' (Partnership / Sole Prop form).`;
+        }
+      } else if (entityType === 'Partnership') {
+        if (cat.includes('1120-s') || cat.includes('1120') || cat.includes('schedule c')) {
+          compatibilityStatus = 'INCOMPATIBLE';
+          isBlocking = true;
+          details = `Entity classification mismatch! Client is a Partnership (Form 1065), but received '${doc.claimedCategory}'.`;
+        }
+      } else if (entityType === 'Individual') {
+        if (cat.includes('1120-s return') || cat.includes('1065 return') || cat.includes('1120 return')) {
+          compatibilityStatus = 'INCOMPATIBLE';
+          isBlocking = true;
+          details = `Entity classification mismatch! Client is an Individual (Form 1040), but received business income tax return '${doc.claimedCategory}'.`;
+        }
+      } else if (entityType === 'C-Corporation') {
+        if (cat.includes('1120-s') || cat.includes('1065') || cat.includes('schedule c')) {
+          compatibilityStatus = 'INCOMPATIBLE';
+          isBlocking = true;
+          details = `Entity classification mismatch! Client is a C-Corporation (Form 1120), but received '${doc.claimedCategory}'.`;
+        }
+      }
+
+      if (compatibilityStatus === 'INCOMPATIBLE') {
+        this.createConflict({
+          clientId,
+          taxYear,
+          conflictCategory: 'ENTITY_TYPE_MISMATCH',
+          affectedField: 'entity_classification',
+          sourceA: {
+            sourceId: `DOC-${doc.documentId}`,
+            documentId: doc.documentId,
+            documentName: doc.originalFileName,
+            value: doc.claimedCategory,
+            sourceTier: 'AUTHORITATIVE'
+          },
+          sourceB: {
+            sourceId: 'SYS_ENGAGEMENT_PROFILE',
+            documentId: 'PROFILE',
+            documentName: 'Engagement Master Profile',
+            value: entityType,
+            sourceTier: 'AUTHORITATIVE'
+          },
+          observedValues: `Document: "${doc.claimedCategory}" incompatible with "${entityType}"`,
+          variance: 'ENTITY_TYPE_CONFLICT',
+          materiality: 'MATERIAL',
+          severity: 'CRITICAL',
+          blockingStatus: true
+        });
+      }
+
+      findings.push({
+        findingId: `ECF-${Math.random().toString(36).substring(2, 9)}`,
+        documentId: doc.documentId,
+        documentName: doc.originalFileName,
+        documentCategory: doc.claimedCategory,
+        clientEntityClassification: entityType,
+        compatibilityStatus,
+        isBlocking,
+        details
+      });
+    });
+
+    return findings;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-008: CONTROLLED TAX FORM VALIDATION
+  // --------------------------------------------------------------------------
+
+  /**
+   * Validates mandatory structural fields and required data completeness
+   * on controlled tax forms (W-2, 1099-NEC, 1099-MISC, 1099-INT, 1099-DIV, K-1, 941).
+   */
+  public static runControlledTaxFormValidation(
+    clientId: string,
+    taxYear: number
+  ): ControlledTaxFormValidationResult[] {
+    const docs = StageTwoCollectionService.getUploadedDocuments(clientId, taxYear);
+    const sources = this.getValidationSources(clientId, taxYear);
+    const results: ControlledTaxFormValidationResult[] = [];
+
+    const CONTROLLED_FORM_RULES: Record<string, Array<{ fieldName: string; label: string }>> = {
+      'W-2': [
+        { fieldName: 'employer_name', label: 'Employer Name' },
+        { fieldName: 'employer_ein', label: 'Employer EIN' },
+        { fieldName: 'employee_ssn', label: 'Employee SSN' },
+        { fieldName: 'box1_wages', label: 'Box 1 Wages' },
+        { fieldName: 'box2_fed_withheld', label: 'Box 2 Federal Tax Withheld' }
+      ],
+      '1099-NEC': [
+        { fieldName: 'payer_tin', label: 'Payer TIN' },
+        { fieldName: 'recipient_tin', label: 'Recipient TIN' },
+        { fieldName: 'box1_nonemployee_compensation', label: 'Box 1 Nonemployee Compensation' }
+      ],
+      '1099-MISC': [
+        { fieldName: 'payer_tin', label: 'Payer TIN' },
+        { fieldName: 'recipient_tin', label: 'Recipient TIN' }
+      ],
+      '1099-INT': [
+        { fieldName: 'payer_tin', label: 'Payer TIN' },
+        { fieldName: 'recipient_tin', label: 'Recipient TIN' },
+        { fieldName: 'box1_interest_income', label: 'Box 1 Interest Income' }
+      ],
+      '1099-DIV': [
+        { fieldName: 'payer_tin', label: 'Payer TIN' },
+        { fieldName: 'recipient_tin', label: 'Recipient TIN' },
+        { fieldName: 'box1a_total_ordinary_dividends', label: 'Box 1a Total Ordinary Dividends' }
+      ],
+      'K-1': [
+        { fieldName: 'entity_ein', label: 'Entity EIN' },
+        { fieldName: 'partner_or_shareholder_tin', label: 'Partner/Shareholder TIN' }
+      ],
+      '941': [
+        { fieldName: 'employer_ein', label: 'Employer EIN' },
+        { fieldName: 'quarter', label: 'Quarter' },
+        { fieldName: 'total_wages', label: 'Total Wages' }
+      ]
+    };
+
+    docs.forEach(doc => {
+      const matchedFormKey = Object.keys(CONTROLLED_FORM_RULES).find(key =>
+        doc.claimedCategory.toLowerCase().includes(key.toLowerCase())
+      );
+
+      if (matchedFormKey) {
+        const required = CONTROLLED_FORM_RULES[matchedFormKey];
+        const docSources = sources.filter(s => s.documentId === doc.documentId);
+
+        const evaluated: Array<{ fieldName: string; label: string; isPresent: boolean; value: any }> = [];
+        const missing: string[] = [];
+
+        required.forEach(rule => {
+          const found = docSources.find(s => s.fieldName.toLowerCase() === rule.fieldName.toLowerCase());
+          const hasValue = !!found && found.normalizedValue !== '' && found.normalizedValue !== null && found.normalizedValue !== undefined;
+
+          evaluated.push({
+            fieldName: rule.fieldName,
+            label: rule.label,
+            isPresent: hasValue,
+            value: found ? found.normalizedValue : null
+          });
+
+          if (!hasValue) {
+            missing.push(rule.label);
+          }
+        });
+
+        const isMissingFields = missing.length > 0;
+        const status: ControlledTaxFormValidationResult['status'] = isMissingFields ? 'MISSING_MANDATORY_FIELDS' : 'VALID';
+        const isBlocking = isMissingFields;
+        const details = isMissingFields
+          ? `Controlled form '${doc.claimedCategory}' is missing mandatory IRS fields: ${missing.join(', ')}.`
+          : `All mandatory fields for controlled form '${doc.claimedCategory}' are verified and present.`;
+
+        if (isMissingFields) {
+          this.createValidationException({
+            clientId,
+            taxYear,
+            category: 'CONTROLLED_FORM_DEFECT',
+            title: `Missing Mandatory Fields: ${doc.claimedCategory}`,
+            description: `Document '${doc.originalFileName}' fails structural validation. Missing: ${missing.join(', ')}.`,
+            severity: 'HIGH',
+            isBlocking: true,
+            relatedDocumentId: doc.documentId,
+            createdBy: 'Controlled Form Validator',
+            assignedTo: 'Lead Tax Reviewer / CPA'
+          });
+        }
+
+        results.push({
+          validationId: `CFV-${Math.random().toString(36).substring(2, 9)}`,
+          documentId: doc.documentId,
+          documentName: doc.originalFileName,
+          formType: matchedFormKey,
+          status,
+          mandatoryFieldsEvaluated: evaluated,
+          missingFields: missing,
+          isBlocking,
+          details
+        });
+      }
+    });
+
+    return results;
+  }
+
+  // --------------------------------------------------------------------------
+  // TG-VAL-005 (LEGACY/UI ALIAS): TAX-YEAR & PERIOD CONSISTENCY ENGINE
   // --------------------------------------------------------------------------
 
   public static runTaxYearPeriodValidation(
@@ -1242,8 +1891,7 @@ export class StageThreeValidationService {
       recordId: conflictId,
       ipAddress: '127.0.0.1 (Validation Engine)',
       result: 'success',
-      riskLevel:
-  conflict.materiality === 'MATERIAL' ? 'material' : 'routine',
+      riskLevel: conflict.materiality === 'MATERIAL' ? 'material' : 'routine',
       details: `Validation conflict logged [${conflict.conflictCategory}] on field '${conflict.affectedField}': ${conflict.observedValues}. Severity: ${conflict.severity}`
     });
 
@@ -1379,12 +2027,7 @@ export class StageThreeValidationService {
       recordId: exceptionId,
       ipAddress: '127.0.0.1 (Validation Service)',
       result: 'success',
-      riskLevel:
-  params.severity === 'CRITICAL'
-    ? 'critical'
-    : params.isBlocking
-      ? 'high_risk'
-      : 'routine',
+      riskLevel: params.severity === 'CRITICAL' || params.isBlocking ? 'material' : 'routine',
       details: `Stage 03 validation exception created [${exceptionId}]: ${exception.title}. Severity: ${exception.severity}. Blocking: ${exception.isBlocking}`
     });
 
@@ -1648,8 +2291,8 @@ export class StageThreeValidationService {
         recordType: 'governance',
         recordId: `INV-${clientId}-${taxYear}`,
         ipAddress: '127.0.0.1 (Watcher)',
-        result: 'success',
-riskLevel: 'material',
+        result: 'error',
+        riskLevel: 'material',
         details: `Stage 03 validation marked REVALIDATION_REQUIRED due to upstream Stage 02 reopening. Validated sources marked STALE.`
       });
 

@@ -3,8 +3,6 @@ import { useApp } from '../../context/AppContext';
 import { TESTIMONIALS_DATA } from '../../data/mockData';
 import { BrandLogo } from '../common/BrandLogo';
 import { BRAND_ASSETS } from '../../utils/assets';
-import ceoHeroPng from '../../assets/images/desmond-hinds-ceo-ar-tax-services.png';
-import ceoHeroWebp from '../../assets/images/desmond-hinds-ceo-ar-tax-services.webp';
 import { FounderPortrait, ServiceCardImage, EditorialSplitImage } from './images';
 import { 
   ShieldCheck, 
@@ -155,36 +153,27 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* Master Editorial Hero Image - CEO Corporate Portrait */}
-                <div className="relative aspect-[4/3] sm:aspect-[16/11] md:aspect-[16/10] rounded-xl sm:rounded-2xl overflow-hidden border border-[#1E3A5F] bg-[#07172B] shadow-inner">
-                  <picture className="w-full h-full block">
-                    <source srcSet={ceoHeroWebp || BRAND_ASSETS.heroCeoPortraitWebp} type="image/webp" />
-                    <source srcSet={ceoHeroPng || BRAND_ASSETS.heroCeoPortraitPng} type="image/png" />
-                    <img
-                      src={ceoHeroPng || BRAND_ASSETS.heroCeoPortraitPng}
-                      alt="Desmond Hinds, Founder of A/R Tax Services, LLC, at the A/R Tax Services office"
-                      width={896}
-                      height={1200}
-                      loading="eager"
-                      fetchPriority="high"
-                      decoding="async"
-                      className="w-full h-full object-cover object-top"
-                      referrerPolicy="no-referrer"
-                    />
-                  </picture>
+                <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden border border-[#1E3A5F] bg-[#07172B] shadow-inner">
+                  <img
+                    id="home-hero-ceo-portrait"
+                    src="/ceo/123456789-desmond.png?v=20260922-1"
+                    alt="Desmond Hinds, Founder and Chief Executive Officer of A/R Tax Services, LLC"
+                    className="home-ceo-image"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                </div>
 
-                  {/* Restrained tonal gradient for high contrast readability without obscuring portrait */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#06172C]/90 via-[#06172C]/20 to-transparent pointer-events-none" />
-
-                  {/* Office Location & Advisory Tag repositioned cleanly toward lower corners */}
-                  <figcaption className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between text-[11px] text-slate-200 z-10 pointer-events-none">
-                    <span className="flex items-center gap-1.5 font-medium bg-[#06172C]/90 px-2.5 py-1 rounded-md border border-[#1E3A5F] backdrop-blur-sm shadow-md">
-                      <MapPin className="w-3.5 h-3.5 text-[#C99A3D]" />
-                      Columbia, SC Practice Office
-                    </span>
-                    <span className="text-[#E2BD67] font-semibold text-[10px] bg-[#06172C]/95 px-2 py-0.5 rounded border border-[#C99A3D]/40 backdrop-blur-sm shadow-md">
-                      Private Advisory
-                    </span>
-                  </figcaption>
+                {/* Practice Office & Advisory Status Strip (Cleanly positioned outside the photograph) */}
+                <div className="flex items-center justify-between text-xs text-slate-300 px-0.5 pt-0.5">
+                  <div className="flex items-center gap-1.5 text-slate-300">
+                    <MapPin className="w-3.5 h-3.5 text-[#C99A3D] flex-shrink-0" />
+                    <span className="text-[11px] sm:text-xs">Columbia, SC Practice Office</span>
+                  </div>
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-[#E2BD67] px-2 py-0.5 rounded bg-[#07172B] border border-[#C99A3D]/40">
+                    Private Advisory
+                  </span>
                 </div>
 
                 {/* Firm Mission Banner */}

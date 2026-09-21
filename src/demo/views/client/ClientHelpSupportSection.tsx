@@ -135,8 +135,8 @@ export const ClientHelpSupportSection: React.FC<ClientHelpSupportSectionProps> =
               <div className="flex items-center gap-2.5 pt-1">
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-[#C99A32] flex-shrink-0 bg-[#061A2F]">
                   <img
-                    src="/images/Desmond-CEO-PROFILE.png"
-                    alt="Desmond Hinds, CEO"
+                    src="/ceo/123456789-desmond.png"
+                    alt="Desmond Hinds, Founder and Chief Executive Officer of A/R Tax Services, LLC"
                     className="w-full h-full object-cover object-top"
                   />
                 </div>

@@ -457,8 +457,8 @@ export const ClientAppointmentsView: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden border border-[#D7AC4A] bg-[#061A2F] flex-shrink-0">
                 <img
-                  src="/images/Desmond-CEO-PROFILE.png"
-                  alt="Desmond Hinds, CEO"
+                  src="/ceo/123456789-desmond.png"
+                  alt="Desmond Hinds, Founder and Chief Executive Officer of A/R Tax Services, LLC"
                   className="w-full h-full object-cover object-top"
                 />
               </div>
