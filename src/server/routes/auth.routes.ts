@@ -18,7 +18,18 @@ import {
   authenticateToken, 
   AuthenticatedRequest 
 } from '../auth';
-import { User } from '../../types';
+import { User, OnboardingState } from '../../types';
+
+import {
+  getFirebaseAdminAuth,
+  getFirebaseAdminDb,
+  verifyFirebaseIdToken
+} from '../firebase-admin';
+
+import {
+  allocateTaxGuardClientId
+} from '../client-id.service';
+
 
 export const authRouter = Router();
 
@@ -115,6 +126,254 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     return res.status(500).json({ error: error.message || 'Internal registration failure.' });
   }
 });
+
+/// OPHIREUM MULTIMEDIA PRODUCTIONS
+
+/**
+ * Firebase -> TaxGuard LIVE session bridge.
+ *
+ * Firebase verifies the external identity.
+ * TaxGuard provisions or restores the LIVE client workspace,
+ * permanent Client ID, Stage 01 state, and TaxGuard session.
+ */
+authRouter.post(
+  '/firebase-session',
+  async (req: Request, res: Response) => {
+    try {
+      const {
+        idToken,
+        name,
+        phone,
+        companyName,
+        clientType
+      } = req.body;
+
+      if (!idToken || typeof idToken !== 'string') {
+        return res.status(400).json({
+          error: 'Firebase ID token is required.'
+        });
+      }
+
+      // Trust identity only after server-side Firebase verification.
+      const decodedToken =
+        await verifyFirebaseIdToken(idToken);
+
+      const firebaseUid = decodedToken.uid;
+
+      const email =
+        typeof decodedToken.email === 'string'
+          ? decodedToken.email.trim().toLowerCase()
+          : '';
+
+      if (!firebaseUid || !email) {
+        return res.status(401).json({
+          error:
+            'Verified Firebase identity does not contain a valid email.'
+        });
+      }
+
+      const firestore = getFirebaseAdminDb();
+
+      if (!firestore) {
+        return res.status(503).json({
+          error: 'Live account persistence is unavailable.'
+        });
+      }
+
+      const userRef =
+        firestore.collection('users').doc(firebaseUid);
+
+      const existingSnapshot =
+        await userRef.get();
+
+      let clientId: string;
+      let user: User;
+
+      if (existingSnapshot.exists) {
+        const existing =
+          existingSnapshot.data() || {};
+
+        if (!existing.clientId) {
+          return res.status(409).json({
+            error:
+              'Existing live account is missing its permanent Client ID. Manual reconciliation is required.'
+          });
+        }
+
+        // Existing LIVE client:
+        // NEVER allocate another Client ID.
+        clientId = String(existing.clientId);
+
+        user = {
+          id: firebaseUid,
+          clientId,
+          email,
+          name: String(
+            existing.fullName ||
+            existing.name ||
+            name ||
+            email
+          ),
+          role: 'client',
+          phone: String(
+            existing.phone || phone || ''
+          ),
+          companyName: String(
+            existing.companyName ||
+            companyName ||
+            ''
+          ),
+          company: String(
+            existing.companyName ||
+            companyName ||
+            ''
+          ),
+         status: 'active',
+isVerified: true,
+createdAt: new Date().toISOString()
+        };
+      } else {
+        // First LIVE provisioning only.
+        const allocation =
+          await allocateTaxGuardClientId(firestore);
+
+        clientId = allocation.clientId;
+
+        user = {
+          id: firebaseUid,
+          clientId,
+          email,
+          name: String(name || email),
+          role: 'client',
+          phone: String(phone || ''),
+          companyName: String(companyName || ''),
+          company: String(companyName || ''),
+          status: 'active',
+isVerified: true,
+createdAt: new Date().toISOString()
+        };
+
+        await userRef.set({
+          uid: firebaseUid,
+          clientId,
+          clientIdSequence: allocation.sequence,
+
+          email,
+          fullName: user.name,
+          role: 'client',
+
+          phone: user.phone || '',
+          companyName: user.companyName || '',
+
+          clientType:
+            clientType === 'business'
+              ? 'business'
+              : 'individual',
+
+          environment: 'live',
+
+          // External filing/transmission remains disabled.
+          externalSubmissionEnabled: false,
+
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      /*
+       * Compatibility bridge.
+       *
+       * Existing TaxGuard modules currently resolve the
+       * operational user through db.users.
+       *
+       * Firestore remains the permanent LIVE identity record.
+       */
+      db.users.set(firebaseUid, user);
+
+      /*
+       * Preserve existing Stage 01 architecture.
+       * Only initialize Stage 01 when no onboarding state exists.
+       */
+      if (!db.onboardingStates.has(firebaseUid)) {
+        const onboardingState: OnboardingState = {
+  id: `onb_${firebaseUid}`,
+  userId: firebaseUid,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+
+          step: 1,
+          percentComplete: 5,
+
+          entityType:
+            clientType === 'business'
+              ? 'business'
+              : 'individual',
+
+          contactInfo: {
+            fullName: user.name,
+            email: user.email,
+            phone: user.phone || '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: ''
+          },
+
+          selectedServices: [],
+          intakeAnswers: {},
+          uploadedDocuments: [],
+
+          paymentMethodAuthorized: false,
+          engagementAgreementSigned: false,
+          privacyDisclaimerAccepted: false,
+          accountingSoftwareConnected: false,
+          consultationBooked: false,
+
+          status: 'draft',
+
+          missingRequirements: [
+            'Complete identity verification',
+            'Complete onboarding information'
+          ]
+        };
+
+        db.onboardingStates.set(
+          firebaseUid,
+          onboardingState
+        );
+      }
+
+      // Reuse the existing TaxGuard session architecture.
+      const sessionToken =
+        createSession(firebaseUid, 'client');
+
+      return res.status(200).json({
+        message: existingSnapshot.exists
+          ? 'Live TaxGuard session restored.'
+          : 'Live TaxGuard account provisioned.',
+
+        token: sessionToken,
+        user,
+        clientId,
+
+        environment: 'live',
+        externalSubmissionEnabled: false
+      });
+
+    } catch (error: any) {
+      console.error(
+        '[Firebase Session] Provisioning failed.',
+        error
+      );
+
+      return res.status(401).json({
+        error:
+          'Firebase authentication could not be verified.'
+      });
+    }
+  }
+);
+
 
 // Secure Login
 authRouter.post('/login', async (req: Request, res: Response) => {
@@ -445,3 +704,7 @@ authRouter.post('/google', (req: Request, res: Response) => {
 
   return res.json({ token, user });
 });
+
+
+
+

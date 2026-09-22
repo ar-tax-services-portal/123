@@ -30,6 +30,7 @@ import { monitoringRouter } from './src/server/routes/monitoring.routes';
 import { taxguardRouter, handleLegacyTaxGuardRoute } from './src/server/routes/taxguard.routes';
 import { db } from './src/server/db';
 import { AuthenticatedRequest } from './src/server/auth';
+import './src/server/firebase-admin';
 
 const app = express();
 const PORT = 3000;

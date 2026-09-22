@@ -285,6 +285,7 @@ export const ClientRegisterPage: React.FC = () => {
     const success = await register({
       name: fullName,
       email,
+      password,
       phone,
       company: category !== 'individual' ? company : '',
       role: 'client',

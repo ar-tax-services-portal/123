@@ -1,4 +1,4 @@
-export type UserRole = 
+﻿export type UserRole = 
   | 'prospective_client'
   | 'client'
   | 'consultant'
@@ -20,6 +20,12 @@ export * from './calendar';
 
 export interface User {
   id: string;
+  /**
+   * Human-readable TaxGuard client identifier.
+   * This is separate from the authentication/user ID.
+   * Examples: 001, 999, 1000, A00000000.
+   */
+  clientId?: string;
   email: string;
   name: string;
   role: UserRole;
@@ -1039,4 +1045,5 @@ export interface TaxStrategy {
 }
 
 export * from './intake';
+
 

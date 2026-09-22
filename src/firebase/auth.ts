@@ -212,3 +212,19 @@ export async function refreshIdToken(): Promise<UserRole> {
   const role = (tokenResult.claims.role as UserRole) || 'client';
   return role;
 }
+
+/**
+ * Returns the current Firebase ID token for secure server-side verification.
+ * The token must be verified by Firebase Admin on the TaxGuard server.
+ */
+export async function getFirebaseIdToken(
+  forceRefresh = false
+): Promise<string | null> {
+  const firebaseUser = auth.currentUser;
+
+  if (!firebaseUser) {
+    return null;
+  }
+
+  return firebaseUser.getIdToken(forceRefresh);
+}

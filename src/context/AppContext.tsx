@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   User, 
   UserRole, 
@@ -568,48 +568,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Real Auth Login with Firebase Auth
   const login = async (email: string, password: string, mfaCode?: string) => {
     try {
-      // 1. Attempt Firebase Authentication
-      const fbRes = await loginWithEmail(email, password);
-      if (fbRes.success && fbRes.user) {
-        const userObj: User = {
-          id: fbRes.user.uid,
-          name: fbRes.user.fullName,
-          email: fbRes.user.email,
-          role: fbRes.user.role,
-          phone: fbRes.user.phone,
-          companyName: fbRes.user.organizationId || 'Client Organization',
-          status: 'active',
-          isVerified: true,
-          createdAt: new Date().toISOString(),
-          mfaEnabled: false
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!normalizedEmail || !password) {
+        return {
+          success: false,
+          error: 'Email and password are required.'
         };
-        setCurrentUser(userObj);
-        setCurrentRoleState(fbRes.user.role);
-        await refreshBackendData();
-        return { success: true };
       }
 
-      // 2. Fallback to express auth
-      const res = await api.auth.login(email, password, mfaCode);
+      // TaxGuard backend is the application session authority.
+      // It creates the session token required by protected API routes.
+      const res = await api.auth.login(
+        normalizedEmail,
+        password,
+        mfaCode
+      );
+
       if (res.mfaRequired) {
-        return { success: false, mfaRequired: true, message: res.message };
+        return {
+          success: false,
+          mfaRequired: true,
+          message: res.message
+        };
       }
-      if (res.user) {
-        setCurrentUser(res.user);
-        setCurrentRoleState(res.user.role);
-        await refreshBackendData();
-        return { success: true };
+
+      if (!res.user) {
+        return {
+          success: false,
+          error: 'Invalid email or password.'
+        };
       }
-      return { success: false, error: fbRes.error || 'Login failed' };
+
+      setCurrentUser(res.user);
+      setCurrentRoleState(res.user.role);
+
+      // Backend session now exists, so protected data can be loaded.
+      await refreshBackendData();
+
+      return {
+        success: true
+      };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Login failed' };
+      return {
+        success: false,
+        error:
+          err?.message ||
+          'Invalid email or password.'
+      };
     }
   };
 
   // Real Auth Register with Firebase Auth
   const register = async (payload: { name: string; email: string; password?: string; phone?: string; companyName?: string; company?: string; clientType?: 'individual' | 'business'; role?: UserRole; taxFilingType?: string; }) => {
     try {
-      const effectivePassword = payload.password || 'SecurePass@2025!';
+      if (!payload.password) {
+        return { success: false, error: 'Password is required.' };
+      }
+      const effectivePassword = payload.password;
       const effectiveCompanyName = payload.companyName || payload.company || 'Personal';
       const effectiveRole = payload.role || 'client';
 
@@ -1400,3 +1416,5 @@ export const useApp = () => {
   }
   return context;
 };
+
+
