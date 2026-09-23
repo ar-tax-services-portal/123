@@ -40,7 +40,6 @@ import {
 import { seedInitialServicesIfEmpty } from '../firebase/seed';
 import { testConnection } from '../firebase/firestore';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { DemoAuthService } from '../demo/services/DemoAuthService';
 
 export type PageRoute =
   | 'home'
@@ -126,7 +125,7 @@ interface AppContextType {
   onboardingProgress: { percentComplete: number; missingRequirements: string[]; nextAction: string } | null;
   legalRecords: LegalCoordinationRecord[];
   securityTestResults: SecurityTestResult[];
-  login: (email: string, password: string, mfaCode?: string) => Promise<{ success: boolean; mfaRequired?: boolean; error?: string; redirectPage?: PageRoute }>;
+  login: (email: string, password: string, mfaCode?: string) => Promise<{ success: boolean; mfaRequired?: boolean; error?: string }>;
   register: (payload: { name: string; email: string; password?: string; phone?: string; companyName?: string; company?: string; clientType?: 'individual' | 'business'; role?: UserRole; taxFilingType?: string }) => Promise<{ success: boolean; error?: string; verificationTokenSimulated?: string }>;
   logout: () => Promise<void>;
   switchTestAccount: (userId: string) => Promise<void>;
@@ -309,7 +308,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSyncingWithBackend, setIsSyncingWithBackend] = useState(false);
   const [currentRole, setCurrentRoleState] = useState<UserRole | 'guest'>('guest');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -319,7 +318,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [messages, setMessages] = useState<Message[]>([]);
   const [jobPostings, setJobPostings] = useState<JobPosting[]>(INITIAL_JOBS);
   const [selectedJob, setSelectedJob] = useState<JobPosting | null>(null);
-  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [applicants, setApplicants] = useState<Applicant[]>(INITIAL_APPLICANTS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -330,14 +329,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [securityTestResults, setSecurityTestResults] = useState<SecurityTestResult[]>([]);
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState(true);
   const [cookieModalOpen, setCookieModalOpen] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => DEMO_NOTIFICATIONS.map(item => ({ ...item })));
 
   const authOperationInProgressRef = useRef(false);
   const firebaseSessionPromisesRef = useRef<Map<string, Promise<User>>>(new Map());
-
-  const isDemoWorkspace = () => DemoAuthService.hasAnyActiveSession() || (
-    typeof window !== 'undefined' && localStorage.getItem('taxguard_environment') === 'demo'
-  );
 
   const clearTaxpayerState = useCallback(() => {
     setUsers([]);
@@ -400,11 +395,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const refreshBackendData = useCallback(async () => {
-    const environment = typeof window !== 'undefined' ? localStorage.getItem('taxguard_environment') : null;
-    if (environment !== 'live') {
-      throw new Error('LIVE workspace synchronization requires an authenticated LIVE environment.');
-    }
-
     setIsSyncingWithBackend(true);
     setIsLoadingData(true);
     setDataError(null);
@@ -474,7 +464,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const idToken = await firebaseUser.getIdToken(forceRefresh);
       if (!idToken) throw new Error('A verified Firebase identity token could not be obtained.');
 
-      DemoAuthService.clearAllSessions();
       clearTaxpayerState();
       clearStoredToken();
 
@@ -490,20 +479,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(liveSession.user);
       setCurrentRoleState(liveSession.user.role);
       await refreshBackendData();
-
-      if (liveSession.user.role === 'client' || liveSession.user.role === 'prospective_client') {
-        setCurrentPageState('stage_one_onboard');
-        setPageParams({});
-
-        if (typeof window !== 'undefined') {
-          try {
-            window.history.replaceState({ page: 'stage_one_onboard' }, '', '/stage_one_onboard');
-          } catch {
-            window.location.hash = '#/stage_one_onboard';
-          }
-        }
-      }
-
       return liveSession.user;
     })();
 
@@ -564,8 +539,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const existingToken = getStoredToken();
     const environment = typeof window !== 'undefined' ? localStorage.getItem('taxguard_environment') : null;
 
-    if (environment !== 'live') {
-      if (existingToken) clearStoredToken();
+    if (existingToken && environment !== 'live') {
+      refreshBackendData().catch(() => {
+        clearStoredToken();
+        setCurrentUser(null);
+        setCurrentRoleState('guest');
+      });
+    } else if (!existingToken && environment !== 'live') {
       setIsInitialized(true);
     }
 
@@ -575,25 +555,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [clearTaxpayerState, refreshBackendData, restoreFirebaseSession]);
 
-  const switchTestAccount = async (_userId: string) => {
+  const switchTestAccount = async (userId: string) => {
+    const target = INITIAL_USERS.find(user => user.id === userId);
+    if (!target) return;
+
     setIsSyncingWithBackend(true);
     authOperationInProgressRef.current = true;
 
     try {
       await firebaseLogout().catch(() => {});
-      DemoAuthService.clearAllSessions();
       clearStoredToken();
       clearTaxpayerState();
-      setCurrentUser(null);
-      setCurrentRoleState('guest');
+      restoreDemoFixtures();
 
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('taxguard_environment');
-        localStorage.removeItem('demo_session');
-        sessionStorage.removeItem('demo_session');
+      if (typeof window !== 'undefined') localStorage.setItem('taxguard_environment', 'demo');
+
+      const password = target.role === 'client' || target.role === 'prospective_client'
+        ? 'ClientPass123!'
+        : 'FirmPass123!';
+
+      const res = await api.auth.login(target.email, password, target.mfaEnabled ? '123456' : undefined);
+      if (!res.user) throw new Error('The demonstration account could not be authenticated.');
+
+      setCurrentUser(res.user);
+      setCurrentRoleState(res.user.role);
+
+      if (res.user.role === 'client' || res.user.role === 'prospective_client') {
+        setCurrentPage('stage_one_onboard');
+      } else if (res.user.role === 'accountant' || res.user.role === 'senior_reviewer') {
+        setCurrentPage('accountant_workspace');
+      } else if (res.user.role === 'recruiter') {
+        setCurrentPage('careers');
+      } else if (res.user.role === 'admin' || res.user.role === 'super_admin') {
+        setCurrentPage('admin_dashboard');
       }
 
-      setCurrentPage('portals');
+      await refreshBackendData();
+    } catch (err) {
+      console.warn('Could not authenticate test account via /api/auth/login:', err);
+      clearStoredToken();
+      setCurrentUser(null);
+      setCurrentRoleState('guest');
     } finally {
       authOperationInProgressRef.current = false;
       setIsSyncingWithBackend(false);
@@ -615,14 +617,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    void switchTestAccount(role);
+    const matchedUser = INITIAL_USERS.find(user => user.role === role);
+    if (matchedUser) void switchTestAccount(matchedUser.id);
   };
 
-  const login = async (
-    email: string,
-    password: string,
-    _mfaCode?: string
-  ): Promise<{ success: boolean; mfaRequired?: boolean; error?: string; redirectPage?: PageRoute }> => {
+  const login = async (email: string, password: string, mfaCode?: string) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) return { success: false, error: 'Email and password are required.' };
@@ -631,42 +630,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       authOperationInProgressRef.current = true;
       try {
         await firebaseLogout().catch(() => {});
-        DemoAuthService.clearAllSessions();
-        const demoResult = await DemoAuthService.authenticate('client', normalizedEmail, password);
-        if (!demoResult.success || !demoResult.session) {
-          return { success: false, error: demoResult.error || 'Invalid Login ID or password.' };
-        }
-
-        const demoProfile = INITIAL_USERS.find(user =>
-          user.id === demoResult.session?.user.id || user.email === demoResult.session?.user.email
-        ) || INITIAL_USERS.find(user => user.role === 'client');
-
-        if (!demoProfile) {
-          DemoAuthService.logout('client');
-          return { success: false, error: 'The demonstration client profile is unavailable.' };
-        }
-
         clearStoredToken();
         clearTaxpayerState();
         restoreDemoFixtures();
 
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('taxguard_environment', 'demo');
-          localStorage.removeItem('demo_session');
-        }
+        if (typeof window !== 'undefined') localStorage.setItem('taxguard_environment', 'demo');
 
-        const demoUser: User = {
-          ...demoProfile,
-          id: demoResult.session.user.id,
-          name: demoResult.session.user.name,
-          email: demoResult.session.user.email,
-          role: 'client'
-        };
+        const demoRes = await api.auth.login(normalizedEmail, password, mfaCode);
+        if (demoRes.mfaRequired) return { success: false, mfaRequired: true };
+        if (!demoRes.user) return { success: false, error: 'Invalid Login ID or password.' };
 
-        setCurrentUser(demoUser);
-        setCurrentRoleState('client');
-        setIsInitialized(true);
-        return { success: true, redirectPage: 'client_portal' };
+        setCurrentUser(demoRes.user);
+        setCurrentRoleState(demoRes.user.role);
+        await refreshBackendData();
+        return { success: true };
       } catch (err: any) {
         return { success: false, error: err?.message || 'Invalid Login ID or password.' };
       } finally {
@@ -677,7 +654,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     authOperationInProgressRef.current = true;
 
     try {
-      DemoAuthService.clearAllSessions();
       if (typeof window !== 'undefined') {
         localStorage.removeItem('demo_session');
         sessionStorage.removeItem('demo_session');
@@ -692,7 +668,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       await restoreFirebaseSession(auth.currentUser, true);
-      return { success: true, redirectPage: 'stage_one_onboard' };
+      return { success: true };
     } catch (err: any) {
       await firebaseLogout().catch(() => {});
       clearStoredToken();
@@ -712,7 +688,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     authOperationInProgressRef.current = true;
 
     try {
-      DemoAuthService.clearAllSessions();
       clearStoredToken();
       clearTaxpayerState();
 
@@ -756,17 +731,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = async () => {
     authOperationInProgressRef.current = true;
-    const isDemoSession = typeof window !== 'undefined' && localStorage.getItem('taxguard_environment') === 'demo';
 
     try {
-      if (isDemoSession) {
-        DemoAuthService.clearAllSessions();
-      } else {
-        await firebaseLogout().catch(() => {});
-        await api.auth.logout().catch(() => {});
-      }
+      await firebaseLogout().catch(() => {});
+      await api.auth.logout().catch(() => {});
     } finally {
-      DemoAuthService.clearAllSessions();
       clearStoredToken();
       clearTaxpayerState();
       setCurrentUser(null);
@@ -787,8 +756,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const uploadDocument = async (docData: Partial<DocumentItem>, sampleText?: string): Promise<DocumentItem | null> => {
     try {
-      if (isDemoWorkspace()) throw new Error('DEMO documents cannot be written to LIVE storage.');
-      if (!currentUser?.clientId) throw new Error('Permanent TaxGuard Client ID is required.');
+      if (!currentUser?.id) throw new Error('Authenticated client identity is required.');
+
+      const docId = docData.id || `doc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const clientId = currentUser.id;
+
+      setDoc(doc(db, 'documents', docId), {
+        id: docId,
+        clientId,
+        uploadedBy: currentUser.name || 'Client',
+        fileName: docData.fileName || 'Uploaded_Document.pdf',
+        category: docData.category || 'other',
+        year: docData.taxYear || 2025,
+        status: 'pending_review',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }).catch(error => console.warn('Firestore doc sync notice:', error));
 
       const res = await api.documents.upload({
         fileName: docData.fileName || 'Uploaded_Document.pdf',
@@ -891,8 +874,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bookAppointment = async (aptData: Omit<Appointment, 'id' | 'createdAt' | 'status'>) => {
     try {
-      if (isDemoWorkspace()) throw new Error('DEMO appointments cannot be written to LIVE scheduling services.');
-      if (!currentUser?.clientId) throw new Error('Permanent TaxGuard Client ID is required.');
+      if (currentUser?.id) {
+        const aptId = `apt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        setDoc(doc(db, 'appointments', aptId), {
+          id: aptId,
+          clientId: currentUser.id,
+          ...aptData,
+          status: 'confirmed',
+          createdAt: serverTimestamp()
+        }).catch(error => console.warn('Firestore appointment sync notice:', error));
+      }
 
       const res = await api.appointments.book(aptData);
       setAppointments(previous => [res.appointment, ...previous]);
@@ -1069,8 +1060,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveOnboardingStep = async (stepData: Partial<OnboardingState>): Promise<boolean> => {
     try {
-      if (isDemoWorkspace()) throw new Error('DEMO onboarding data cannot be written to LIVE storage.');
-      if (!currentUser?.clientId) throw new Error('Permanent TaxGuard Client ID is required.');
+      if (!currentUser?.id) throw new Error('Authenticated client identity is required.');
+      const clientId = currentUser.id;
+      setDoc(doc(db, 'onboarding_dossiers', clientId), {
+        clientId,
+        ...stepData,
+        updatedAt: serverTimestamp()
+      }, { merge: true }).catch(error => console.warn('Firestore onboarding sync notice:', error));
       const res = await api.onboarding.saveStep(stepData);
       setOnboardingState(res.state);
       setOnboardingProgress(res.progress);
@@ -1083,8 +1079,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const submitOnboardingDossier = async (): Promise<boolean> => {
     try {
-      if (isDemoWorkspace()) throw new Error('DEMO onboarding dossiers cannot be submitted to LIVE services.');
-      if (!currentUser?.clientId) throw new Error('Permanent TaxGuard Client ID is required.');
+      if (!currentUser?.id) throw new Error('Authenticated client identity is required.');
+      const clientId = currentUser.id;
+      setDoc(doc(db, 'onboarding_dossiers', clientId), {
+        clientId,
+        submitted: true,
+        status: 'pending_review',
+        submittedAt: serverTimestamp()
+      }, { merge: true }).catch(error => console.warn('Firestore onboarding submit sync notice:', error));
       const res = await api.onboarding.submitDossier();
       setOnboardingState(res.state);
       return true;
@@ -1096,7 +1098,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createLegalRecord = async (record: Partial<LegalCoordinationRecord>): Promise<boolean> => {
     try {
-      if (isDemoWorkspace()) throw new Error('DEMO legal records cannot be written to LIVE storage.');
       const recordId = record.id || `legal_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       setDoc(doc(db, 'consentRecords', recordId), {
         ...record,

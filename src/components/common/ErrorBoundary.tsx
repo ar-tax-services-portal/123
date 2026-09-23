@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+﻿import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { 
   AlertTriangle, 
   RefreshCw, 
@@ -145,7 +145,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
 
     try {
-      reportClientError(error, this.state.incidentId || undefined, {
+      const sanitizedError = new Error(sanitizedMessage);
+      sanitizedError.name = error?.name || 'Error';
+      reportClientError(sanitizedError, this.state.incidentId || undefined, {
         componentStack: sanitizedStack
       });
     } catch {
@@ -197,7 +199,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       sanitizedMessage: null,
       componentStack: null
     });
-    window.location.hash = '#/client_portal';
+    window.location.hash = '#/client/login';
   };
 
   private toggleDevDiagnostics = () => {
@@ -350,3 +352,4 @@ export class ErrorBoundary extends React.Component<Props, State> {
     return this.props.children;
   }
 }
+

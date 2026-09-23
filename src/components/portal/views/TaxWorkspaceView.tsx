@@ -401,8 +401,15 @@ export const TaxWorkspaceView: React.FC<TaxWorkspaceViewProps> = ({
 
                     <div className="text-[11px] text-slate-400 space-y-0.5">
                       <div>Source: <span className="text-slate-300">{fact.documentName} (Page {fact.pageNumber})</span></div>
+                      <div>Document ID: <span className="font-mono text-slate-300">{fact.documentId}</span></div>
+                      <div>
+                        Bounding Box:{' '}
+                        <span className="font-mono text-slate-300">
+                          x={fact.boundingBox.x}, y={fact.boundingBox.y}, w={fact.boundingBox.width}, h={fact.boundingBox.height}
+                        </span>
+                      </div>
                       <div>Extraction Engine: <span className="font-mono text-slate-300">{fact.modelIdentifier}</span></div>
-                      <div className="text-emerald-400 font-medium">✓ Verified by Desmond Hinds, Founder &amp; CEO</div>
+                      <div className="text-emerald-400 font-medium">✓ Reviewer status: {fact.reviewerStatus}</div>
                     </div>
                   </div>
                 ))}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Phone, 
@@ -142,7 +142,7 @@ export const ContactPage: React.FC = () => {
                   </div>
                   <div>
                     <strong className="text-white block">Firm Business Hours:</strong>
-                    Monday – Friday: 9:00 AM – 6:00 PM EST<br />
+                    Monday â€“ Friday: 9:00 AM â€“ 6:00 PM EST<br />
                     Saturday: By Appointment Only<br />
                     Sunday: Closed (Secure Vault Active 24/7)
                   </div>
@@ -184,7 +184,7 @@ export const ContactPage: React.FC = () => {
                       Please do not submit Social Security numbers, tax documents, banking information, or other sensitive personal information through this form. Existing clients should use the{' '}
                       <button
                         type="button"
-                        onClick={() => setCurrentPage('client_portal')}
+                        onClick={() => window.location.hash = '#/client/login'}
                         className="text-[#C6A15B] underline hover:text-[#E2BD67] font-semibold"
                       >
                         secure client portal
@@ -432,3 +432,5 @@ export const ContactPage: React.FC = () => {
     </div>
   );
 };
+
+

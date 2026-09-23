@@ -1,4 +1,4 @@
-import { 
+﻿import { 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -135,40 +135,83 @@ export async function registerWithEmail(
 export async function loginWithEmail(
   email: string,
   pass: string
-): Promise<{ success: boolean; user?: AuthUserProfile; error?: string }> {
+): Promise<{
+  success: boolean;
+  user?: AuthUserProfile;
+  error?: string;
+}> {
   try {
-    const cred = await signInWithEmailAndPassword(auth, email.trim(), pass);
+    /*
+     * LIVE AUTHENTICATION BOUNDARY
+     *
+     * Firebase Authentication establishes identity here.
+     *
+     * Do NOT require a Firestore profile read before the
+     * TaxGuard server session exists. Firestore rules may
+     * intentionally restrict that read.
+     *
+     * The verified Firebase ID token is subsequently sent to
+     * /api/auth/firebase-session, where Firebase Admin verifies
+     * identity and restores/provisions the permanent LIVE
+     * TaxGuard profile.
+     */
+    const cred = await signInWithEmailAndPassword(
+      auth,
+      email.trim().toLowerCase(),
+      pass
+    );
+
     const fbUser = cred.user;
-
-    const role = await getVerifiedUserRole(fbUser);
-
-    // Fetch user profile
-    const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
-    const userData = userDoc.data();
 
     const profile: AuthUserProfile = {
       uid: fbUser.uid,
-      email: fbUser.email || email,
-      fullName: userData?.fullName || fbUser.displayName || 'Client',
-      role,
-      phone: userData?.phone || '',
-      organizationId: userData?.organizationId || '',
-      status: userData?.status || 'active',
+      email:
+        fbUser.email ||
+        email.trim().toLowerCase(),
+      fullName:
+        fbUser.displayName ||
+        'Client',
+      role: 'client',
+      phone: '',
+      organizationId: '',
+      status: 'active',
       emailVerified: fbUser.emailVerified
     };
 
-    return { success: true, user: profile };
+    return {
+      success: true,
+      user: profile
+    };
   } catch (error: any) {
-    let msg = error.message || 'Sign in failed.';
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-      msg = 'Invalid email or password combination. Please check your credentials and try again.';
-    } else if (error.code === 'auth/too-many-requests') {
-      msg = 'Access temporarily disabled due to multiple failed login attempts. Please reset your password or try again later.';
+    let msg =
+      error?.message ||
+      'Sign in failed.';
+
+    if (
+      error?.code === 'auth/user-not-found' ||
+      error?.code === 'auth/wrong-password' ||
+      error?.code === 'auth/invalid-credential'
+    ) {
+      msg =
+        'Invalid email or password combination. Please check your credentials and try again.';
+    } else if (
+      error?.code === 'auth/too-many-requests'
+    ) {
+      msg =
+        'Access temporarily disabled by Firebase due to multiple failed authentication attempts. Please try again later.';
+    } else if (
+      error?.code === 'auth/user-disabled'
+    ) {
+      msg =
+        'This account has been disabled.';
     }
-    return { success: false, error: msg };
+
+    return {
+      success: false,
+      error: msg
+    };
   }
 }
-
 /**
  * Sign out
  */
@@ -228,3 +271,4 @@ export async function getFirebaseIdToken(
 
   return firebaseUser.getIdToken(forceRefresh);
 }
+

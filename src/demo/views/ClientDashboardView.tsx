@@ -1,9 +1,10 @@
-/**
+﻿/**
  * A/R Tax Services, LLC - Client / Taxpayer Demonstration Dashboard
  * Comprehensive 35+ function taxpayer portal with strict black-and-white theme.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useApp } from '../../context/AppContext';
 import { 
   DemoClient, 
   DemoEngagement, 
@@ -116,6 +117,47 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
   activeNavId,
   onSelectNav
 }) => {
+  const { currentUser } = useApp();
+
+  /*
+   * LIVE DATA ISOLATION
+   *
+   * Firebase LIVE clients must never inherit the seeded
+   * cli_perotti demonstration dataset.
+   */
+  const isLiveClient =
+    Boolean(currentUser?.id) &&
+    Boolean(currentUser?.email) &&
+    currentUser.email.toLowerCase() !== 'artest2026';
+
+  /*
+   * AUTHORITATIVE CLIENT ID BOUNDARY
+   *
+   * LIVE:
+   *   Use the authenticated TaxGuard user/client identifier.
+   *
+   * DEMO:
+   *   Preserve the seeded cli_perotti demonstration fixture.
+   *
+   * A LIVE account is NEVER allowed to fall back to cli_perotti.
+   */
+  const authoritativeClientId =
+    isLiveClient
+      ? currentUser?.clientId || currentUser?.id
+      : 'cli_perotti';
+
+  /*
+   * DEFENSE IN DEPTH
+   *
+   * ClientDashboardView remains the demonstration taxpayer portal.
+   *
+   * The router should never render this component for a LIVE client.
+   * If routing fails, LIVE data must still never fall back to the
+   * cli_perotti demonstration taxpayer.
+   */
+  const allowDemoData =
+    !isLiveClient;
+
   const [client, setClient] = useState<DemoClient | undefined>(undefined);
   const [engagements, setEngagements] = useState<DemoEngagement[]>([]);
   const [documents, setDocuments] = useState<DemoDocument[]>([]);
@@ -224,17 +266,32 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
 
   // Refresh data from store
   const refresh = () => {
+    /*
+     * LIVE clients fail closed here.
+     *
+     * The demoDataStore contains seeded demonstration taxpayers.
+     * It is never an authoritative source for a Firebase LIVE client.
+     */
+    if (isLiveClient) {
+      setClient(null);
+      setEngagements([]);
+      setDocuments([]);
+      setInvoices([]);
+      return;
+    }
+
     const currentClient = demoDataStore.getClientById('cli_perotti');
     setClient(currentClient);
     const allEngs = demoDataStore.getEngagements().filter(e => e.clientId === 'cli_perotti');
     setEngagements(allEngs);
-    const docs = demoDataStore.getDocumentsByClient('cli_perotti');
+    const docs = (isLiveClient ? [] : demoDataStore.getDocumentsByClient('cli_perotti'));
     setDocuments(docs);
     const invs = demoDataStore.getInvoices().filter(i => i.clientId === 'cli_perotti');
     setInvoices(invs);
     const txns = demoDataStore.getTransactions().filter(t => t.clientId === 'cli_perotti');
     setTransactions(txns);
     overviewService.getOverview('cli_perotti').then(setOverviewData);
+  
   };
 
   useEffect(() => {
@@ -246,7 +303,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
 
   // Helper to mask values if discretionMode is active
   const formatDiscreetAmount = (val: number | string) => {
-    if (discretionMode) return '••••••';
+    if (discretionMode) return 'â€¢â€¢â€¢â€¢â€¢â€¢';
     if (typeof val === 'number') {
       return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -347,7 +404,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
             {currentTab === 'support' && 'Client Support, Tax Knowledge Base & Contacts'}
           </h2>
           <p className="text-xs text-[#667085]">
-            A/R Tax Services, LLC • Client Demonstration Portal
+            A/R Tax Services, LLC â€¢ Client Demonstration Portal
           </p>
         </div>
 
@@ -437,7 +494,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
               </span>
             </div>
             <div className="font-semibold text-slate-200 text-xs">
-              Client Identity &amp; IRC § 7216 Onboarding Dossier Cleared &bull; Hard Exit Gate Passed
+              Client Identity &amp; IRC Â§ 7216 Onboarding Dossier Cleared &bull; Hard Exit Gate Passed
             </div>
           </div>
         </div>
@@ -489,7 +546,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: ENTITIES & OWNERSHIP */}
       {currentTab === 'entities' && (
         <ClientProfileEntitiesSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -507,7 +564,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: STAGE 02 COLLECTION WORKSPACE (TG-COL-001) */}
       {currentTab === 'collection_workspace' && (
         <StageTwoCollectionWorkspace
-          clientId={client?.id || 'cli_perotti'}
+          clientId={authoritativeClientId}
           selectedTaxYear={selectedTaxYear}
           onTaxYearChange={setSelectedTaxYear}
           onOpenAssistant={() => setAssistantModalOpen(true)}
@@ -517,7 +574,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: PERSONALIZED CHECKLIST */}
       {currentTab === 'checklist' && (
         <PersonalizedChecklistSection
-          clientId={client?.id || 'cli_perotti'}
+          clientId={authoritativeClientId}
           selectedYear={selectedTaxYear}
           onNavigateToUpload={() => setTab('upload_center')}
           onNavigateToVault={() => setTab('vault')}
@@ -530,7 +587,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {currentTab === 'vault' && (
         <ClientVaultSection
           vaultService={vaultService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -587,7 +644,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {currentTab === 'organizer' && (
         <ClientOrganizerSection
           organizerService={organizerService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onNavigateToVault={() => setTab('vault')}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
@@ -596,7 +653,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: PREFERENCES & NOTIFICATION DELEGATION */}
       {currentTab === 'preferences' && (
         <ClientSettingsConsentSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           defaultTab="notifications"
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
@@ -605,7 +662,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: INTEGRATION CENTER */}
       {currentTab === 'integrations_center' && (
         <ClientAccountingConnectionsSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -663,7 +720,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: BOOKKEEPING & REGISTERS */}
       {currentTab === 'bookkeeping' && (
         <ClientBookkeepingSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToVault={() => setTab('vault')}
         />
@@ -672,7 +729,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: GENERAL JOURNAL & TRIAL BALANCE */}
       {currentTab === 'journal' && (
         <ClientJournalLedgerSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToReports={() => setTab('financial_reports')}
         />
@@ -681,7 +738,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: BANK FEEDS & AGGREGATION */}
       {currentTab === 'bank_feeds' && (
         <ClientBankConnectionsSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToBookkeeping={() => setTab('bookkeeping')}
         />
@@ -690,7 +747,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: ACCOUNTING SYNC */}
       {currentTab === 'accounting_sync' && (
         <ClientAccountingConnectionsSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -698,7 +755,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: RECONCILIATION */}
       {currentTab === 'reconciliation' && (
         <ClientReconciliationSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToVault={() => setTab('vault')}
         />
@@ -707,7 +764,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: FINANCIAL REPORTS */}
       {currentTab === 'financial_reports' && (
         <ClientFinancialReportsSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToLenderPackage={() => setTab('lender_package')}
         />
@@ -717,7 +774,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {currentTab === 'income_expenses' && (
         <ClientIncomeExpensesSection
           incomeExpenseService={incomeExpenseService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -731,7 +788,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {currentTab === 'return_review' && (
         <ClientReturnReviewSection
           returnService={returnService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -739,7 +796,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: TAX READINESS */}
       {currentTab === 'readiness' && (
         <ClientTaxReadinessSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToSignatures={() => setTab('return_review')}
         />
@@ -749,7 +806,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {currentTab === 'billing' && (
         <ClientInvoicesSection
           invoiceService={invoiceService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -758,7 +815,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {currentTab === 'notices' && (
         <ClientNoticesSection
           noticeService={noticeService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -767,7 +824,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {(currentTab === 'advisory' || currentTab === 'tax_planning') && (
         <ClientAdvisorySection
           advisoryService={advisoryService}
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -775,7 +832,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: ESTIMATED TAX & SAFE HARBOR */}
       {currentTab === 'estimated_tax' && (
         <ClientEstimatedTaxesSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -783,7 +840,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: SECURE MESSAGES & TASKS */}
       {currentTab === 'messages' && (
         <ClientMessagesTasksSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
           onNavigateToVault={() => setTab('vault')}
           onNavigateToOrganizer={() => setTab('questionnaire')}
@@ -794,7 +851,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: LENDER PACKAGE */}
       {currentTab === 'lender_package' && (
         <ClientLenderPackageSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -802,7 +859,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: AMENDMENTS & CLOSURES */}
       {currentTab === 'amendments' && (
         <ClientAmendmentsClosureSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -817,7 +874,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: ARCHIVE */}
       {currentTab === 'archive' && (
         <ClientPriorArchiveSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -825,7 +882,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: SETTINGS & CONSENTS */}
       {currentTab === 'settings' && (
         <ClientSettingsConsentSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -833,7 +890,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
       {/* TAB: HELP & SUPPORT */}
       {currentTab === 'support' && (
         <ClientHelpSupportSection
-          clientId="cli_perotti"
+          clientId={authoritativeClientId}
           onOpenAssistant={() => setAssistantModalOpen(true)}
         />
       )}
@@ -869,7 +926,7 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
         isOpen={assistantModalOpen}
         onClose={() => setAssistantModalOpen(false)}
         currentSection={currentTab}
-        clientId="cli_perotti"
+        clientId={authoritativeClientId}
       />
 
       {/* Tax-Year Switching Safeguard Modal (Section 7) */}
@@ -895,9 +952,9 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
 
             <div className="p-3 bg-neutral-50 border border-neutral-200 rounded text-xs text-neutral-700 space-y-1">
               <div className="font-semibold text-neutral-900">Choose an action:</div>
-              <div>• <strong>Save Draft:</strong> Retain all in-progress answers and switch to CY{pendingTaxYear}.</div>
-              <div>• <strong>Discard:</strong> Abandon uncommitted entries and switch immediately.</div>
-              <div>• <strong>Cancel:</strong> Stay in CY{selectedTaxYear} to continue editing.</div>
+              <div>â€¢ <strong>Save Draft:</strong> Retain all in-progress answers and switch to CY{pendingTaxYear}.</div>
+              <div>â€¢ <strong>Discard:</strong> Abandon uncommitted entries and switch immediately.</div>
+              <div>â€¢ <strong>Cancel:</strong> Stay in CY{selectedTaxYear} to continue editing.</div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-neutral-200">
@@ -929,3 +986,9 @@ export const ClientDashboardView: React.FC<ClientDashboardViewProps> = ({
     </div>
   );
 };
+
+
+
+
+
+

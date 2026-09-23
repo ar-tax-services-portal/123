@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Calendar as CalendarIcon, 
@@ -68,7 +68,7 @@ export const BookConsultationPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0D2340] border border-[#C6A15B]/40 text-[#C6A15B] text-xs font-semibold">
             <CalendarIcon className="w-3.5 h-3.5" />
-            <span>Confidential Advisory • Columbia, SC</span>
+            <span>Confidential Advisory â€¢ Columbia, SC</span>
           </div>
           <h1 className="font-serif text-4xl sm:text-5xl font-extrabold text-white">
             Schedule a Consultation
@@ -228,7 +228,7 @@ export const BookConsultationPage: React.FC = () => {
               </div>
               <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-[#C6A15B]" />
-                <span>Firm business hours: Monday–Friday, 9:00 AM–6:00 PM Eastern Time.</span>
+                <span>Firm business hours: Mondayâ€“Friday, 9:00 AMâ€“6:00 PM Eastern Time.</span>
               </div>
             </div>
 
@@ -245,7 +245,7 @@ export const BookConsultationPage: React.FC = () => {
                   Please do not submit Social Security numbers, tax documents, banking information, or other sensitive personal information through this form. Existing clients should use the{' '}
                   <button
                     type="button"
-                    onClick={() => setCurrentPage('client_portal')}
+                    onClick={() => window.location.hash = '#/client/login'}
                     className="text-[#C6A15B] underline hover:text-[#E2BD67] font-semibold"
                   >
                     secure client portal
@@ -365,7 +365,7 @@ export const BookConsultationPage: React.FC = () => {
 
             <div className="pt-4 flex flex-wrap justify-center gap-4">
               <button
-                onClick={() => setCurrentPage('client_portal')}
+                onClick={() => window.location.hash = '#/client/login'}
                 className="px-6 py-3 rounded-xl font-bold text-xs text-[#07172B] bg-[#C6A15B] hover:bg-[#D9BF7A]"
               >
                 View in Client Portal
@@ -385,3 +385,5 @@ export const BookConsultationPage: React.FC = () => {
     </div>
   );
 };
+
+

@@ -59,6 +59,18 @@ interface UploadModalProps {
   ) => void;
 }
 
+async function computeSourceSha256(file: File): Promise<string> {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('Cryptographic SHA-256 hashing is unavailable. The source document was not accepted.');
+  }
+
+  const sourceBytes = await file.arrayBuffer();
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', sourceBytes);
+  return Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 export const SmartUploadModal: React.FC<UploadModalProps> = ({
   isOpen,
   onClose,
@@ -71,25 +83,28 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [simulatedDocYear, setSimulatedDocYear] = useState<number>(selectedTaxYear);
 
   if (!isOpen || !targetDoc) return null;
 
-  const handleSimulatedUpload = () => {
+  const handleSimulatedUpload = async () => {
+    if (!selectedFile) {
+      setUploadError('Select an actual source file before OCR processing. Unsupported synthetic source data will not be accepted.');
+      return;
+    }
+
     setIsProcessing(true);
+    setUploadError(null);
     setUploadProgress(20);
 
-    const timer1 = setTimeout(() => setUploadProgress(60), 300);
-    const timer2 = setTimeout(() => {
-      setUploadProgress(100);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setUploadProgress(60);
 
-      const fileName = selectedFile
-        ? selectedFile.name
-        : `${simulatedDocYear}_${targetDoc.formNumber.replace(/[^a-zA-Z0-9]/g, '_')}_Upload_${Math.floor(1000 + Math.random() * 9000)}.pdf`;
+      const fileName = selectedFile.name;
+      const fileHash = await computeSourceSha256(selectedFile);
 
-      const fileHash = `sha256_${Math.random().toString(36).substring(2, 12)}_${Date.now().toString(36)}`;
-
-      // Run anomaly check
       const anomaly = detectUploadAnomalies(
         {
           fileName,
@@ -101,7 +116,6 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
         selectedTaxYear
       );
 
-      // Generate realistic extracted OCR fields
       const ocrFields: Record<string, string | number> = {
         taxYear: simulatedDocYear,
         taxpayerName: 'Taxpayer on Record',
@@ -123,9 +137,10 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
         ocrFields.outstandingPrincipal = 420000.00;
       }
 
+      setUploadProgress(100);
       onUploadSuccess(targetDoc.id, {
         fileName,
-        fileSize: selectedFile ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB` : '1.34 MB',
+        fileSize: `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`,
         fileHash,
         confidenceScore: anomaly.isTaxYearMismatch ? 76 : 98,
         ocrData: ocrFields,
@@ -134,16 +149,14 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
         possibleDuplicateOf: anomaly.duplicateMatchId
       });
 
-      setIsProcessing(false);
       setSelectedFile(null);
       setIsCameraActive(false);
       onClose();
-    }, 800);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Source provenance capture failed. The document was not accepted.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -238,6 +251,7 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
                     setSelectedFile(e.target.files[0]);
+                    setUploadError(null);
                   }
                 }}
               />
@@ -288,6 +302,13 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
             </div>
           )}
 
+          {uploadError && (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-2.5 text-xs text-red-800 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+
           {/* Progress Bar */}
           {isProcessing && (
             <div className="space-y-1.5">
@@ -317,8 +338,8 @@ export const SmartUploadModal: React.FC<UploadModalProps> = ({
           <button
             type="button"
             onClick={handleSimulatedUpload}
-            disabled={isProcessing}
-            className="flex items-center gap-2 rounded-lg bg-[#0A2544] px-4 py-2 text-xs font-semibold text-[#E8C66A] shadow-sm hover:bg-[#061A2F]"
+            disabled={isProcessing || !selectedFile || isCameraActive}
+            className="flex items-center gap-2 rounded-lg bg-[#0A2544] px-4 py-2 text-xs font-semibold text-[#E8C66A] shadow-sm hover:bg-[#061A2F] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span>{isProcessing ? 'Processing...' : 'Complete Upload &amp; Scan'}</span>
@@ -424,9 +445,9 @@ export const OcrInspectionModal: React.FC<OcrInspectionModalProps> = ({
                             : String(val)}
                         </td>
                         <td className="px-3 py-2">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#061A2F] bg-[#FAF9F5] px-2 py-0.5 rounded border border-[#C99A32]">
-                            <CheckCircle2 className="h-3 w-3 text-[#C99A32]" />
-                            Verified
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-300">
+                            <AlertTriangle className="h-3 w-3 text-amber-600" />
+                            Proposed — Review Required
                           </span>
                         </td>
                       </tr>
@@ -444,7 +465,7 @@ export const OcrInspectionModal: React.FC<OcrInspectionModalProps> = ({
               <span>Security, Hash &amp; Chain of Custody</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-neutral-600">
-              <div>SHA-256 Hash: <span className="text-neutral-900">{doc.fileHash || 'sha256_e8910a293b8214'}</span></div>
+              <div>SHA-256 Hash: <span className={doc.fileHash ? 'text-neutral-900' : 'text-red-700 font-bold'}>{doc.fileHash || 'UNAVAILABLE — LINEAGE INCOMPLETE'}</span></div>
               <div>Upload Timestamp: <span className="text-neutral-900">{doc.uploadedDate || '2026-02-14 14:22 EST'}</span></div>
               <div>Malware &amp; PDF Sanitization: <span className="text-[#061A2F] font-bold">Passed (Zero Threats)</span></div>
               <div>PII Redaction Engine: <span className="text-[#061A2F] font-bold">SSN &amp; Bank Accts Masked</span></div>

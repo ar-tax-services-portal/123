@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { TESTIMONIALS_DATA } from '../../data/mockData';
 import { BrandLogo } from '../common/BrandLogo';
@@ -81,7 +81,7 @@ export const HomePage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => setCurrentPage('client_portal')}
+                  onClick={() => window.location.hash = '#/client/login'}
                   className="px-6 py-4 rounded-xl font-semibold text-sm text-slate-100 bg-[#0D2340] hover:bg-[#132E52] border border-[#1E3A5F] hover:border-[#C99A3D]/60 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
                   id="hero-portal-btn"
                 >
@@ -481,7 +481,7 @@ export const HomePage: React.FC = () => {
                 size="lg"
                 variant="portrait"
                 priority={false}
-                caption="Desmond Hinds • Founder & Chief Executive Officer"
+                caption="Desmond Hinds â€¢ Founder & Chief Executive Officer"
                 className="w-full"
               />
             </div>
@@ -689,7 +689,7 @@ export const HomePage: React.FC = () => {
 
             <div className="pt-2 flex items-center gap-4">
               <button
-                onClick={() => setCurrentPage('client_portal')}
+                onClick={() => window.location.hash = '#/client/login'}
                 className="px-6 py-3.5 rounded-xl font-bold text-xs text-[#07172B] bg-[#C99A3D] hover:bg-[#E2BD67] transition-all flex items-center gap-2"
                 id="portal-upload-btn"
               >
@@ -724,7 +724,7 @@ export const HomePage: React.FC = () => {
             Tailored Engagement Structures
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Every client’s financial blueprint is unique. Engagements are tailored to your entity complexity and filings required, with personalized proposals presented inside the secure client portal.
+            Every clientâ€™s financial blueprint is unique. Engagements are tailored to your entity complexity and filings required, with personalized proposals presented inside the secure client portal.
           </p>
         </div>
 
@@ -950,4 +950,6 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
+
+
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * A/R Tax Services, LLC - Stage One Onboarding & Identity Verification Engine
  * Implements Stage One (Onboard) in the Unified 18-Stage Operating Workflow:
  * 1. Minimal account entry -> Internal Client ID generation
@@ -7,7 +7,7 @@
  * 4. Addresses & Authorized Representative
  * 5. Supporting ID documents
  * 6. Duplicate check across TIN, Legal Name, Email, Phone, Address (block/route to review)
- * 7. Engagement & Consent with approved IRC § 7216 language
+ * 7. Engagement & Consent with approved IRC Â§ 7216 language
  * 8. Onboarding Readiness Card & Hard Exit Gate
  * 9. Stage Two activation upon satisfaction
  */
@@ -161,8 +161,19 @@ export class StageOneOnboardingService {
     phone: string;
     taxpayerType?: TaxpayerType;
     businessName?: string;
+
+    /**
+     * Authoritative TaxGuard client identifier.
+     *
+     * LIVE callers MUST supply the authenticated/server-issued
+     * identifier. Demo callers may omit it and retain the existing
+     * generated demonstration identifier behavior.
+     */
+    clientId?: string;
   }): StageOneDossier {
-    const clientId = this.generateClientId();
+    const clientId =
+      params.clientId?.trim() ||
+      this.generateClientId();
     const isEntity = params.taxpayerType === 'entity' || Boolean(params.businessName);
 
     const dossier: StageOneDossier = {
@@ -257,7 +268,12 @@ export class StageOneOnboardingService {
    * 5. Address (Street and ZIP)
    * Blocks or routes to review if a likely match!
    */
-  public static runDuplicateCheck(dossier: Partial<StageOneDossier>): DuplicateCheckReport {
+  public static runDuplicateCheck(
+    dossier: Partial<StageOneDossier>,
+    options?: {
+      includeDemoRepository?: boolean;
+    }
+  ): DuplicateCheckReport {
     const matches: DuplicateMatchItem[] = [];
     const normEmail = (dossier.email || '').trim().toLowerCase();
     const normPhone = (dossier.phone || '').replace(/\D/g, '');
@@ -267,8 +283,19 @@ export class StageOneOnboardingService {
     const normZip = (dossier.residentialOrPrincipalAddress?.zip || '').trim();
     const targetLast4 = dossier.tinLast4 || (dossier.maskedTIN ? dossier.maskedTIN.slice(-4) : '');
 
-    // Cross-check against demo client repository
-    for (const existing of INITIAL_DEMO_CLIENTS) {
+    /*
+     * The seeded demonstration repository must never participate
+     * in a LIVE taxpayer duplicate decision.
+     *
+     * A production client registry should later be supplied by the
+     * server/database duplicate-check pipeline.
+     */
+    const duplicateRepository =
+      options?.includeDemoRepository === false
+        ? []
+        : INITIAL_DEMO_CLIENTS;
+
+    for (const existing of duplicateRepository) {
       // 1. Check Email
       const exEmail = (existing.email || '').trim().toLowerCase();
       if (normEmail && exEmail && normEmail === exEmail) {
@@ -497,9 +524,9 @@ export class StageOneOnboardingService {
     );
     blockingItems.push({
       id: 'gate_consent',
-      label: 'Engagement Scope & IRC § 7216 Consent E-Signature',
+      label: 'Engagement Scope & IRC Â§ 7216 Consent E-Signature',
       satisfied: consentSatisfied,
-      blockingReason: consentSatisfied ? undefined : 'IRC § 7216 consent, scope acknowledgment, and legal electronic signature required.'
+      blockingReason: consentSatisfied ? undefined : 'IRC Â§ 7216 consent, scope acknowledgment, and legal electronic signature required.'
     });
 
     // Calculate percentage
@@ -707,3 +734,6 @@ export class StageOneOnboardingService {
     return dossier;
   }
 }
+
+
+

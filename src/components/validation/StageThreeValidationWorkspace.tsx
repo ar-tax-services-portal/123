@@ -63,7 +63,6 @@ import {
   HumanValidationQueueItem,
   StageThreeWorkspaceContext
 } from '../../services/stageThreeValidationService';
-import { StageTwoCollectionOperationsService } from '../../services/stageTwoCollectionOperationsService';
 
 export interface StageThreeValidationWorkspaceProps {
   clientId?: string;
@@ -122,25 +121,22 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
 
   // Load all workspace state
   const reloadWorkspace = () => {
-    // Check if Stage 02 has cleared gate or if demo needs default cleared record
-    const existingGate = StageTwoCollectionOperationsService.getExitGateStatus(clientId, selectedTaxYear);
-    if (!existingGate) {
-      // Provision a valid demonstration cleared Stage 02 gate for Perotti Consulting 2025
-      StageTwoCollectionOperationsService.executeStageTwoExitGate({
-        clientId,
-        taxYear: selectedTaxYear,
-        engagementId: `ENG-${selectedTaxYear}-${clientId}`,
-        actor: 'Desmond Hinds, CPA',
-        actorRole: 'cpa',
-        certificationStatement: 'Certified that all mandatory Stage 02 collection requirements and intake verifications are complete.'
-      });
-    }
-
-    // Sync sources from Stage 02
-    StageThreeValidationService.syncSourcesFromStageTwo(clientId, selectedTaxYear);
-
     const ctx = StageThreeValidationService.getWorkspaceContext(clientId, selectedTaxYear);
     setContext(ctx);
+
+    if (!ctx.isHandoffVerified) {
+      setSources([]);
+      setIdentityFindings([]);
+      setPeriodFindings([]);
+      setCrossDocRules([]);
+      setMathResults([]);
+      setConflicts([]);
+      setExceptions([]);
+      setReviewQueue([]);
+      return;
+    }
+
+    StageThreeValidationService.syncSourcesFromStageTwo(clientId, selectedTaxYear, ctx.engagementId);
 
     const srcList = StageThreeValidationService.getValidationSources(clientId, selectedTaxYear);
     setSources(srcList);
@@ -172,20 +168,56 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
   }, [clientId, selectedTaxYear]);
 
   const handleSyncFromStageTwo = () => {
-    const added = StageThreeValidationService.syncSourcesFromStageTwo(clientId, selectedTaxYear);
+    const handoff = StageThreeValidationService.validateStageTwoHandoff(clientId, selectedTaxYear, context?.engagementId);
+    if (!handoff.isValid) {
+      setActionNotice({
+        type: 'error',
+        message: handoff.reasons.join(' ')
+      });
+      setTimeout(() => setActionNotice(null), 4000);
+      return;
+    }
+
+    const added = StageThreeValidationService.syncSourcesFromStageTwo(clientId, selectedTaxYear, handoff.gateRecord?.engagementId);
     reloadWorkspace();
     setActionNotice({
       type: 'success',
-      message: `Synchronized ${added.length} source records from Stage 02 Document Vault.`
+      message: `Synchronized ${added.length} source records from the certified Stage 02 handoff.`
     });
     setTimeout(() => setActionNotice(null), 4000);
   };
 
   const handleRunFullValidation = () => {
+    const handoff = StageThreeValidationService.validateStageTwoHandoff(clientId, selectedTaxYear, context?.engagementId);
+    if (!handoff.isValid) {
+      setActionNotice({
+        type: 'error',
+        message: handoff.reasons.join(' ')
+      });
+      setTimeout(() => setActionNotice(null), 4000);
+      return;
+    }
+
+    StageThreeValidationService.syncSourcesFromStageTwo(
+      clientId,
+      selectedTaxYear,
+      handoff.gateRecord?.engagementId
+    );
+    StageThreeValidationService.verifySourceIntegrity(clientId, selectedTaxYear);
+    StageThreeValidationService.validateOcrSourceProvenance(clientId, selectedTaxYear);
+    StageThreeValidationService.validateExtractedFields(clientId, selectedTaxYear);
+    StageThreeValidationService.runConfidenceThresholdValidation(clientId, selectedTaxYear);
+    StageThreeValidationService.runDuplicateAndVersionValidation(clientId, selectedTaxYear);
+    StageThreeValidationService.runControlledTaxFormValidation(clientId, selectedTaxYear);
+    StageThreeValidationService.runTaxpayerIdentityValidation(clientId, selectedTaxYear);
+    StageThreeValidationService.runTinEinValidation(clientId, selectedTaxYear);
+    StageThreeValidationService.runTaxYearConsistencyValidation(clientId, selectedTaxYear);
+    StageThreeValidationService.runEntityClassificationValidation(clientId, selectedTaxYear);
+
     reloadWorkspace();
     setActionNotice({
       type: 'success',
-      message: 'Comprehensive Stage 03 validation pipeline executed. Identity, periods, cross-documents, and math recalculated.'
+      message: 'Comprehensive Stage 03 validation pipeline executed. Provenance, extracted fields, confidence, versions, identity, periods, cross-documents, and math recalculated.'
     });
     setTimeout(() => setActionNotice(null), 4000);
   };
@@ -796,6 +828,7 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
                         <td className="py-3 px-3 font-mono font-bold text-slate-900">{source.validationSourceId}</td>
                         <td className="py-3 px-3">
                           <div className="font-medium text-slate-900 truncate max-w-xs">{source.originalFilename}</div>
+                          <div className="text-[10px] font-mono text-slate-500">Document ID: {source.documentId} • Page {source.pageNumber}</div>
                           <div className="text-[10px] font-mono text-slate-400">Hash: {source.sourceHash.substring(0, 12)}...</div>
                         </td>
                         <td className="py-3 px-3 font-mono text-slate-700">{source.fieldName}</td>
@@ -1273,9 +1306,15 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
             <div className="space-y-2 text-xs">
               <div className="p-3 border border-slate-200 rounded-md flex items-center justify-between">
                 <span>Stage 02 Certified Exit Gate Verified</span>
-                <span className="text-emerald-700 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> CLEARED
-                </span>
+                {context?.isHandoffVerified ? (
+                  <span className="text-emerald-700 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" /> CLEARED
+                  </span>
+                ) : (
+                  <span className="text-rose-700 font-bold flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" /> BLOCKED
+                  </span>
+                )}
               </div>
 
               <div className="p-3 border border-slate-200 rounded-md flex items-center justify-between">
@@ -1460,6 +1499,10 @@ export const StageThreeValidationWorkspace: React.FC<StageThreeValidationWorkspa
                 <div className="p-2 border border-slate-200 rounded-md">
                   <div className="text-[10px] text-slate-400 uppercase font-mono">Source Tier</div>
                   <div className="font-bold text-indigo-700">{selectedSourceDetail.sourceTier}</div>
+                </div>
+                <div className="p-2 border border-slate-200 rounded-md">
+                  <div className="text-[10px] text-slate-400 uppercase font-mono">Source Location</div>
+                  <div className="font-bold text-slate-900">Document {selectedSourceDetail.documentId} • Page {selectedSourceDetail.pageNumber}</div>
                 </div>
                 <div className="p-2 border border-slate-200 rounded-md">
                   <div className="text-[10px] text-slate-400 uppercase font-mono">AI Confidence</div>

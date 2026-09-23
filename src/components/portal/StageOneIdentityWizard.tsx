@@ -1,4 +1,4 @@
-/**
+﻿/**
  * A/R Tax Services, LLC - Stage One Identity Verification Wizard
  * Entry point: Registration -> Stage One Onboard (Unified 18-Stage Operating Workflow)
  * Features:
@@ -8,7 +8,7 @@
  * - Address & authorized representative collection
  * - Supporting ID documents via secure upload
  * - 5-Point Duplicate Check (TIN, Name, Email, Phone, Address) with blocking & review routing
- * - Approved IRC § 7216 engagement & consent
+ * - Approved IRC Â§ 7216 engagement & consent
  * - Onboarding Readiness Card & Hard Exit Gate
  * - Stage Two activation upon pass
  */
@@ -64,6 +64,20 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
   onNavigateToDashboard
 }) => {
   const { currentUser, setCurrentPage } = useApp();
+
+  /*
+   * HARD ENVIRONMENT BOUNDARY
+   *
+   * A normal authenticated client is LIVE.
+   * artest2026 remains the demonstration account.
+   */
+  const isLiveClient =
+    Boolean(currentUser?.id) &&
+    Boolean(currentUser?.email) &&
+    currentUser!.email!.toLowerCase() !== 'artest2026';
+
+  const authenticatedClientId =
+    currentUser?.clientId || currentUser?.id;
   
   // Environment state
   const [activeEnv, setActiveEnv] = useState<AppEnvironment>(() => EnvironmentConfigService.getEnvironment());
@@ -88,17 +102,59 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
 
   // Initialize or load dossier
   useEffect(() => {
-    const targetId = initialClientId || StageOneOnboardingService.getActiveClientId() || 'AR-CLT-2025-10842';
+    /*
+     * LIVE must NEVER inherit the browser's previously active
+     * demonstration/onboarding client.
+     *
+     * DEMO preserves the existing fallback behavior.
+     */
+    const targetId =
+      isLiveClient
+        ? authenticatedClientId
+        : (
+            initialClientId ||
+            StageOneOnboardingService.getActiveClientId() ||
+            'AR-CLT-2025-10842'
+          );
+
+    if (!targetId) {
+      return;
+    }
+
+    if (isLiveClient) {
+      StageOneOnboardingService.setActiveClientId(targetId);
+    }
     let loaded = StageOneOnboardingService.getDossier(targetId);
     
     if (!loaded) {
       // Create initial dossier if none exists
       loaded = StageOneOnboardingService.createInitialDossier({
-        fullName: currentUser?.name || 'Vance Global Enterprises, LLC',
-        email: currentUser?.email || 'eleanor.vance@example.com',
-        phone: currentUser?.phone || '(678) 555-0199',
-        taxpayerType: 'entity',
-        businessName: 'Vance Global Enterprises, LLC'
+        /*
+         * LIVE identity is assigned by authentication/provisioning.
+         * Never replace it with a random Stage One identifier.
+         */
+        clientId:
+          isLiveClient
+            ? targetId
+            : undefined,
+
+        fullName:
+          currentUser?.name ||
+          (isLiveClient ? '' : 'Vance Global Enterprises, LLC'),
+        email:
+          currentUser?.email ||
+          (isLiveClient ? '' : 'eleanor.vance@example.com'),
+        phone:
+          currentUser?.phone ||
+          (isLiveClient ? '' : '(678) 555-0199'),
+        taxpayerType:
+          isLiveClient
+            ? (currentUser?.companyName || currentUser?.company ? 'entity' : 'individual')
+            : 'entity',
+        businessName:
+          currentUser?.companyName ||
+          currentUser?.company ||
+          (isLiveClient ? '' : 'Vance Global Enterprises, LLC')
       });
     }
 
@@ -111,6 +167,14 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
   };
 
   const handleEnvChange = (env: AppEnvironment) => {
+    /*
+     * Environment switching is a demonstration/testing capability.
+     * A LIVE client cannot change application environment.
+     */
+    if (isLiveClient) {
+      return;
+    }
+
     EnvironmentConfigService.setEnvironment(env);
     setActiveEnv(env);
   };
@@ -141,7 +205,13 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
     if (!dossier) return;
     setIsSimulatingCheck(true);
     setTimeout(() => {
-      const report = StageOneOnboardingService.runDuplicateCheck(dossier);
+      const report =
+        StageOneOnboardingService.runDuplicateCheck(
+          dossier,
+          {
+            includeDemoRepository: !isLiveClient
+          }
+        );
       const updated: StageOneDossier = {
         ...dossier,
         duplicateCheck: report
@@ -154,14 +224,17 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
   // Document upload completion handler
   const handleDocUploadComplete = (metadata: any) => {
     if (!dossier) return;
+    if (typeof metadata.sha256Hash !== 'string' || !/^[a-f0-9]{64}$/i.test(metadata.sha256Hash)) {
+      throw new Error('Supporting document provenance is incomplete: a valid SHA-256 source hash is required.');
+    }
     const newDoc: SupportingIdDoc = {
       id: metadata.id || `doc_${Date.now()}`,
       name: metadata.fileName || 'Government_ID_Verification.pdf',
       category: 'government_id',
-      sha256Hash: metadata.sha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      sha256Hash: metadata.sha256Hash,
       uploadedAt: new Date().toISOString(),
       fileSize: metadata.fileSize || '2.4 MB',
-      verified: true
+      verified: metadata.malwareScanStatus === 'clean'
     };
     const updated: StageOneDossier = {
       ...dossier,
@@ -193,6 +266,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
 
   // Test Failure Simulation: Inject collision with an existing client
   const handleInjectCollision = (sampleExisting: typeof INITIAL_DEMO_CLIENTS[0]) => {
+    if (isLiveClient) return;
     if (!dossier) return;
     const updated: StageOneDossier = {
       ...dossier,
@@ -212,6 +286,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
 
   // Test Happy Path: Autofill compliant data
   const handleAutofillCompliant = () => {
+    if (isLiveClient) return;
     if (!dossier) return;
     const updated: StageOneDossier = {
       ...dossier,
@@ -305,7 +380,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
               {isStageOneCompleted ? (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900/40 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
                   <Check className="w-3 h-3" />
-                  <span>EXIT GATE PASSED — STAGE 02 (COLLECT) ACTIVE</span>
+                  <span>EXIT GATE PASSED â€” STAGE 02 (COLLECT) ACTIVE</span>
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-900/40 text-amber-300 border border-amber-500/40 flex items-center gap-1">
@@ -318,7 +393,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
               <span>Identity Verification Wizard</span>
             </h1>
             <p className="text-xs text-slate-300 mt-0.5">
-              Authoritative client onboarding, taxpayer validation, TIN masking, duplicate detection, and IRC § 7216 consent.
+              Authoritative client onboarding, taxpayer validation, TIN masking, duplicate detection, and IRC Â§ 7216 consent.
             </p>
           </div>
 
@@ -328,19 +403,42 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
               <span className="text-xs font-mono font-bold text-[#C6A15B] tracking-wider">{dossier.clientId}</span>
             </div>
             
-            {/* Environment Switcher */}
-            <div className="flex items-center gap-1 text-[11px]">
-              <span className="text-slate-400">Environment:</span>
-              <select
-                value={activeEnv}
-                onChange={(e) => handleEnvChange(e.target.value as AppEnvironment)}
-                className="bg-[#07172B] border border-[#1E3A5F] rounded-lg px-2 py-0.5 text-xs text-[#C6A15B] font-semibold focus:outline-none"
-              >
-                <option value="demo">Demo Mode (Fictional Data)</option>
-                <option value="uat_staging">UAT Staging Mode</option>
-                <option value="production">Production (Dual Key)</option>
-              </select>
-            </div>
+            {/* Environment boundary */}
+            {isLiveClient ? (
+              <div className="flex items-center gap-2 text-[11px]">
+                <span className="text-slate-400">Environment:</span>
+
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+                  LIVE CLIENT WORKSPACE
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-[11px]">
+                <span className="text-slate-400">Environment:</span>
+
+                <select
+                  value={activeEnv}
+                  onChange={(e) =>
+                    handleEnvChange(
+                      e.target.value as AppEnvironment
+                    )
+                  }
+                  className="bg-[#07172B] border border-[#1E3A5F] rounded-lg px-2 py-0.5 text-xs text-[#C6A15B] font-semibold focus:outline-none"
+                >
+                  <option value="demo">
+                    Demo Mode (Fictional Data)
+                  </option>
+
+                  <option value="uat_staging">
+                    UAT Staging Mode
+                  </option>
+
+                  <option value="production">
+                    Production (Dual Key)
+                  </option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -384,7 +482,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
 
           <div className="p-2.5 rounded-xl border bg-[#07172B]/40 border-[#1E3A5F]/50 text-slate-500 hidden md:block">
             <div className="text-[10px] font-mono">STAGE 06-18</div>
-            <div className="font-bold text-xs mt-0.5">Review → File → Archive</div>
+            <div className="font-bold text-xs mt-0.5">Review â†’ File â†’ Archive</div>
             <div className="text-[10px] text-slate-500">Unified 18-Stage</div>
           </div>
         </div>
@@ -408,7 +506,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                 if (onNavigateToDashboard) {
                   onNavigateToDashboard();
                 } else {
-                  setCurrentPage('client_portal');
+                  setCurrentPage('stage_one_onboard');
                 }
               }}
               className="px-4 py-2 rounded-xl text-xs font-bold text-[#07172B] bg-[#C6A15B] hover:bg-[#D9BF7A] transition-all flex items-center gap-1.5 shadow-lg"
@@ -420,7 +518,8 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
         </div>
       )}
 
-      {/* Testing Simulation Bar */}
+      {/* Testing Simulation Bar - DEMO ONLY */}
+      {!isLiveClient && (
       <div className="p-3 rounded-2xl bg-[#07172B] border border-[#1E3A5F] flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-slate-300 font-semibold">
           <Sliders className="w-4 h-4 text-[#C6A15B]" />
@@ -458,6 +557,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
           </button>
         </div>
       </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex flex-wrap gap-1.5 border-b border-[#1E3A5F] pb-2 text-xs font-semibold">
@@ -541,7 +641,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
-          <span>7. IRC § 7216 Consent</span>
+          <span>7. IRC Â§ 7216 Consent</span>
         </button>
 
         <button
@@ -1268,7 +1368,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                 onClick={() => setActiveTab('consent')}
                 className="px-4 py-2 rounded-xl text-xs font-bold text-[#07172B] bg-[#C6A15B] hover:bg-[#D9BF7A] flex items-center gap-1.5"
               >
-                <span>Next: IRC § 7216 Consent</span>
+                <span>Next: IRC Â§ 7216 Consent</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1279,7 +1379,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
         {activeTab === 'consent' && (
           <div className="space-y-6">
             <div className="border-b border-[#1E3A5F] pb-3">
-              <h2 className="font-serif text-lg font-bold text-white">7. Engagement Scope & IRC § 7216 Consent</h2>
+              <h2 className="font-serif text-lg font-bold text-white">7. Engagement Scope & IRC Â§ 7216 Consent</h2>
               <p className="text-xs text-slate-300">
                 Statutory disclosures governing taxpayer data confidentiality, electronic communications, and professional scope.
               </p>
@@ -1287,7 +1387,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
 
             <div className="p-4 rounded-2xl bg-[#07172B] border border-[#1E3A5F] space-y-4 text-xs text-slate-300 max-h-64 overflow-y-auto">
               <h4 className="font-bold text-white uppercase tracking-wider text-[11px] text-[#C6A15B]">
-                Statutory Disclosure Under Internal Revenue Code § 7216
+                Statutory Disclosure Under Internal Revenue Code Â§ 7216
               </h4>
               <p>
                 Federal law strictly prohibits tax return preparers from disclosing or using tax return information for purposes other than tax return preparation, unless expressly consented to by the taxpayer in writing.
@@ -1318,7 +1418,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                   className="mt-0.5 rounded text-[#C6A15B] focus:ring-[#C6A15B]"
                 />
                 <span>
-                  <strong>IRC § 7216 Consent:</strong> I formally authorize A/R Tax Services, LLC to process confidential tax return information under Treas. Reg. § 301.7216-3.
+                  <strong>IRC Â§ 7216 Consent:</strong> I formally authorize A/R Tax Services, LLC to process confidential tax return information under Treas. Reg. Â§ 301.7216-3.
                 </span>
               </label>
 
@@ -1525,7 +1625,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                       if (onNavigateToDashboard) {
                         onNavigateToDashboard();
                       } else {
-                        setCurrentPage('client_portal');
+                        setCurrentPage('stage_one_onboard');
                       }
                     }}
                     className="px-6 py-3 rounded-xl font-bold text-xs text-[#07172B] bg-emerald-400 hover:bg-emerald-300 transition-all shadow-xl flex items-center gap-2"
@@ -1557,7 +1657,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1E3A5F] hover:bg-[#2A4D7A] text-white flex items-center gap-1.5"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Previous: IRC § 7216 Consent</span>
+                <span>Previous: IRC Â§ 7216 Consent</span>
               </button>
             </div>
           </div>
@@ -1567,3 +1667,17 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+

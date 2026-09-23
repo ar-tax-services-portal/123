@@ -16,7 +16,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { db } from '../../firebase/config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { generateEventHash } from '../../services/clientPortalService';
+
 
 export interface DocumentUploadProps {
   onUploadComplete?: (docMetadata: any) => void;
@@ -69,17 +69,18 @@ const MAX_FILE_SIZE_BYTES = 52428800; // 50MB statutory vault limit
  * Client-side cryptographic SHA-256 computation using Web Crypto API.
  */
 async function computeSha256(file: File): Promise<string> {
-  try {
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-      const arrayBuffer = await file.arrayBuffer();
-      const hashBuffer = await window.crypto.subtle.digest('SHA-256', arrayBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-  } catch {
-    // Non-fatal fallback
+  if (typeof window === 'undefined' || !window.crypto?.subtle) {
+    throw new Error('Cryptographic SHA-256 hashing is unavailable. The document was not accepted.');
   }
-  return generateEventHash(`${file.name}-${file.size}-${file.lastModified}-${Date.now()}`);
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    throw new Error('Cryptographic SHA-256 hashing failed. The document was not accepted.');
+  }
 }
 
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({
@@ -193,6 +194,16 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         encryptionStandard: 'AES-256-GCM',
         status: 'pending_review',
         provenanceId: `PRV-${Date.now().toString(36).toUpperCase()}`,
+        evidenceProvenance: {
+          documentId: docId,
+          sourceHashAlgorithm: 'SHA-256',
+          sourceHash: sha256,
+          hashComputation: 'WEB_CRYPTO_SOURCE_BYTES',
+          ocrArtifactId: null,
+          extractionArtifactId: null,
+          lineageStatus: 'SOURCE_CAPTURED',
+          unsupportedSourceRepairsApplied: false
+        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -218,7 +229,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         });
       }
 
-      updateStatus('complete', 'Verified, encrypted, and saved to client dossier.', {
+      updateStatus('complete', 'Source received, SHA-256 recorded, and queued for professional review.', {
         scanResult: 'clean'
       });
 

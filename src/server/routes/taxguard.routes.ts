@@ -35,7 +35,11 @@ interface WorkpaperField {
   clientId: string;
   fieldName: string;
   taxFormTarget: string;
+  sourceDocumentId: string;
   sourceDocName: string;
+  sourceSha256: string;
+  ocrArtifactId: string;
+  extractionArtifactId: string;
   sourcePage: number;
   boundingBox: { ymin: number; xmin: number; ymax: number; xmax: number };
   extractedRawValue: string;
@@ -68,7 +72,11 @@ const DEMO_WORKPAPERS: Map<string, WorkpaperField> = new Map([
       clientId: 'usr_client_001',
       fieldName: 'Gross Receipts or Sales',
       taxFormTarget: 'Form 1120-S, Line 1a',
+      sourceDocumentId: 'doc_gl_trial_balance_2024',
       sourceDocName: '2024_General_Ledger_Trial_Balance.pdf',
+      sourceSha256: '7df42928a44b67b57e6c0e497f5103f787d0ef89f4ad4d97ac6f27db320e658f',
+      ocrArtifactId: 'ocr_doc_gl_trial_balance_2024_v1',
+      extractionArtifactId: 'ext_doc_gl_trial_balance_2024_v1',
       sourcePage: 1,
       boundingBox: { ymin: 120, xmin: 50, ymax: 160, xmax: 320 },
       extractedRawValue: '$ 1,482,910.00',
@@ -93,7 +101,11 @@ const DEMO_WORKPAPERS: Map<string, WorkpaperField> = new Map([
       clientId: 'usr_client_002',
       fieldName: 'Depreciation & Section 179 Expense',
       taxFormTarget: 'Form 1120-S, Line 14 (Form 4562)',
+      sourceDocumentId: 'doc_fixed_asset_additions_2024',
       sourceDocName: '2024_Fixed_Asset_Additions_Invoice_Batch.pdf',
+      sourceSha256: '1178a801b75c253f101fbe70545b28d89d6fd4a8fe900c3565f652aba1c1956c',
+      ocrArtifactId: 'ocr_doc_fixed_asset_additions_2024_v1',
+      extractionArtifactId: 'ext_doc_fixed_asset_additions_2024_v1',
       sourcePage: 1,
       boundingBox: { ymin: 360, xmin: 50, ymax: 410, xmax: 310 },
       extractedRawValue: '$ 173,731.00',
@@ -398,6 +410,13 @@ taxguardRouter.post('/maker-checker/material-override', authenticateToken, (req:
     return res.status(400).json({ error: 'Contemporaneous professional justification required for material overrides.' });
   }
 
+  const parsedNewAmount = Number(newAmount);
+  if (newAmount === null || newAmount === undefined || newAmount === '' || !Number.isFinite(parsedNewAmount)) {
+    return res.status(400).json({
+      error: 'Material override requires an explicit finite numeric amount. Unsupported source data was not repaired or coerced.'
+    });
+  }
+
   const field = DEMO_WORKPAPERS.get(fieldId);
   if (!field) {
     return res.status(404).json({ error: 'Workpaper field not found.' });
@@ -418,7 +437,7 @@ taxguardRouter.post('/maker-checker/material-override', authenticateToken, (req:
 
   // Apply change, increment version, and invalidate prior sign-off
   field.version += 1;
-  field.workpaperValue = Number(newAmount);
+  field.workpaperValue = parsedNewAmount;
   field.reviewStatus = 'Corrected';
   field.lastApprovedBy = undefined;
   field.lastApprovedAt = undefined;
@@ -428,7 +447,7 @@ taxguardRouter.post('/maker-checker/material-override', authenticateToken, (req:
       eventType: 'MATERIAL_CHANGE_INVALIDATED_APPROVAL',
       ipAddress: req.ip || 'unknown',
       userId: req.user!.id,
-      details: `Material override on "${field.fieldName}" from $${previousValue.toLocaleString()} to $${Number(newAmount).toLocaleString()} INVALIDATED former approval by ${previousApprovedBy || 'Reviewer'}. Reason: ${justification}`,
+      details: `Material override on "${field.fieldName}" from ${previousValue.toLocaleString()} to ${parsedNewAmount.toLocaleString()} INVALIDATED former approval by ${previousApprovedBy || 'Reviewer'}. Reason: ${justification}`,
       severity: 'critical'
     });
   }
@@ -452,7 +471,44 @@ taxguardRouter.get('/provenance/field/:fieldId', authenticateToken, requireClien
 
   // Scrub internal notes if client is requesting
   const sanitized = filterReviewerNotesForClients(field, req.user!.role);
-  res.json(sanitized);
+  res.json({
+    ...sanitized,
+    evidenceLineage: {
+      document: {
+        documentId: field.sourceDocumentId,
+        fileName: field.sourceDocName
+      },
+      hash: {
+        algorithm: 'SHA-256',
+        value: field.sourceSha256
+      },
+      ocrArtifact: {
+        artifactId: field.ocrArtifactId
+      },
+      extractionArtifact: {
+        artifactId: field.extractionArtifactId,
+        page: field.sourcePage,
+        boundingBox: field.boundingBox
+      },
+      proposedField: {
+        fieldId: field.id,
+        fieldName: field.fieldName,
+        rawValue: field.extractedRawValue,
+        proposedWorkpaperValue: field.workpaperValue,
+        confidence: field.confidence,
+        isAiProposedOnly: true
+      },
+      validation: {
+        status: field.reviewStatus,
+        version: field.version
+      },
+      decision: {
+        approvedBy: field.lastApprovedBy || null,
+        approvedAt: field.lastApprovedAt || null,
+        history: field.history
+      }
+    }
+  });
 });
 
 // ----------------------------------------------------------------------

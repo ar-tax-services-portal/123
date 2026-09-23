@@ -930,8 +930,13 @@ export class StageThreeValidationService {
       valStatus = handoff.status === 'REVALIDATION_REQUIRED' ? 'REVALIDATION_REQUIRED' : 'BLOCKED_BY_STAGE_02';
     } else {
       const sources = this.getValidationSources(clientId, taxYear);
-      if (sources.length > 0) {
-        valStatus = blockingExceptions.length === 0 ? 'VALIDATED' : 'IN_PROGRESS';
+      const stageThreeGate = this.getExitGateStatus(clientId, taxYear);
+      if (stageThreeGate?.gateStatus === 'REOPENED' || stageThreeGate?.gateStatus === 'SUPERSEDED') {
+        valStatus = 'REVALIDATION_REQUIRED';
+      } else if (stageThreeGate?.gateStatus === 'CLEARED') {
+        valStatus = 'VALIDATED';
+      } else if (sources.length > 0) {
+        valStatus = 'IN_PROGRESS';
       }
     }
 
@@ -1093,7 +1098,16 @@ export class StageThreeValidationService {
   /**
    * Synchronizes sources from Stage 02 accepted documents and tie-outs into Stage 03.
    */
-  public static syncSourcesFromStageTwo(clientId: string, taxYear: number): ValidationSourceRecord[] {
+  public static syncSourcesFromStageTwo(
+    clientId: string,
+    taxYear: number,
+    engagementId?: string
+  ): ValidationSourceRecord[] {
+    const handoff = this.validateStageTwoHandoff(clientId, taxYear, engagementId);
+    if (!handoff.isValid) {
+      return [];
+    }
+
     const docs = StageTwoCollectionService.getUploadedDocuments(clientId, taxYear);
     const existing = this.getValidationSources(clientId, taxYear);
     const existingDocIds = new Set(existing.map(e => e.documentId));
@@ -1118,28 +1132,43 @@ export class StageThreeValidationService {
         // Register main fields from intelligence record if present
         if (doc.intelligenceRecord && doc.intelligenceRecord.extractedData) {
           Object.entries(doc.intelligenceRecord.extractedData).forEach(([field, val]) => {
+            const extractedField = val && typeof val === 'object' && 'extractedValue' in val
+              ? val as {
+                  extractedValue: string | number;
+                  confidence?: number;
+                  pageNumber?: number;
+                  boundingBox?: ValidationSourceRecord['boundingBox'];
+                  extractionArtifactId?: string;
+                }
+              : null;
+            const extractedValue = extractedField ? extractedField.extractedValue : String(val);
+            const fieldConfidence = extractedField?.confidence;
+
             const registered = this.registerValidationSource({
               documentId: doc.documentId,
               clientId,
-              engagementId: doc.engagementId || `ENG-${taxYear}-${clientId}`,
+              engagementId: handoff.gateRecord?.engagementId || doc.engagementId || `ENG-${taxYear}-${clientId}`,
               taxYear,
-              collectionVersion: 1,
+              collectionVersion: handoff.gateRecord?.collectionVersion || 1,
               documentVersion: doc.intelligenceRecord?.versionIntelligence?.versionNumber || 1,
               documentCategory: doc.claimedCategory,
               originalFilename: doc.originalFileName,
               sourceHash: doc.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
               OCRArtifactId: doc.intelligenceRecord?.ocrArtifact?.ocrArtifactId || `OCR-${doc.documentId}`,
-              extractionArtifactId: `EXT-${doc.documentId}`,
-              pageNumber: 1,
+              extractionArtifactId: extractedField?.extractionArtifactId || `EXT-${doc.documentId}-${field}`,
+              pageNumber: extractedField?.pageNumber || 1,
+              boundingBox: extractedField?.boundingBox,
               fieldName: field,
-              rawExtractedValue: String(val),
-              normalizedValue: String(val),
+              rawExtractedValue: extractedValue,
+              normalizedValue: extractedValue,
               sourceTier: tier,
-              AIConfidence: doc.intelligenceRecord?.overallExtractionConfidence !== undefined
+              AIConfidence: fieldConfidence !== undefined
+                ? fieldConfidence
+                : doc.intelligenceRecord?.overallExtractionConfidence !== undefined
                 ? doc.intelligenceRecord.overallExtractionConfidence
                 : null,
               isAiProposedOnly: true,
-              humanReviewStatus: doc.isVerified ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
+              humanReviewStatus: doc.intelligenceRecord?.humanReviewed ? 'REVIEWED_APPROVED' : 'UNREVIEWED',
               validationStatus: 'UNVALIDATED'
             });
             newlyAdded.push(registered);
@@ -3879,15 +3908,18 @@ export class StageThreeValidationService {
     const criteriaResults: ValidationCriterionResult[] = [];
 
     // 1. Stage 02 certified handoff remains valid
-    const stageTwoPassed = !!gateStatus && gateStatus.gateResult === 'CLEARED' && gateStatus.stageTwoStatus !== 'REOPENED' && gateStatus.stageThreeStatus !== 'REVALIDATION_REQUIRED';
+    const stageTwoHandoff = this.validateStageTwoHandoff(clientId, taxYear);
+    const stageTwoPassed = stageTwoHandoff.isValid;
     criteriaResults.push({
       criterionId: 'CRIT-01-STAGE-02-HANDOFF',
       description: 'Stage 02 certified handoff remains valid and un-reopened',
       status: stageTwoPassed ? 'PASSED' : 'FAILED',
       isBlocking: true,
-      details: stageTwoPassed ? 'Stage 02 exit gate cleared.' : 'Stage 02 collection record is missing or reopened.'
+      details: stageTwoPassed
+        ? `Stage 02 exit gate ${stageTwoHandoff.gateRecord?.gateId} cleared.`
+        : stageTwoHandoff.reasons.join(' ')
     });
-    if (!stageTwoPassed) blockingReasons.push('Stage 02 certified handoff is missing or has been reopened.');
+    if (!stageTwoPassed) blockingReasons.push(...stageTwoHandoff.reasons);
 
     // 2. Required validation sources exist
     const sourcesExist = sources.length > 0;

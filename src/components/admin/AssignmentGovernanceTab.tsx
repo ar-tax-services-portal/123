@@ -321,9 +321,8 @@ export const AssignmentGovernanceTab: React.FC<AssignmentGovernanceTabProps> = (
                     ))}
                   </div>
 
-                  <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-[#1E3A5F]/60">
-                    <span>EFIN: <strong className="text-slate-300 font-mono">SC-EFIN-091</strong></span>
-                    <span>License: <strong className="text-slate-300 font-mono">SC-CPA-9921</strong></span>
+                  <div className="text-[10px] text-slate-400 pt-1 border-t border-[#1E3A5F]/60">
+                    Professional credential status is verified server-side; identifiers are restricted.
                   </div>
                 </div>
               );
@@ -650,7 +649,6 @@ export const AssignmentGovernanceTab: React.FC<AssignmentGovernanceTabProps> = (
                     { id: 'prepare_tax_work', label: 'Prepare Tax Work & Returns' },
                     { id: 'review_tax_work', label: 'Review & Certify Returns' },
                     { id: 'communicate_with_client', label: 'Client Messaging & Notes' },
-                    { id: 'e_file_transmission', label: 'IRS Form 8879 / E-file' },
                     { id: 'manage_integrations', label: 'QuickBooks / Xero Sync' }
                   ].map(item => (
                     <label key={item.id} className="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer">

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * A/R Tax Services, LLC - Unified Master Demonstration Router
  * Intercepts protected role dashboard and login routes.
  * Enforces strict authentication tokens, isolation, and role boundaries.
@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DemoRole, DEMO_ROLES, DemoRoleConfig } from './types';
 import { DemoAuthService } from './services/DemoAuthService';
+import { useApp } from '../context/AppContext';
 import { DashboardShell, NavItem } from './components/DashboardShell';
 import { RoleLoginPage } from './components/RoleLoginPage';
 import { ErrorPageView, ErrorPageType } from './components/ErrorPages';
@@ -86,6 +87,30 @@ interface ParsedDemoRoute {
 }
 
 export const DemoAppRouter: React.FC = () => {
+  /*
+   * Unified authentication authority.
+   *
+   * DEMO clients are authenticated by DemoAuthService.
+   * LIVE clients are authenticated by Firebase + TaxGuard and
+   * represented by AppContext.currentUser.
+   */
+  const {
+    currentUser,
+    logout: taxGuardLogout,
+    setCurrentPage
+  } = useApp();
+
+  const hasDemoClientSession =
+    DemoAuthService.isAuthenticated('client');
+
+  const hasLiveClientSession =
+    Boolean(
+      currentUser &&
+      currentUser.role === 'client' &&
+      currentUser.email &&
+      currentUser.email.toLowerCase() !== 'artest2026'
+    );
+
   const [currentHash, setCurrentHash] = useState(() => 
     typeof window !== 'undefined' ? window.location.hash || window.location.pathname : ''
   );
@@ -157,7 +182,9 @@ export const DemoAppRouter: React.FC = () => {
 
     // Additional aliases and legacy redirects to canonical routes
     if (raw === 'client-portal' || raw === 'client_portal' || raw === 'client/portal' || raw === 'portal') {
-      const isClientAuth = DemoAuthService.isAuthenticated('client');
+      const isClientAuth =
+        hasDemoClientSession ||
+        hasLiveClientSession;
       return { 
         isDemo: true, 
         isPortals: false, 
@@ -191,7 +218,21 @@ export const DemoAppRouter: React.FC = () => {
 
   const role = routeInfo.role;
   const roleConfig: DemoRoleConfig | undefined = role ? DEMO_ROLES[role] : undefined;
-  const isAuthenticated = role ? DemoAuthService.isAuthenticated(role) : false;
+  /*
+   * Shared dashboard authorization.
+   *
+   * Client:
+   *   DEMO session OR verified LIVE Firebase/TaxGuard session.
+   *
+   * Other demonstration roles:
+   *   existing DemoAuthService behavior is preserved.
+   */
+  const isAuthenticated =
+    role === 'client'
+      ? hasDemoClientSession || hasLiveClientSession
+      : role
+        ? DemoAuthService.isAuthenticated(role)
+        : false;
 
   // Keep address bar in sync when route is redirected to login without firing synchronous hashchange during render
   useEffect(() => {
@@ -204,6 +245,50 @@ export const DemoAppRouter: React.FC = () => {
       }
     }
   }, [routeInfo.isLogin, isAuthenticated, roleConfig?.loginPath]);
+
+  /*
+   * ================================================================
+   * HARD LIVE / DEMO ROUTING BOUNDARY
+   * ================================================================
+   *
+   * ClientDashboardView is a demonstration application backed by
+   * demoDataStore.
+   *
+   * A verified LIVE Firebase/TaxGuard taxpayer is therefore NEVER
+   * allowed to render that demonstration workspace.
+   *
+   * LIVE clients enter the authoritative TaxGuard workflow instead.
+   *
+   * New/incomplete LIVE clients begin at Stage 01. Existing TaxGuard
+   * stage services remain responsible for their sequential exit gates.
+   */
+  if (
+    hasLiveClientSession &&
+    routeInfo.role === 'client' &&
+    routeInfo.isDashboard
+  ) {
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('taxguard_environment', 'live');
+      localStorage.removeItem('demo_session');
+
+      const targetHash = '#/stage_one_onboard';
+
+      if (window.location.hash !== targetHash) {
+        window.history.replaceState(
+          null,
+          '',
+          targetHash
+        );
+      }
+    }
+
+    setTimeout(() => {
+      setCurrentPage('stage_one_onboard');
+    }, 0);
+
+    return null;
+  }
 
   // If not a demo route, let the public site render
   if (!routeInfo.isDemo) {
@@ -333,7 +418,7 @@ export const DemoAppRouter: React.FC = () => {
       { id: 'resolution', label: 'Tax Resolution & Defense', icon: ShieldAlert },
       { id: 'taxguard_audit', label: 'TaxGuard Audit Ledger', icon: Activity },
       { id: 'ai_governance', label: 'AI Governance & Safety', icon: Lock },
-      { id: 'irc7216', label: 'IRC § 7216 Consents', icon: FileText },
+      { id: 'irc7216', label: 'IRC Â§ 7216 Consents', icon: FileText },
       { id: 'credentials', label: 'PTIN / EFIN Registry', icon: Key },
       { id: 'retention', label: 'Retention Schedule', icon: Folder }
     ],
@@ -603,7 +688,7 @@ export const DemoAppRouter: React.FC = () => {
         navItems={navItems}
         navGroups={role === 'client' ? CLIENT_NAV_GROUPS : (role === 'accountant' ? ACCOUNTANT_NAV_GROUPS : undefined)}
         title={roleConfig.title}
-        breadcrumbs={['Demonstration Workspace', roleConfig.department, roleConfig.title]}
+        breadcrumbs={[role === 'client' && hasLiveClientSession ? 'LIVE Client Workspace' : 'Demonstration Workspace', roleConfig.department, roleConfig.title]}
         onOpenAiAssistant={() => setAiAssistantOpen(true)}
         onOpenIntegrations={() => setIntegrationsModalOpen(true)}
         isRightDrawerOpen={aiAssistantOpen}
@@ -620,3 +705,8 @@ export const DemoAppRouter: React.FC = () => {
     </>
   );
 };
+
+
+
+
+

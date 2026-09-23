@@ -1,10 +1,11 @@
-/**
+﻿/**
  * A/R Tax Services, LLC - Unified Demonstration Dashboard Shell
  * Strict black-and-white minimalist architecture.
  * Shared across all 12 protected practice roles.
  */
 
 import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
 import { DemoRole, DEMO_ROLES, DemoRoleConfig, WorkCycleStage, WORK_CYCLE_STAGES } from '../types';
 import { DemoAuthService } from '../services/DemoAuthService';
 import { demoDataStore } from '../services/DemoDataService';
@@ -62,6 +63,7 @@ interface DashboardShellProps {
 }
 
 export const DashboardShell: React.FC<DashboardShellProps> = ({
+
   role,
   activeNavId,
   onSelectNav,
@@ -77,6 +79,32 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   onCloseRightDrawer,
   hasUnsavedChanges = false
 }) => {
+  /*
+   * TaxGuard authentication authority.
+   *
+   * LIVE:
+   *   AppContext.currentUser
+   *
+   * DEMO:
+   *   DemoAuthService
+   */
+  const {
+    currentUser: taxGuardCurrentUser,
+    logout: taxGuardLogout
+  } = useApp();
+
+  const isLiveClientSession =
+    typeof window !== 'undefined' &&
+    (
+      localStorage.getItem('taxguard_environment') === 'live' ||
+      (
+        Boolean(localStorage.getItem('authToken')) &&
+        !Boolean(localStorage.getItem('demo_session'))
+      )
+    ) &&
+    Boolean(taxGuardCurrentUser) &&
+    taxGuardCurrentUser?.role === 'client';
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,10 +241,31 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const getAuthoritativeStage = (): { stage: WorkCycleStage; engagementName?: string } => {
     const engagements = demoDataStore.getEngagements();
     if (role === 'client') {
-      const clientEng = engagements.find(e => e.clientId === 'cli_perotti') || engagements[0];
-      if (clientEng?.currentStage && WORK_CYCLE_STAGES.includes(clientEng.currentStage)) {
-        return { stage: clientEng.currentStage, engagementName: clientEng.clientName };
+      /*
+       * LIVE clients must never inherit workflow state from a seeded
+       * demonstration engagement.
+       *
+       * Stage 01 is the safe starting state until the authenticated
+       * LIVE workflow provides an authoritative later stage.
+       */
+      if (isLiveClientSession) {
+        return { stage: 'Onboard' };
       }
+
+      const clientEng =
+        engagements.find(e => e.clientId === 'cli_perotti') ||
+        engagements[0];
+
+      if (
+        clientEng?.currentStage &&
+        WORK_CYCLE_STAGES.includes(clientEng.currentStage)
+      ) {
+        return {
+          stage: clientEng.currentStage,
+          engagementName: clientEng.clientName
+        };
+      }
+
       return { stage: 'Sign' };
     }
     if (role === 'reviewer') {
@@ -241,11 +290,40 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const isOverview = !activeNavId || activeNavId === 'overview' || (navItems.length > 0 && activeNavId === navItems[0].id);
 
   const roleConfig: DemoRoleConfig = DEMO_ROLES[role];
-  const session = DemoAuthService.getSession(role);
-  const currentUser = session?.user || roleConfig.sampleUser;
 
-  const handleSignOut = () => {
+  /*
+   * CRITICAL TAXPAYER ISOLATION BOUNDARY
+   *
+   * A LIVE taxpayer must NEVER inherit roleConfig.sampleUser.
+   */
+  const session =
+    isLiveClientSession
+      ? null
+      : DemoAuthService.getSession(role);
+
+  const currentUser =
+    isLiveClientSession
+      ? taxGuardCurrentUser
+      : session?.user || roleConfig.sampleUser;
+
+  const handleSignOut = async () => {
+    if (isLiveClientSession) {
+
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('taxguard_environment');
+        localStorage.removeItem('demo_session');
+        sessionStorage.removeItem('demo_session');
+      }
+
+      await taxGuardLogout();
+
+      window.location.hash = '#/client/login';
+
+      return;
+    }
+
     DemoAuthService.logout(role);
+
     window.location.hash = roleConfig.loginPath;
   };
 
@@ -255,8 +333,11 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
   return (
     <div className="min-h-screen bg-[#FBFAF7] text-[#1A2028] flex flex-col font-sans antialiased selection:bg-[#061A2F] selection:text-[#F7F4ED]">
-      {/* 1. Discreet Persistent Demo Banner */}
-      <DemoBanner />
+      {/*
+        Demonstration disclosure belongs only to the DEMO environment.
+        LIVE clients must not be presented as a demonstration session.
+      */}
+      {!isLiveClientSession && <DemoBanner />}
 
       {/* Main App Flex Layout */}
       <div className="flex-1 flex overflow-hidden">
@@ -709,7 +790,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                     </span>
                     {engagementName && (
                       <span className="text-[11px] text-[#667085] font-sans">
-                        • Connected to {engagementName}
+                        â€¢ Connected to {engagementName}
                       </span>
                     )}
                   </div>
@@ -717,7 +798,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                     onClick={() => setShowCycleProgress(!showCycleProgress)}
                     className="text-[10px] font-mono text-[#667085] hover:text-[#1A2028] underline font-medium cursor-pointer"
                   >
-                    {showCycleProgress ? '▲ Compact Summary' : '▼ Expand Full 18 Stages'}
+                    {showCycleProgress ? 'â–² Compact Summary' : 'â–¼ Expand Full 18 Stages'}
                   </button>
                 </div>
                 {showCycleProgress ? (
@@ -827,7 +908,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
           <div className="bg-white border border-black max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-300 pb-3">
               <h3 className="text-sm font-bold uppercase tracking-wider text-black">
-                Active Demonstration Profile
+                {isLiveClientSession ? 'Active LIVE Client Profile' : 'Active Demonstration Profile'}
               </h3>
               <button onClick={() => setProfileModalOpen(false)} className="p-1 border border-neutral-300">
                 <X className="w-4 h-4" />
@@ -851,7 +932,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                 <span className="font-mono text-neutral-500">Department:</span> {roleConfig.department}
               </div>
               <div className="p-2 border border-neutral-200">
-                <span className="font-mono text-neutral-500">Session Mode:</span> <strong>Demo Isolation (4-hr token)</strong>
+                <span className="font-mono text-neutral-500">Session Mode:</span> <strong>{isLiveClientSession ? 'LIVE Firebase / TaxGuard Session' : 'Demo Isolation (4-hr token)'}</strong>
               </div>
             </div>
 
@@ -875,3 +956,15 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+

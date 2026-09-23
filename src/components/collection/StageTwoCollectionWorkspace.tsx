@@ -72,6 +72,7 @@ import { StageTwoDocumentRequestsView } from './StageTwoDocumentRequestsView';
 import { StageTwoExceptionsView } from './StageTwoExceptionsView';
 import { StageTwoExitGateView } from './StageTwoExitGateView';
 import { StageTwoCollectionOperationsService } from '../../services/stageTwoCollectionOperationsService';
+import { StageThreeValidationWorkspace } from '../validation/StageThreeValidationWorkspace';
 import { UploadScanCenterSection } from '../../demo/views/client/UploadScanCenterSection';
 import { ClientVaultSection } from '../../demo/views/client/ClientVaultSection';
 import { MissingDocumentsSection } from '../../demo/views/client/MissingDocumentsSection';
@@ -97,6 +98,7 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
   const [activeSubTab, setActiveSubTab] = useState<
     'checklist' | 'upload' | 'vault' | 'missing' | 'requests' | 'processing' | 'security' | 'exceptions' | 'review' | 'readiness'
   >(initialSubTab);
+  const [showStageThree, setShowStageThree] = useState(false);
 
   const [workspaceVersion, setWorkspaceVersion] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -208,6 +210,10 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
     if (!selectedReviewItem) return;
     if (!reviewJustification.trim()) {
       alert('A justification or operational explanation is required to complete this human review action.');
+      return;
+    }
+    if (reviewAction === 'CORRECT' && (!fieldCorrectionKey.trim() || !fieldCorrectionValue.trim())) {
+      alert('A correction requires both the source field key and the human-verified replacement value.');
       return;
     }
 
@@ -330,6 +336,19 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
       setIsSubmittingUpload(false);
     }
   };
+
+  if (showStageThree) {
+    return (
+      <StageThreeValidationWorkspace
+        clientId={context.clientId}
+        selectedTaxYear={context.taxYear}
+        onTaxYearChange={onTaxYearChange}
+        userRole="cpa"
+        onOpenAssistant={onOpenAssistant}
+        onNavigateToStageTwo={() => setShowStageThree(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6" id="stage-two-collection-workspace">
@@ -1742,6 +1761,7 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
           engagementId={context.engagementId}
           userRole="cpa"
           onRefresh={() => setWorkspaceVersion(v => v + 1)}
+          onNavigateToStageThree={() => setShowStageThree(true)}
         />
       )}
 

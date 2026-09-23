@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { UserRole } from '../../types';
 import { ShieldCheck, UserCheck, KeyRound, ExternalLink } from 'lucide-react';
@@ -28,7 +28,7 @@ export const RoleSwitcherBanner: React.FC = () => {
           <span className="hidden sm:inline text-slate-600">|</span>
           <div className="hidden sm:flex items-center gap-1.5 text-slate-400 whitespace-nowrap text-[11px] sm:text-xs">
             <span>Columbia, SC</span>
-            <span className="text-[#C99A3D]">•</span>
+            <span className="text-[#C99A3D]">â€¢</span>
             <a href="tel:678-205-9486" className="text-slate-300 hover:text-[#E2BD67] transition-colors">
               678-205-9486
             </a>
@@ -77,7 +77,7 @@ export const RoleSwitcherBanner: React.FC = () => {
           {/* Direct portal shortcuts */}
           {currentRole === 'client' && currentPage !== 'client_portal' && (
             <button
-              onClick={() => setCurrentPage('client_portal')}
+              onClick={() => setCurrentPage('client_login')}
               className="hidden sm:inline-flex bg-[#C99A3D]/20 text-[#E2BD67] hover:bg-[#C99A3D]/30 px-2 py-1 rounded text-[11px] font-semibold transition-colors items-center gap-1 whitespace-nowrap"
             >
               <span>Portal</span> <ExternalLink className="w-3 h-3" />
@@ -115,3 +115,4 @@ export const RoleSwitcherBanner: React.FC = () => {
     </div>
   );
 };
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useApp, PageRoute } from '../../context/AppContext';
 import { BrandLogo } from './BrandLogo';
 import { 
@@ -131,7 +131,7 @@ export const Navbar: React.FC = () => {
   const handlePortalAction = () => {
     if (currentUser && currentRole !== 'guest') {
       if (currentRole === 'client') {
-        window.location.hash = '#/client/dashboard';
+        window.location.hash = '#/client/login';
       } else if (currentRole === 'accountant') {
         window.location.hash = '#/accountant/dashboard';
       } else if (currentRole === 'senior_reviewer') {
@@ -139,7 +139,7 @@ export const Navbar: React.FC = () => {
       } else if (currentRole === 'admin' || currentRole === 'super_admin') {
         window.location.hash = '#/admin/dashboard';
       } else {
-        window.location.hash = '#/client/dashboard';
+        window.location.hash = '#/client/login';
       }
     } else {
       window.location.hash = '#/client/login';
@@ -168,7 +168,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* DESKTOP PRIMARY NAVIGATION (1024px+) */}
-          {/* Clean architecture: Home, About, Services ▼, Industries ▼ (xl), Tax Strategies ▼, More ▼ */}
+          {/* Clean architecture: Home, About, Services â–¼, Industries â–¼ (xl), Tax Strategies â–¼, More â–¼ */}
           <nav 
             className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 flex-shrink-0"
             aria-label="Primary Site Navigation"
@@ -199,7 +199,7 @@ export const Navbar: React.FC = () => {
               About
             </button>
 
-            {/* 3. Services ▼ */}
+            {/* 3. Services â–¼ */}
             <div className="relative" ref={servicesRef}>
               <button
                 ref={servicesBtnRef}
@@ -296,7 +296,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 4. Industries ▼ (Visible on xl, accessible via More on lg) */}
+            {/* 4. Industries â–¼ (Visible on xl, accessible via More on lg) */}
             <div className="hidden xl:block relative" ref={industriesRef}>
               <button
                 ref={industriesBtnRef}
@@ -371,7 +371,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 5. Tax Strategies ▼ */}
+            {/* 5. Tax Strategies â–¼ */}
             <div className="relative" ref={taxStrategiesRef}>
               <button
                 ref={taxStrategiesBtnRef}
@@ -470,7 +470,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* 6. More ▼ */}
+            {/* 6. More â–¼ */}
             <div className="relative" ref={moreRef}>
               <button
                 ref={moreBtnRef}
@@ -983,3 +983,4 @@ export const Navbar: React.FC = () => {
     </div>
   );
 };
+

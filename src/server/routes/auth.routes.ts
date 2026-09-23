@@ -1,314 +1,199 @@
 /**
  * Authentication & Identity Routes
- * Client registration, email verification, password management,
+ * Firebase-backed LIVE identity, demonstration login, password management,
  * brute-force lockout, session validation, and MFA.
  */
 
 import { Router, Request, Response } from 'express';
-import { randomUUID, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import { db } from '../db';
-import { 
-  hashPassword, 
-  verifyPassword, 
-  createSession, 
-  revokeSession, 
-  checkBruteForceLockout, 
-  recordLoginFailure, 
-  clearLoginFailures, 
-  authenticateToken, 
-  AuthenticatedRequest 
+import {
+  hashPassword,
+  verifyPassword,
+  createSession,
+  revokeSession,
+  checkBruteForceLockout,
+  recordLoginFailure,
+  clearLoginFailures,
+  authenticateToken,
+  AuthenticatedRequest
 } from '../auth';
 import { User, OnboardingState } from '../../types';
-
 import {
   getFirebaseAdminAuth,
   getFirebaseAdminDb,
   verifyFirebaseIdToken
 } from '../firebase-admin';
-
-import {
-  allocateTaxGuardClientId
-} from '../client-id.service';
-
+import { allocateTaxGuardClientId } from '../client-id.service';
 
 export const authRouter = Router();
 
-// Rate limiting and registration endpoint
-authRouter.post('/register', async (req: Request, res: Response) => {
-  try {
-    const { name, email, password, phone, companyName, clientType } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required.' });
-    }
-
-    // Security: Check if email already registered
-    const existing = Array.from(db.users.values()).find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-      return res.status(409).json({ error: 'An account with this email address is already registered.' });
-    }
-
-    // SECURITY MANDATE: Public registration CANNOT select staff or admin roles
-    // Any role in body is strictly ignored and forced to 'client'
-    const newUserId = `usr_${randomUUID()}`;
-    const verificationToken = randomBytes(24).toString('hex');
-    db.emailVerificationTokens.set(verificationToken, email);
-
-    const newUser: User = {
-      id: newUserId,
-      name,
-      email: email.toLowerCase(),
-      role: 'client', // STRICTLY client role
-      phone: phone || '',
-      companyName: companyName || '',
-      clientType: clientType || (companyName ? 'business' : 'individual'),
-      status: 'active',
-      isVerified: false, // Email verification pending
-      mfaEnabled: false,
-      onboardingStatus: 'in_progress',
-      onboardingStep: 1,
-      createdAt: new Date().toISOString()
-    };
-
-    db.users.set(newUserId, newUser);
-    db.userPasswords.set(email.toLowerCase(), hashPassword(password));
-
-    // Initialize initial onboarding draft
-    db.onboardingStates.set(newUserId, {
-      id: `onb_${randomUUID()}`,
-      userId: newUserId,
-      step: 1,
-      percentComplete: 7,
-      entityType: clientType || 'individual',
-      contactInfo: {
-        fullName: name,
-        email: email.toLowerCase(),
-        phone: phone || '',
-        address: '',
-        city: 'Columbia',
-        state: 'SC',
-        zipCode: ''
-      },
-      selectedServices: ['individual_tax_1040'],
-      intakeAnswers: {},
-      uploadedDocuments: [],
-      paymentMethodAuthorized: false,
-      engagementAgreementSigned: false,
-      privacyDisclaimerAccepted: false,
-      accountingSoftwareConnected: false,
-      consultationBooked: false,
-      status: 'draft',
-      missingRequirements: ['Email Verification', 'Contact Information', 'Engagement Agreement'],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-
-    const sessionToken = createSession(newUserId, 'client');
-
-    db.logAudit({
-      userId: newUserId,
-      userName: name,
-      userRole: 'client',
-      action: 'CLIENT_REGISTERED',
-      resource: `User #${newUserId}`,
-      details: `New client account registered for ${email}. Email verification dispatched.`,
-      ipAddress: req.ip || '127.0.0.1',
-      severity: 'info'
-    });
-
-    return res.status(201).json({
-      message: 'Account successfully registered.',
-      token: sessionToken,
-      user: newUser,
-      verificationTokenSimulated: verificationToken
-    });
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Internal registration failure.' });
-  }
+/**
+ * LIVE public registration must be completed with Firebase Authentication and
+ * then bridged through /firebase-session. The legacy endpoint must never mint
+ * a LIVE session from caller-supplied profile data.
+ */
+authRouter.post('/register', (_req: Request, res: Response) => {
+  return res.status(410).json({
+    error: 'Public registration requires Firebase Authentication.',
+    code: 'FIREBASE_REGISTRATION_REQUIRED'
+  });
 });
 
-/// OPHIREUM MULTIMEDIA PRODUCTIONS
+const firebaseProvisioningLocks = new Map<string, Promise<void>>();
+
+async function withFirebaseProvisioningLock<T>(firebaseUid: string, operation: () => Promise<T>): Promise<T> {
+  const previous = firebaseProvisioningLocks.get(firebaseUid) || Promise.resolve();
+  let release: () => void = () => {};
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const tail = previous.catch(() => {}).then(() => gate);
+  firebaseProvisioningLocks.set(firebaseUid, tail);
+
+  await previous.catch(() => {});
+
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (firebaseProvisioningLocks.get(firebaseUid) === tail) {
+      firebaseProvisioningLocks.delete(firebaseUid);
+    }
+  }
+}
 
 /**
  * Firebase -> TaxGuard LIVE session bridge.
- *
- * Firebase verifies the external identity.
- * TaxGuard provisions or restores the LIVE client workspace,
- * permanent Client ID, Stage 01 state, and TaxGuard session.
+ * Firebase proves external identity. TaxGuard restores or provisions the
+ * permanent application identity and creates the application session.
  */
-authRouter.post(
-  '/firebase-session',
-  async (req: Request, res: Response) => {
-    try {
-      const {
-        idToken,
-        name,
-        phone,
-        companyName,
-        clientType
-      } = req.body;
+authRouter.post('/firebase-session', async (req: Request, res: Response) => {
+  const { idToken } = req.body || {};
 
-      if (!idToken || typeof idToken !== 'string') {
-        return res.status(400).json({
-          error: 'Firebase ID token is required.'
-        });
-      }
+  if (!idToken || typeof idToken !== 'string') {
+    return res.status(400).json({ error: 'Firebase ID token is required.' });
+  }
 
-      // Trust identity only after server-side Firebase verification.
-      const decodedToken =
-        await verifyFirebaseIdToken(idToken);
+  let decodedToken: Awaited<ReturnType<typeof verifyFirebaseIdToken>>;
 
-      const firebaseUid = decodedToken.uid;
+  try {
+    decodedToken = await verifyFirebaseIdToken(idToken);
+  } catch (error) {
+    console.error('[Firebase Session] Token verification failed.', error);
+    return res.status(401).json({ error: 'Firebase authentication could not be verified.' });
+  }
 
-      const email =
-        typeof decodedToken.email === 'string'
-          ? decodedToken.email.trim().toLowerCase()
-          : '';
+  const firebaseUid = decodedToken.uid;
+  const tokenEmail = typeof decodedToken.email === 'string'
+    ? decodedToken.email.trim().toLowerCase()
+    : '';
 
-      if (!firebaseUid || !email) {
-        return res.status(401).json({
-          error:
-            'Verified Firebase identity does not contain a valid email.'
-        });
-      }
+  if (!firebaseUid || !tokenEmail) {
+    return res.status(401).json({
+      error: 'Verified Firebase identity does not contain a valid email.'
+    });
+  }
 
-      const firestore = getFirebaseAdminDb();
+  const firestore = getFirebaseAdminDb();
+  const firebaseAdminAuth = getFirebaseAdminAuth();
 
-      if (!firestore) {
-        return res.status(503).json({
-          error: 'Live account persistence is unavailable.'
-        });
-      }
+  if (!firestore || !firebaseAdminAuth) {
+    return res.status(503).json({ error: 'Live account persistence is unavailable.' });
+  }
 
-      const userRef =
-        firestore.collection('users').doc(firebaseUid);
+  try {
+    const firebaseAccount = await firebaseAdminAuth.getUser(firebaseUid);
+    const verifiedEmail = (firebaseAccount.email || '').trim().toLowerCase();
 
-      const existingSnapshot =
-        await userRef.get();
+    if (!verifiedEmail || verifiedEmail !== tokenEmail) {
+      return res.status(401).json({ error: 'Verified Firebase identity is inconsistent.' });
+    }
+
+    const provisioned = await withFirebaseProvisioningLock(firebaseUid, async () => {
+      const userRef = firestore.collection('users').doc(firebaseUid);
+      const existingSnapshot = await userRef.get();
+      const existing = existingSnapshot.exists ? existingSnapshot.data() || {} : {};
+      const hadPermanentClientId = Boolean(existing.clientId);
 
       let clientId: string;
-      let user: User;
+      let clientIdSequence: number | undefined;
 
-      if (existingSnapshot.exists) {
-        const existing =
-          existingSnapshot.data() || {};
-
-        if (!existing.clientId) {
-          return res.status(409).json({
-            error:
-              'Existing live account is missing its permanent Client ID. Manual reconciliation is required.'
-          });
-        }
-
-        // Existing LIVE client:
-        // NEVER allocate another Client ID.
+      if (hadPermanentClientId) {
         clientId = String(existing.clientId);
-
-        user = {
-          id: firebaseUid,
-          clientId,
-          email,
-          name: String(
-            existing.fullName ||
-            existing.name ||
-            name ||
-            email
-          ),
-          role: 'client',
-          phone: String(
-            existing.phone || phone || ''
-          ),
-          companyName: String(
-            existing.companyName ||
-            companyName ||
-            ''
-          ),
-          company: String(
-            existing.companyName ||
-            companyName ||
-            ''
-          ),
-         status: 'active',
-isVerified: true,
-createdAt: new Date().toISOString()
-        };
       } else {
-        // First LIVE provisioning only.
-        const allocation =
-          await allocateTaxGuardClientId(firestore);
-
+        const allocation = await allocateTaxGuardClientId(firestore);
         clientId = allocation.clientId;
-
-        user = {
-          id: firebaseUid,
-          clientId,
-          email,
-          name: String(name || email),
-          role: 'client',
-          phone: String(phone || ''),
-          companyName: String(companyName || ''),
-          company: String(companyName || ''),
-          status: 'active',
-isVerified: true,
-createdAt: new Date().toISOString()
-        };
-
-        await userRef.set({
-          uid: firebaseUid,
-          clientId,
-          clientIdSequence: allocation.sequence,
-
-          email,
-          fullName: user.name,
-          role: 'client',
-
-          phone: user.phone || '',
-          companyName: user.companyName || '',
-
-          clientType:
-            clientType === 'business'
-              ? 'business'
-              : 'individual',
-
-          environment: 'live',
-
-          // External filing/transmission remains disabled.
-          externalSubmissionEnabled: false,
-
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+        clientIdSequence = allocation.sequence;
       }
 
-      /*
-       * Compatibility bridge.
-       *
-       * Existing TaxGuard modules currently resolve the
-       * operational user through db.users.
-       *
-       * Firestore remains the permanent LIVE identity record.
-       */
+      const existingDbUser = db.users.get(firebaseUid);
+      const persistedStatus = existingDbUser?.status || existing.status;
+
+      if (persistedStatus === 'disabled' || persistedStatus === 'suspended') {
+        const blockedError = new Error('ACCOUNT_DISABLED') as Error & { status?: number };
+        blockedError.status = 403;
+        throw blockedError;
+      }
+
+      const verifiedName = firebaseAccount.displayName?.trim() || verifiedEmail;
+      const existingPhone = hadPermanentClientId && typeof existing.phone === 'string' ? existing.phone : '';
+      const existingCompany = hadPermanentClientId && typeof existing.companyName === 'string' ? existing.companyName : '';
+      const existingClientType = hadPermanentClientId && existing.clientType === 'business'
+        ? 'business'
+        : 'individual';
+      const createdAt = typeof existing.createdAt === 'string'
+        ? existing.createdAt
+        : firebaseAccount.metadata.creationTime || new Date().toISOString();
+
+      const user: User = {
+        id: firebaseUid,
+        clientId,
+        email: verifiedEmail,
+        name: verifiedName,
+        role: 'client',
+        phone: existingPhone || firebaseAccount.phoneNumber || '',
+        companyName: existingCompany,
+        company: existingCompany,
+        clientType: existingClientType,
+        status: 'active',
+        isVerified: true,
+        createdAt,
+        mfaEnabled: false
+      };
+
+      const persistedProfile: Record<string, unknown> = {
+        uid: firebaseUid,
+        clientId,
+        email: verifiedEmail,
+        fullName: verifiedName,
+        role: 'client',
+        phone: user.phone || '',
+        companyName: user.companyName || '',
+        clientType: existingClientType,
+        status: 'active',
+        environment: 'live',
+        externalSubmissionEnabled: false,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (!hadPermanentClientId) {
+        persistedProfile.clientIdSequence = clientIdSequence;
+        persistedProfile.createdAt = createdAt;
+      }
+
+      await userRef.set(persistedProfile, { merge: true });
       db.users.set(firebaseUid, user);
 
-      /*
-       * Preserve existing Stage 01 architecture.
-       * Only initialize Stage 01 when no onboarding state exists.
-       */
       if (!db.onboardingStates.has(firebaseUid)) {
         const onboardingState: OnboardingState = {
-  id: `onb_${firebaseUid}`,
-  userId: firebaseUid,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-
+          id: `onb_${randomBytes(16).toString('hex')}`,
+          userId: firebaseUid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           step: 1,
           percentComplete: 5,
-
-          entityType:
-            clientType === 'business'
-              ? 'business'
-              : 'individual',
-
+          entityType: existingClientType,
           contactInfo: {
             fullName: user.name,
             email: user.email,
@@ -318,64 +203,65 @@ createdAt: new Date().toISOString()
             state: '',
             zipCode: ''
           },
-
           selectedServices: [],
           intakeAnswers: {},
           uploadedDocuments: [],
-
           paymentMethodAuthorized: false,
           engagementAgreementSigned: false,
           privacyDisclaimerAccepted: false,
           accountingSoftwareConnected: false,
           consultationBooked: false,
-
           status: 'draft',
-
           missingRequirements: [
             'Complete identity verification',
             'Complete onboarding information'
           ]
         };
-
-        db.onboardingStates.set(
-          firebaseUid,
-          onboardingState
-        );
+        db.onboardingStates.set(firebaseUid, onboardingState);
       }
 
-      // Reuse the existing TaxGuard session architecture.
-      const sessionToken =
-        createSession(firebaseUid, 'client');
+      return { user, clientId, restored: hadPermanentClientId };
+    });
 
-      return res.status(200).json({
-        message: existingSnapshot.exists
-          ? 'Live TaxGuard session restored.'
-          : 'Live TaxGuard account provisioned.',
+    const sessionToken = createSession(firebaseUid, 'client');
 
-        token: sessionToken,
-        user,
-        clientId,
+    db.logAudit({
+      userId: provisioned.user.id,
+      userName: provisioned.user.name,
+      userRole: 'client',
+      action: provisioned.restored ? 'FIREBASE_SESSION_RESTORED' : 'FIREBASE_CLIENT_PROVISIONED',
+      resource: `User #${provisioned.user.id}`,
+      details: provisioned.restored
+        ? 'LIVE TaxGuard session restored from a verified Firebase identity.'
+        : 'LIVE TaxGuard client provisioned from a verified Firebase identity.',
+      ipAddress: req.ip || 'unknown',
+      severity: 'info'
+    });
 
-        environment: 'live',
-        externalSubmissionEnabled: false
-      });
-
-    } catch (error: any) {
-      console.error(
-        '[Firebase Session] Provisioning failed.',
-        error
-      );
-
-      return res.status(401).json({
-        error:
-          'Firebase authentication could not be verified.'
+    return res.status(200).json({
+      message: provisioned.restored
+        ? 'Live TaxGuard session restored.'
+        : 'Live TaxGuard account provisioned.',
+      token: sessionToken,
+      user: provisioned.user,
+      clientId: provisioned.clientId,
+      environment: 'live',
+      externalSubmissionEnabled: false
+    });
+  } catch (error: any) {
+    if (error?.status === 403 || error?.message === 'ACCOUNT_DISABLED') {
+      return res.status(403).json({
+        error: 'Access denied because this TaxGuard account is disabled or suspended.',
+        code: 'ACCOUNT_DISABLED'
       });
     }
+
+    console.error('[Firebase Session] Provisioning failed.', error);
+    return res.status(503).json({ error: 'The LIVE TaxGuard session could not be provisioned.' });
   }
-);
+});
 
-
-// Secure Login
+// Secure demonstration/staff login. LIVE public clients use Firebase.
 authRouter.post('/login', async (req: Request, res: Response) => {
   const { email, password, mfaCode } = req.body;
   const ip = req.ip || 'unknown';
@@ -385,7 +271,6 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-  // Check brute force lockout
   const lockout = checkBruteForceLockout(lockoutKey);
   if (lockout.locked) {
     db.logSecurityEvent({
@@ -401,18 +286,17 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     });
   }
 
-  const user = Array.from(db.users.values()).find(u => u.email.toLowerCase() === email.toLowerCase());
+  const user = Array.from(db.users.values()).find(item => item.email.toLowerCase() === email.toLowerCase());
   const storedHash = db.userPasswords.get(email.toLowerCase());
 
   if (!user || !storedHash || !verifyPassword(password, storedHash)) {
     recordLoginFailure(lockoutKey, ip, email);
-    return res.status(401).json({ 
+    return res.status(401).json({
       error: 'Invalid credentials. Please verify your email and password.',
-      code: 'INVALID_CREDENTIALS' 
+      code: 'INVALID_CREDENTIALS'
     });
   }
 
-  // Account status check (suspended or disabled accounts)
   if (user.status === 'disabled' || user.status === 'suspended') {
     db.logSecurityEvent({
       eventType: 'DISABLED_USER_LOGIN_ATTEMPT',
@@ -427,7 +311,6 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     });
   }
 
-  // Optional MFA check
   if (user.mfaEnabled && !mfaCode) {
     return res.status(200).json({
       mfaRequired: true,
@@ -436,13 +319,9 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     });
   }
 
-  // Clear failures upon successful validation
   clearLoginFailures(lockoutKey);
-
-  // Update last login
   user.lastLoginAt = new Date().toISOString();
   db.users.set(user.id, user);
-
   const token = createSession(user.id, user.role);
 
   db.logAudit({
@@ -456,22 +335,15 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     severity: 'info'
   });
 
-  return res.json({
-    token,
-    user
-  });
+  return res.json({ token, user });
 });
 
-// Current User Profile
 authRouter.get('/me', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   return res.json({ user: req.user });
 });
 
-// Logout
 authRouter.post('/logout', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
-  if (req.token) {
-    revokeSession(req.token);
-  }
+  if (req.token) revokeSession(req.token);
   db.logAudit({
     userId: req.user?.id || 'unknown',
     userName: req.user?.name || 'Anonymous',
@@ -485,53 +357,46 @@ authRouter.post('/logout', authenticateToken, (req: AuthenticatedRequest, res: R
   return res.json({ message: 'Logged out successfully.' });
 });
 
-// Email Verification
 authRouter.post('/verify-email', (req: Request, res: Response) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: 'Verification token is required.' });
 
   const email = db.emailVerificationTokens.get(token);
-  if (!email) {
-    return res.status(400).json({ error: 'Invalid or expired verification token.' });
-  }
+  if (!email) return res.status(400).json({ error: 'Invalid or expired verification token.' });
 
-  const user = Array.from(db.users.values()).find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (user) {
-    user.isVerified = true;
-    db.users.set(user.id, user);
-    db.emailVerificationTokens.delete(token);
+  const user = Array.from(db.users.values()).find(item => item.email.toLowerCase() === email.toLowerCase());
+  if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    db.logAudit({
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      action: 'EMAIL_VERIFIED',
-      resource: `User #${user.id}`,
-      details: `Email ${email} verified successfully via cryptographic token.`,
-      ipAddress: req.ip || 'unknown',
-      severity: 'info'
-    });
-
-    return res.json({ message: 'Email verified successfully!', user });
-  }
-
-  return res.status(404).json({ error: 'User not found.' });
+  user.isVerified = true;
+  db.users.set(user.id, user);
+  db.emailVerificationTokens.delete(token);
+  db.logAudit({
+    userId: user.id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'EMAIL_VERIFIED',
+    resource: `User #${user.id}`,
+    details: `Email ${email} verified successfully via cryptographic token.`,
+    ipAddress: req.ip || 'unknown',
+    severity: 'info'
+  });
+  return res.json({ message: 'Email verified successfully!', user });
 });
 
-// Forgot Password Workflow
 authRouter.post('/forgot-password', (req: Request, res: Response) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email address is required.' });
 
-  const user = Array.from(db.users.values()).find(u => u.email.toLowerCase() === email.toLowerCase());
+  const user = Array.from(db.users.values()).find(item => item.email.toLowerCase() === email.toLowerCase());
   if (!user) {
-    // Return standard message to prevent email enumeration
     return res.json({ message: 'If an account exists with this email, a secure reset token has been dispatched.' });
   }
 
   const resetToken = randomBytes(24).toString('hex');
-  const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
-  db.passwordResetTokens.set(resetToken, { email: email.toLowerCase(), expiresAt });
+  db.passwordResetTokens.set(resetToken, {
+    email: email.toLowerCase(),
+    expiresAt: Date.now() + 60 * 60 * 1000
+  });
 
   db.logAudit({
     userId: user.id,
@@ -544,13 +409,12 @@ authRouter.post('/forgot-password', (req: Request, res: Response) => {
     severity: 'info'
   });
 
-  return res.json({ 
+  return res.json({
     message: 'If an account exists with this email, a secure reset token has been dispatched.',
     ...(process.env.NODE_ENV !== 'production' ? { devResetToken: resetToken } : {})
   });
 });
 
-// Authenticated Password Change & Session Revocation
 authRouter.post('/change-password', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   const user = req.user!;
   const { currentPassword, newPassword } = req.body;
@@ -569,12 +433,9 @@ authRouter.post('/change-password', authenticateToken, (req: AuthenticatedReques
   }
 
   db.userPasswords.set(user.email.toLowerCase(), hashPassword(newPassword));
-  
-  // Clear mustResetPassword flag
   user.mustResetPassword = false;
   db.users.set(user.id, user);
 
-  // Invalidate all existing sessions except current
   const currentToken = req.headers.authorization?.replace('Bearer ', '') || (req.headers['x-session-token'] as string);
   let revokedCount = 0;
   for (const [token, session] of db.sessions.entries()) {
@@ -595,16 +456,16 @@ authRouter.post('/change-password', authenticateToken, (req: AuthenticatedReques
     severity: 'info'
   });
 
-  return res.json({ 
+  return res.json({
     message: 'Password successfully changed. Other active sessions have been securely terminated.',
-    revokedSessions: revokedCount 
+    revokedSessions: revokedCount
   });
 });
 
-// Explicit Session Revocation Endpoint
 authRouter.post('/revoke-sessions', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   const user = req.user!;
   let revokedCount = 0;
+
   for (const [token, session] of db.sessions.entries()) {
     if (session.userId === user.id) {
       db.sessions.delete(token);
@@ -626,31 +487,24 @@ authRouter.post('/revoke-sessions', authenticateToken, (req: AuthenticatedReques
   return res.json({ message: 'All sessions successfully revoked.', revokedCount });
 });
 
-// Reset Password Workflow
 authRouter.post('/reset-password', (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
-  if (!token || !newPassword) {
-    return res.status(400).json({ error: 'Token and new password are required.' });
-  }
+  if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password are required.' });
 
   const resetRecord = db.passwordResetTokens.get(token);
   if (!resetRecord || Date.now() > resetRecord.expiresAt) {
     return res.status(400).json({ error: 'Reset token is invalid or has expired.' });
   }
 
-  const user = Array.from(db.users.values()).find(u => u.email.toLowerCase() === resetRecord.email.toLowerCase());
-  if (!user) {
-    return res.status(404).json({ error: 'User not found.' });
-  }
+  const user = Array.from(db.users.values()).find(item => item.email.toLowerCase() === resetRecord.email.toLowerCase());
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters long.' });
 
   db.userPasswords.set(user.email.toLowerCase(), hashPassword(newPassword));
   db.passwordResetTokens.delete(token);
 
-  // Invalidate all existing sessions for this user for security
-  for (const [sToken, sData] of db.sessions.entries()) {
-    if (sData.userId === user.id) {
-      db.sessions.delete(sToken);
-    }
+  for (const [sessionToken, sessionData] of db.sessions.entries()) {
+    if (sessionData.userId === user.id) db.sessions.delete(sessionToken);
   }
 
   db.logAudit({
@@ -667,44 +521,13 @@ authRouter.post('/reset-password', (req: Request, res: Response) => {
   return res.json({ message: 'Password has been successfully updated. Please log in with your new credentials.' });
 });
 
-// Optional Google Sign-in Endpoint
-authRouter.post('/google', (req: Request, res: Response) => {
-  const { email, name, googleId } = req.body;
-  if (!email) return res.status(400).json({ error: 'Google email is required.' });
-
-  let user = Array.from(db.users.values()).find(u => u.email.toLowerCase() === email.toLowerCase());
-
-  if (!user) {
-    const newUserId = `usr_${randomUUID()}`;
-    user = {
-      id: newUserId,
-      name: name || email.split('@')[0],
-      email: email.toLowerCase(),
-      role: 'client',
-      status: 'active',
-      isVerified: true,
-      mfaEnabled: false,
-      createdAt: new Date().toISOString()
-    };
-    db.users.set(newUserId, user);
-  }
-
-  const token = createSession(user.id, user.role);
-
-  db.logAudit({
-    userId: user.id,
-    userName: user.name,
-    userRole: user.role,
-    action: 'GOOGLE_SSO_LOGIN',
-    resource: 'OAuth Identity Provider',
-    details: `Client authenticated via Google OAuth SSO.`,
-    ipAddress: req.ip || 'unknown',
-    severity: 'info'
+/**
+ * Caller-asserted Google profile data is not an authentication proof. Google
+ * users must authenticate through Firebase and use /firebase-session.
+ */
+authRouter.post('/google', (_req: Request, res: Response) => {
+  return res.status(410).json({
+    error: 'Google authentication requires a verified Firebase provider token.',
+    code: 'FIREBASE_PROVIDER_TOKEN_REQUIRED'
   });
-
-  return res.json({ token, user });
 });
-
-
-
-

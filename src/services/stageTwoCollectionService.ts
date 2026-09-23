@@ -1,6 +1,6 @@
-/**
+﻿/**
  * A/R Tax Services, LLC - Stage Two Collection & Document Intake Engine
- * Unified 18-Stage Tax Operating Workflow — Milestone M2 / Stage 02: Collect
+ * Unified 18-Stage Tax Operating Workflow â€” Milestone M2 / Stage 02: Collect
  *
  * Implements:
  * - TG-COL-001: Centralized Tax-Year Collection Workspace Context (Client ID + Engagement + Tax Year + Entity/Return Type)
@@ -149,9 +149,22 @@ export class StageTwoCollectionService {
     targetClientId?: string,
     targetTaxYear?: number
   ): TaxYearCollectionWorkspaceContext {
-    // 1. Resolve Client ID from active Stage 01 Onboarding dossier or demo store fallback
+    // 1. Resolve the client from the caller or active Stage 01 dossier.
+    //
+    // IMPORTANT:
+    // Demo callers explicitly provide cli_perotti.
+    // LIVE callers explicitly provide their authenticated Client ID.
+    //
+    // Never silently substitute another taxpayer when client identity
+    // is unavailable.
     const activeOnboardingId = StageOneOnboardingService.getActiveClientId();
-    const resolvedClientId = targetClientId || activeOnboardingId || 'cli_perotti';
+    const resolvedClientId = targetClientId || activeOnboardingId;
+
+    if (!resolvedClientId) {
+      throw new Error(
+        'TaxGuard client context is unavailable. Re-authentication or Stage 01 onboarding is required.'
+      );
+    }
     
     // 2. Resolve Tax Year (default 2025)
     let resolvedYear = targetTaxYear || 2025;
@@ -162,13 +175,13 @@ export class StageTwoCollectionService {
 
     // 3. Resolve Entity & Engagement details
     const onboardingDossier = StageOneOnboardingService.getDossier(resolvedClientId);
-    const demoClient = demoDataStore.getClientById(resolvedClientId) || demoDataStore.getClientById('cli_perotti');
+    const demoClient = demoDataStore.getClientById(resolvedClientId);
     const demoEng = demoDataStore.getEngagements().find(
       e => e.clientId === resolvedClientId && e.taxYear === resolvedYear
-    ) || demoDataStore.getEngagements()[0];
+    );
 
     let entityType: EntityReturnType = 'individual';
-    let entityName = 'Michael Perotti';
+    let entityName = 'Client';
     let returnType = 'Form 1040 (U.S. Individual Income Tax Return)';
     let jurisdictions = ['Federal', 'SC'];
 
@@ -280,7 +293,7 @@ export class StageTwoCollectionService {
         'Govt ID',
         'Identity & Dependents',
         'Federal',
-        'Valid unexpired Driver’s License or Passport for taxpayer and spouse per IRS security verification requirements.',
+        'Valid unexpired Driverâ€™s License or Passport for taxpayer and spouse per IRS security verification requirements.',
         'Required',
         'IRS Pub 1345 / Identity Verification'
       );
@@ -293,7 +306,7 @@ export class StageTwoCollectionService {
         'Federal / ' + primaryJurisdiction,
         'All Form W-2 statements issued by employers reporting wages, tips, federal, and state income tax withholdings.',
         'Required',
-        'IRC § 6051'
+        'IRC Â§ 6051'
       );
 
       addReq(
@@ -304,7 +317,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Interest income earned across bank accounts, credit unions, CDs, or municipal bonds.',
         'Required if applicable',
-        'IRC § 6049'
+        'IRC Â§ 6049'
       );
 
       addReq(
@@ -315,7 +328,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Ordinary dividends, qualified dividends, and capital gain distributions from brokerage holdings.',
         'Required if applicable',
-        'IRC § 6042'
+        'IRC Â§ 6042'
       );
 
       addReq(
@@ -326,7 +339,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Independent contractor, consulting, or freelance compensation earned during the tax year.',
         knownFacts.hasContractWork ? 'Required' : 'Required if applicable',
-        'IRC § 6041A'
+        'IRC Â§ 6041A'
       );
 
       addReq(
@@ -337,7 +350,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Reports home mortgage interest, points, and real estate property taxes paid to lending institutions.',
         'Required if applicable',
-        'IRC § 6050H'
+        'IRC Â§ 6050H'
       );
 
       addReq(
@@ -348,7 +361,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Required for reconciling federal Premium Tax Credit (Form 8962) if covered by Healthcare.gov or state exchange.',
         knownFacts.hasMarketplaceInsurance ? 'Required' : 'Required if applicable',
-        'IRC § 36B'
+        'IRC Â§ 36B'
       );
 
       addReq(
@@ -359,7 +372,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Share of income, deductions, and credits from partnerships, S-corporations, or trusts.',
         knownFacts.hasPassThrough ? 'Required' : 'Required if applicable',
-        'IRC §§ 702, 1366'
+        'IRC Â§Â§ 702, 1366'
       );
 
       if (primaryJurisdiction === 'SC') {
@@ -371,7 +384,7 @@ export class StageTwoCollectionService {
           'SC',
           'Documentation supporting South Carolina state tax credits, tuition tax credits, and county property tax credits.',
           'Recommended',
-          'SC Code Ann. § 12-6-40'
+          'SC Code Ann. Â§ 12-6-40'
         );
       }
     }
@@ -388,7 +401,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Complete signed copy of the prior tax year Form 1120-S including all Schedules K-1, balance sheets, and depreciation schedules.',
         'Required',
-        'Treas. Reg. § 1.6037-1'
+        'Treas. Reg. Â§ 1.6037-1'
       );
 
       addReq(
@@ -399,7 +412,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Year-end adjusted trial balance with debit/credit balance, chart of accounts, and detailed general ledger export.',
         'Required',
-        'IRC § 446 / Accounting Methods'
+        'IRC Â§ 446 / Accounting Methods'
       );
 
       addReq(
@@ -410,7 +423,7 @@ export class StageTwoCollectionService {
         'Federal',
         'All business checking, savings, and credit card statements through December 31 with formal bank reconciliation tie-outs.',
         'Required',
-        'IRC § 6001 / Recordkeeping'
+        'IRC Â§ 6001 / Recordkeeping'
       );
 
       addReq(
@@ -421,7 +434,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Reconciled federal employment tax returns and annual W-3 summary substantiating shareholder-officer reasonable compensation.',
         'Required',
-        'IRC § 3121 / Rev. Rul. 74-44'
+        'IRC Â§ 3121 / Rev. Rul. 74-44'
       );
 
       addReq(
@@ -432,7 +445,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Cumulative stock and debt basis schedules tracking beginning basis, income additions, non-dividend distributions, and loss limits.',
         'Required',
-        'IRC § 1367 / Form 7203'
+        'IRC Â§ 1367 / Form 7203'
       );
 
       addReq(
@@ -443,7 +456,7 @@ export class StageTwoCollectionService {
         'Federal / ' + primaryJurisdiction,
         'Invoices and settlement statements for all capital asset acquisitions, vehicle purchases, and machinery placed in service.',
         'Required',
-        'IRC §§ 168, 179'
+        'IRC Â§Â§ 168, 179'
       );
 
       if (primaryJurisdiction === 'SC') {
@@ -455,7 +468,7 @@ export class StageTwoCollectionService {
           'SC',
           'State depreciation modification schedule disallowing federal bonus depreciation and capping Section 179 at $25,000.',
           'Required',
-          'SC Code Ann. § 12-6-40(A)(1)(a)'
+          'SC Code Ann. Â§ 12-6-40(A)(1)(a)'
         );
       }
     }
@@ -472,7 +485,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Prior year Form 1120 with Schedule M-1/M-3 book-to-tax reconciliations and carryforward loss records.',
         'Required',
-        'IRC § 6012'
+        'IRC Â§ 6012'
       );
 
       addReq(
@@ -483,7 +496,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Comparative balance sheet, income statement, statement of cash flows, and note disclosures.',
         'Required',
-        'IRC § 446'
+        'IRC Â§ 446'
       );
 
       addReq(
@@ -494,7 +507,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Complete year-end adjusted trial balance mapped to corporate tax chart of accounts.',
         'Required',
-        'IRC § 6001'
+        'IRC Â§ 6001'
       );
 
       addReq(
@@ -505,7 +518,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Permanent and temporary timing differences (meals limitation, officer life insurance, deferred compensation, depreciation).',
         'Required',
-        'Treas. Reg. § 1.6012-2'
+        'Treas. Reg. Â§ 1.6012-2'
       );
 
       addReq(
@@ -516,7 +529,7 @@ export class StageTwoCollectionService {
         'Federal / ' + primaryJurisdiction,
         'Electronic Federal Tax Payment System (EFTPS) and state DOR confirmation receipts for quarterly tax installments.',
         'Required',
-        'IRC § 6655'
+        'IRC Â§ 6655'
       );
     }
 
@@ -532,7 +545,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Prior year Form 1065 with all partner Schedules K-1 and tax basis capital account schedules.',
         'Required',
-        'IRC § 6031'
+        'IRC Â§ 6031'
       );
 
       addReq(
@@ -543,7 +556,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Current executed Operating Agreement detailing profit/loss allocation percentages, guaranteed payments, and capital contributions.',
         'Required',
-        'IRC § 704(b)'
+        'IRC Â§ 704(b)'
       );
 
       addReq(
@@ -565,7 +578,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Full adjusted trial balance substantiating all gross receipts, cost of goods sold, and deductible operating expenses.',
         'Required',
-        'IRC § 6001'
+        'IRC Â§ 6001'
       );
 
       addReq(
@@ -574,9 +587,9 @@ export class StageTwoCollectionService {
         'Partner Compensation',
         'Partner Compensation',
         'Federal',
-        'Itemized schedules of all guaranteed payments for services or capital paid to partners under IRC § 707(c).',
+        'Itemized schedules of all guaranteed payments for services or capital paid to partners under IRC Â§ 707(c).',
         'Required if applicable',
-        'IRC § 707(c)'
+        'IRC Â§ 707(c)'
       );
     }
 
@@ -592,7 +605,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Categorized annual summary of business gross revenues, merchant processing fees, advertising, supplies, and operating expenses.',
         'Required',
-        'IRC § 162'
+        'IRC Â§ 162'
       );
 
       addReq(
@@ -603,7 +616,7 @@ export class StageTwoCollectionService {
         'Federal',
         'January through December business bank account statements demonstrating non-commingling of business and personal assets.',
         'Required',
-        'IRC § 6001'
+        'IRC Â§ 6001'
       );
 
       addReq(
@@ -614,7 +627,7 @@ export class StageTwoCollectionService {
         'Federal',
         'Statements issued by Stripe, Square, PayPal, or merchant processors reporting gross settlement volumes.',
         'Required if applicable',
-        'IRC § 6050W'
+        'IRC Â§ 6050W'
       );
     }
 
@@ -1111,3 +1124,7 @@ export class StageTwoCollectionService {
     }
   }
 }
+
+
+
+

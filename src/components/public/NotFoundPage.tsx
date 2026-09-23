@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { BrandLogo } from '../common/BrandLogo';
 import { Compass, Home, Phone, ArrowLeft, Lock } from 'lucide-react';
@@ -14,7 +14,7 @@ export const NotFoundPage: React.FC = () => {
 
       <div className="space-y-3">
         <span className="text-xs font-mono font-bold text-[#C6A15B] tracking-widest uppercase">
-          Status Code 404 • Resource Not Located
+          Status Code 404 â€¢ Resource Not Located
         </span>
         <h1 className="font-serif text-4xl sm:text-5xl font-extrabold text-white">
           Page Not Found
@@ -34,7 +34,7 @@ export const NotFoundPage: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setCurrentPage('client_portal')}
+          onClick={() => window.location.hash = '#/client/login'}
           className="px-6 py-3 rounded-xl font-semibold text-xs text-white bg-[#0D2340] hover:bg-[#132E52] border border-[#1E3A5F] transition-all flex items-center gap-2"
         >
           <Lock className="w-4 h-4 text-[#C6A15B]" />
@@ -52,3 +52,5 @@ export const NotFoundPage: React.FC = () => {
     </div>
   );
 };
+
+
