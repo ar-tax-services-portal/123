@@ -41,6 +41,7 @@ import { seedInitialServicesIfEmpty } from '../firebase/seed';
 import { testConnection } from '../firebase/firestore';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { DemoAuthService } from '../demo/services/DemoAuthService';
+import { StageOneOnboardingService } from '../services/stageOneOnboardingService';
 
 export type PageRoute =
   | 'home'
@@ -304,6 +305,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'home';
   };
 
+  const getLiveClientLandingPage = (user: User): PageRoute => {
+    if (user.role !== 'client' && user.role !== 'prospective_client') return 'home';
+    return StageOneOnboardingService.hasPassedHardExitGate(user.clientId)
+      ? 'client_portal'
+      : 'stage_one_onboard';
+  };
+
   const [currentPage, setCurrentPageState] = useState<PageRoute>(() => getPageFromUrl() || 'home');
   const [pageParams, setPageParams] = useState<any>({});
   const [isSyncingWithBackend, setIsSyncingWithBackend] = useState(false);
@@ -492,14 +500,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await refreshBackendData();
 
       if (liveSession.user.role === 'client' || liveSession.user.role === 'prospective_client') {
-        setCurrentPageState('stage_one_onboard');
+        const landingPage = getLiveClientLandingPage(liveSession.user);
+        setCurrentPageState(landingPage);
         setPageParams({});
 
         if (typeof window !== 'undefined') {
           try {
-            window.history.replaceState({ page: 'stage_one_onboard' }, '', '/stage_one_onboard');
+            window.history.replaceState({ page: landingPage }, '', `/${landingPage}`);
           } catch {
-            window.location.hash = '#/stage_one_onboard';
+            window.location.hash = `#/${landingPage}`;
           }
         }
       }
@@ -691,8 +700,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, error: firebaseResult.error || 'Invalid email or password.' };
       }
 
-      await restoreFirebaseSession(auth.currentUser, true);
-      return { success: true, redirectPage: 'stage_one_onboard' };
+      const restoredUser = await restoreFirebaseSession(auth.currentUser, true);
+      return { success: true, redirectPage: getLiveClientLandingPage(restoredUser) };
     } catch (err: any) {
       await firebaseLogout().catch(() => {});
       clearStoredToken();

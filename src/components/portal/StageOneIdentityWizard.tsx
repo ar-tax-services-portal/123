@@ -72,12 +72,12 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
    * artest2026 remains the demonstration account.
    */
   const isLiveClient =
+    currentUser?.role === 'client' &&
     Boolean(currentUser?.id) &&
     Boolean(currentUser?.email) &&
-    currentUser!.email!.toLowerCase() !== 'artest2026';
+    currentUser.email.toLowerCase() !== 'artest2026';
 
-  const authenticatedClientId =
-    currentUser?.clientId || currentUser?.id;
+  const authenticatedClientId = currentUser?.clientId;
   
   // Environment state
   const [activeEnv, setActiveEnv] = useState<AppEnvironment>(() => EnvironmentConfigService.getEnvironment());
@@ -95,6 +95,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
   const [isSimulatingCheck, setIsSimulatingCheck] = useState(false);
   const [gateErrorMessage, setGateErrorMessage] = useState<string | null>(null);
   const [gateSuccessMessage, setGateSuccessMessage] = useState<string | null>(null);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
 
   // Reviewer role simulation toggle for duplicate overrides
   const [isReviewerMode, setIsReviewerMode] = useState(false);
@@ -102,6 +103,8 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
 
   // Initialize or load dossier
   useEffect(() => {
+    setInitializationError(null);
+
     /*
      * LIVE must NEVER inherit the browser's previously active
      * demonstration/onboarding client.
@@ -118,6 +121,10 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
           );
 
     if (!targetId) {
+      if (isLiveClient) {
+        setDossier(null);
+        setInitializationError('Permanent TaxGuard Client ID is unavailable. Stage 01 cannot initialize until the authenticated LIVE identity is restored.');
+      }
       return;
     }
 
@@ -351,6 +358,16 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
     updateDossier(updated);
   };
 
+  if (initializationError) {
+    return (
+      <div className="max-w-2xl mx-auto p-8 text-center text-rose-200 bg-rose-950/40 border border-rose-500/50 rounded-2xl">
+        <AlertTriangle className="w-7 h-7 mx-auto mb-3 text-rose-400" />
+        <div className="font-bold text-white">Stage One Initialization Blocked</div>
+        <p className="text-xs mt-2">{initializationError}</p>
+      </div>
+    );
+  }
+
   if (!dossier) {
     return (
       <div className="p-12 text-center text-slate-300">
@@ -506,7 +523,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                 if (onNavigateToDashboard) {
                   onNavigateToDashboard();
                 } else {
-                  setCurrentPage('stage_one_onboard');
+                  setCurrentPage('client_portal');
                 }
               }}
               className="px-4 py-2 rounded-xl text-xs font-bold text-[#07172B] bg-[#C6A15B] hover:bg-[#D9BF7A] transition-all flex items-center gap-1.5 shadow-lg"
@@ -1625,7 +1642,7 @@ export const StageOneIdentityWizard: React.FC<StageOneIdentityWizardProps> = ({
                       if (onNavigateToDashboard) {
                         onNavigateToDashboard();
                       } else {
-                        setCurrentPage('stage_one_onboard');
+                        setCurrentPage('client_portal');
                       }
                     }}
                     className="px-6 py-3 rounded-xl font-bold text-xs text-[#07172B] bg-emerald-400 hover:bg-emerald-300 transition-all shadow-xl flex items-center gap-2"

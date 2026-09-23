@@ -15,6 +15,7 @@ import { AiAssistantDrawer } from './components/AiAssistantDrawer';
 import { IntegrationRegistryModal } from './components/IntegrationRegistryModal';
 import { CLIENT_NAV_GROUPS } from './config/clientNavGroups';
 import { ACCOUNTANT_NAV_GROUPS } from './config/accountantNavGroups';
+import { StageOneOnboardingService } from '../services/stageOneOnboardingService';
 
 // Role Views
 import { ClientDashboardView } from './views/ClientDashboardView';
@@ -272,7 +273,10 @@ export const DemoAppRouter: React.FC = () => {
       localStorage.setItem('taxguard_environment', 'live');
       localStorage.removeItem('demo_session');
 
-      const targetHash = '#/stage_one_onboard';
+      const landingPage = StageOneOnboardingService.hasPassedHardExitGate(currentUser?.clientId)
+        ? 'client_portal'
+        : 'stage_one_onboard';
+      const targetHash = `#/${landingPage}`;
 
       if (window.location.hash !== targetHash) {
         window.history.replaceState(
@@ -284,7 +288,10 @@ export const DemoAppRouter: React.FC = () => {
     }
 
     setTimeout(() => {
-      setCurrentPage('stage_one_onboard');
+      const landingPage = StageOneOnboardingService.hasPassedHardExitGate(currentUser?.clientId)
+        ? 'client_portal'
+        : 'stage_one_onboard';
+      setCurrentPage(landingPage);
     }, 0);
 
     return null;

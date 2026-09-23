@@ -169,7 +169,18 @@ export function generateDynamicChecklist(dossier: ClientOnboardingDossier) {
 onboardingRouter.get('/client', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
 
-  let dossier = db.clientOnboarding.get(req.user.id);
+  const permanentClientId = req.user.clientId?.trim();
+
+  if (req.user.role === 'client' && !permanentClientId) {
+    return res.status(409).json({
+      error: 'Permanent TaxGuard Client ID is required before onboarding can continue.',
+      code: 'CLIENT_ID_REQUIRED'
+    });
+  }
+
+  const onboardingKey = permanentClientId || req.user.id;
+
+  let dossier = db.clientOnboarding.get(onboardingKey);
   if (!dossier) {
     // Create initial dossier
     const [firstName, ...rest] = (req.user.name || '').split(' ');
@@ -177,7 +188,7 @@ onboardingRouter.get('/client', authenticateToken, (req: AuthenticatedRequest, r
 
     dossier = {
       id: `conb_${randomUUID()}`,
-      clientId: req.user.id,
+      clientId: req.user.clientId!,
       status: 'onboarding_in_progress',
       currentSection: 'A',
       percentComplete: 15,
@@ -265,7 +276,7 @@ onboardingRouter.get('/client', authenticateToken, (req: AuthenticatedRequest, r
 
     dossier.documentChecklist = generateDynamicChecklist(dossier);
     dossier.percentComplete = calculateClientDossierProgress(dossier);
-    db.clientOnboarding.set(req.user.id, dossier);
+    db.clientOnboarding.set(onboardingKey, dossier);
   }
 
   return res.json({ dossier });

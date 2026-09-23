@@ -175,10 +175,20 @@ export class StageTwoCollectionService {
 
     // 3. Resolve Entity & Engagement details
     const onboardingDossier = StageOneOnboardingService.getDossier(resolvedClientId);
-    const demoClient = demoDataStore.getClientById(resolvedClientId);
-    const demoEng = demoDataStore.getEngagements().find(
-      e => e.clientId === resolvedClientId && e.taxYear === resolvedYear
-    );
+
+    // Hard LIVE/DEMO isolation.
+    // Only the canonical DEMO taxpayer may query the demo data store.
+    const isExplicitDemoClient = resolvedClientId === 'cli_perotti';
+
+    const demoClient = isExplicitDemoClient
+      ? demoDataStore.getClientById(resolvedClientId)
+      : undefined;
+
+    const demoEng = isExplicitDemoClient
+      ? demoDataStore.getEngagements().find(
+          e => e.clientId === resolvedClientId && e.taxYear === resolvedYear
+        )
+      : undefined;
 
     let entityType: EntityReturnType = 'individual';
     let entityName = 'Client';
@@ -864,8 +874,11 @@ export class StageTwoCollectionService {
       }
     }
 
-    // Synchronize into demoDataStore so clean document is visible across Document Vault & Staff Dashboards
-    if (!isQuarantined) {
+    // DEMO isolation boundary:
+    // LIVE taxpayer documents must never be synchronized into demoDataStore.
+    const isExplicitDemoClient = payload.clientId === 'cli_perotti';
+
+    if (!isQuarantined && isExplicitDemoClient) {
       try {
         demoDataStore.uploadDocument({
           clientId: payload.clientId,

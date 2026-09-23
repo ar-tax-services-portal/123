@@ -223,6 +223,14 @@ describe('Stage One Onboard - Unified 18-Stage Operating Workflow', () => {
       expect(gateResult.success).toBe(true);
       expect(gateResult.dossier?.stageOneCompleted).toBe(true);
       expect(gateResult.dossier?.activeWorkflowStage).toBe(2); // Activates Stage 2: Collect
+      expect(StageOneOnboardingService.hasPassedHardExitGate(dossier.clientId)).toBe(true);
+
+      const invalidatedDossier = gateResult.dossier!;
+      invalidatedDossier.supportingDocs[0].verified = false;
+      StageOneOnboardingService.saveDossier(invalidatedDossier);
+
+      expect(StageOneOnboardingService.hasPassedHardExitGate(dossier.clientId)).toBe(false);
+      expect(StageOneOnboardingService.getDossier(dossier.clientId)?.readiness.overallStatus).toBe('incomplete');
     });
   });
 

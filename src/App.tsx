@@ -10,6 +10,7 @@ import { PortalLayout } from './components/layout/PortalLayout';
 import { PageLoadingFallback } from './components/common/PageLoadingFallback';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { HomePage } from './components/public/HomePage';
+import { StageTwoCollectionWorkspace } from './components/collection/StageTwoCollectionWorkspace';
 
 const AboutPage = lazy(() => import('./components/public/AboutPage').then(m => ({ default: m.AboutPage })));
 const FounderPage = lazy(() => import('./components/public/FounderPage').then(m => ({ default: m.FounderPage })));
@@ -31,7 +32,6 @@ const NotFoundPage = lazy(() => import('./components/public/NotFoundPage').then(
 const ClientLoginPage = lazy(() => import('./components/auth/AuthPages').then(m => ({ default: m.ClientLoginPage })));
 const ClientRegisterPage = lazy(() => import('./components/auth/AuthPages').then(m => ({ default: m.ClientRegisterPage })));
 const StaffLoginPage = lazy(() => import('./components/auth/AuthPages').then(m => ({ default: m.StaffLoginPage })));
-const StageOneIdentityWizard = lazy(() => import('./components/portal/StageOneIdentityWizard').then(m => ({ default: m.StageOneIdentityWizard })));
 const StaffOnboardingWizard = lazy(() => import('./components/workspace/StaffOnboardingWizard').then(m => ({ default: m.StaffOnboardingWizard })));
 const LiveCalendarModule = lazy(() => import('./components/calendar/LiveCalendarModule').then(m => ({ default: m.LiveCalendarModule })));
 const VirtualConsultationRoom = lazy(() => import('./components/consultation/VirtualConsultationRoom').then(m => ({ default: m.VirtualConsultationRoom })));
@@ -42,6 +42,7 @@ import { DemoAuthService } from './demo/services/DemoAuthService';
 import { DEMO_ROLES, DemoRole } from './demo/types';
 import { ErrorPageView } from './demo/components/ErrorPages';
 
+import { LiveClientWorkflowRouter } from './components/workflow/LiveClientWorkflowRouter';
 function getUrlTarget(): string {
   if (typeof window === 'undefined') return '';
   const hash = (window.location.hash || '').replace(/^#\/?/, '').replace(/^\/+/, '').toLowerCase();
@@ -76,6 +77,7 @@ function hasLiveClientWorkspace(user: { role?: string } | null | undefined): boo
   );
 }
 
+
 function isDemoRouteUrl(): boolean {
   const target = getUrlTarget();
   if (target.startsWith('taxguard') || target.startsWith('public-v2')) return false;
@@ -89,6 +91,9 @@ function isDemoRouteUrl(): boolean {
 
 const AppContent: React.FC = () => {
   const { currentPage, currentUser, setCurrentPage, pageParams } = useApp();
+  const [liveTaxYear, setLiveTaxYear] = React.useState<number>(
+    () => new Date().getFullYear() - 1
+  );
   const [isDemoRoute, setIsDemoRoute] = React.useState(() => isDemoRouteUrl());
   const [isPublicV2Route, setIsPublicV2Route] = React.useState(() => isPublicV2RouteUrl());
   const [isTaxGuardRoute, setIsTaxGuardRoute] = React.useState(() => isTaxGuardRouteUrl());
@@ -112,14 +117,7 @@ const AppContent: React.FC = () => {
       console.log(`[DIAGNOSTIC] Router initialization: active page = "${currentPage}", isTaxGuardRoute = ${isTaxGuardRoute}, isDemoRoute = ${isDemoRoute}, isPublicV2Route = ${isPublicV2Route}, authenticatedRole = "${currentUser?.role || 'none'}"`);
     }
   }, [currentPage, isTaxGuardRoute, isDemoRoute, isPublicV2Route, currentUser?.role]);
-
-  useEffect(() => {
-    if (hasLiveClientWorkspace(currentUser) && getUrlTarget().startsWith('client/dashboard')) {
-      setCurrentPage('stage_one_onboard');
-    }
-  }, [currentUser, setCurrentPage]);
-
-  useEffect(() => {
+useEffect(() => {
     let targetHash = '';
 
     if (currentPage === 'portals') {
@@ -135,7 +133,7 @@ const AppContent: React.FC = () => {
       const hasDemoClientSession = DemoAuthService.isAuthenticated('client');
 
       if (hasLiveClientSession) {
-        targetHash = '#/stage_one_onboard';
+        targetHash = '#/client_portal';
       } else if (hasDemoClientSession) {
         targetHash = '#/client/dashboard';
       } else {
@@ -206,10 +204,28 @@ const AppContent: React.FC = () => {
 
   const renderPage = () => {
     if (currentPage === 'client_portal' && hasLiveClientSession) {
+      const permanentClientId = currentUser?.clientId?.trim();
+
+      if (!permanentClientId) {
+        return (
+          <div className="mx-auto mt-8 max-w-3xl rounded-xl border border-red-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-red-800">
+              LIVE Workspace Locked
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-700">
+              A permanent TaxGuard Client ID is required before the LIVE workflow can open.
+              TaxGuard will not substitute DEMO data or create a browser-side Client ID.
+            </p>
+          </div>
+        );
+      }
+
       return (
-        <StageOneIdentityWizard
-          onExitGatePassed={() => setCurrentPage('stage_one_onboard')}
-          onNavigateToDashboard={() => setCurrentPage('stage_one_onboard')}
+        <LiveClientWorkflowRouter
+          clientId={permanentClientId}
+          taxYear={liveTaxYear}
+          onTaxYearChange={setLiveTaxYear}
         />
       );
     }
@@ -228,11 +244,26 @@ const AppContent: React.FC = () => {
       return null;
     }
 
-    if (currentPage === 'stage_one_onboard' || currentPage === 'onboarding' || currentPage === 'client_onboarding') {
+    if (
+      currentPage === 'stage_one_onboard' ||
+      currentPage === 'onboarding' ||
+      currentPage === 'client_onboarding'
+    ) {
+      if (!hasLiveClientSession) {
+        return <ClientLoginPage />;
+      }
+
+      const permanentClientId = currentUser?.clientId?.trim();
+
+      if (!permanentClientId) {
+        return <ClientLoginPage />;
+      }
+
       return (
-        <StageOneIdentityWizard
-          onExitGatePassed={() => setCurrentPage('stage_one_onboard')}
-          onNavigateToDashboard={() => setCurrentPage('stage_one_onboard')}
+        <LiveClientWorkflowRouter
+          clientId={permanentClientId}
+          taxYear={liveTaxYear}
+          onTaxYearChange={setLiveTaxYear}
         />
       );
     }

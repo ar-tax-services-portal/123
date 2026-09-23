@@ -490,12 +490,14 @@ export class StageOneOnboardingService {
     });
 
     // Gate 5: Supporting ID Document Upload
-    const hasUploadedDoc = dossier.supportingDocs && dossier.supportingDocs.length > 0;
+    const hasVerifiedSupportingDoc = Boolean(
+      dossier.supportingDocs && dossier.supportingDocs.some(document => document.verified === true)
+    );
     blockingItems.push({
       id: 'gate_document',
       label: 'Government ID or Formation Document Vault Receipt',
-      satisfied: hasUploadedDoc,
-      blockingReason: hasUploadedDoc ? undefined : 'At least one verified supporting identification or entity document must be uploaded.'
+      satisfied: hasVerifiedSupportingDoc,
+      blockingReason: hasVerifiedSupportingDoc ? undefined : 'At least one verified supporting identification or entity document must be uploaded.'
     });
 
     // Gate 6: Duplicate Check Cleared or Approved
@@ -535,7 +537,7 @@ export class StageOneOnboardingService {
     const isReady = satisfiedCount === blockingItems.length;
 
     let overallStatus: 'incomplete' | 'review_hold' | 'ready_to_exit' | 'completed' = 'incomplete';
-    if (dossier.stageOneCompleted) {
+    if (dossier.stageOneCompleted && isReady) {
       overallStatus = 'completed';
     } else if (dup && dup.routedToReview && dup.reviewDecision !== 'override_approved') {
       overallStatus = 'review_hold';
@@ -615,6 +617,25 @@ export class StageOneOnboardingService {
       success: true,
       dossier
     };
+  }
+
+  /**
+   * Resolve whether the persisted Stage 01 hard exit gate has passed.
+   * Missing, inconsistent, or incomplete state fails closed.
+   */
+  public static hasPassedHardExitGate(clientId: string | null | undefined): boolean {
+    const permanentClientId = clientId?.trim();
+    if (!permanentClientId) return false;
+
+    const dossier = this.getDossier(permanentClientId);
+    return Boolean(
+      dossier &&
+      dossier.clientId === permanentClientId &&
+      dossier.stageOneCompleted === true &&
+      dossier.activeWorkflowStage >= 2 &&
+      dossier.readiness.isReady === true &&
+      dossier.readiness.overallStatus === 'completed'
+    );
   }
 
   private static inMemoryDossiers: Map<string, StageOneDossier> = new Map();

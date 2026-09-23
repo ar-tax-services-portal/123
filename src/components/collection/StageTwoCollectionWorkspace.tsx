@@ -86,6 +86,15 @@ interface StageTwoCollectionWorkspaceProps {
   onTaxYearChange?: (year: number) => void;
   initialSubTab?: 'checklist' | 'upload' | 'vault' | 'missing' | 'requests' | 'processing' | 'security' | 'exceptions' | 'review' | 'readiness';
   onOpenAssistant?: () => void;
+
+  /*
+   * LIVE server-authoritative workflow controls.
+   *
+   * These default to false/undefined for legacy or DEMO
+   * consumers so no existing caller gains new authority.
+   */
+  serverStageThreeEligible?: boolean;
+  onServerWorkflowRefresh?: () => void;
 }
 
 export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspaceProps> = ({
@@ -93,7 +102,9 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
   selectedTaxYear,
   onTaxYearChange,
   initialSubTab = 'checklist',
-  onOpenAssistant
+  onOpenAssistant,
+  serverStageThreeEligible = false,
+  onServerWorkflowRefresh
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     'checklist' | 'upload' | 'vault' | 'missing' | 'requests' | 'processing' | 'security' | 'exceptions' | 'review' | 'readiness'
@@ -337,15 +348,21 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
     }
   };
 
-  if (showStageThree) {
+  if (
+    showStageThree &&
+    serverStageThreeEligible
+  ) {
     return (
       <StageThreeValidationWorkspace
         clientId={context.clientId}
         selectedTaxYear={context.taxYear}
         onTaxYearChange={onTaxYearChange}
-        userRole="cpa"
+        userRole="client"
         onOpenAssistant={onOpenAssistant}
-        onNavigateToStageTwo={() => setShowStageThree(false)}
+        onNavigateToStageTwo={() => {
+          setShowStageThree(false);
+          onServerWorkflowRefresh?.();
+        }}
       />
     );
   }
@@ -1352,7 +1369,7 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
           clientId={context.clientId}
           taxYear={context.taxYear}
           engagementId={context.engagementId}
-          userRole="cpa"
+          userRole="client"
           onRefresh={() => setWorkspaceVersion(v => v + 1)}
         />
       )}
@@ -1759,7 +1776,7 @@ export const StageTwoCollectionWorkspace: React.FC<StageTwoCollectionWorkspacePr
           clientId={context.clientId}
           taxYear={context.taxYear}
           engagementId={context.engagementId}
-          userRole="cpa"
+          userRole="client"
           onRefresh={() => setWorkspaceVersion(v => v + 1)}
           onNavigateToStageThree={() => setShowStageThree(true)}
         />

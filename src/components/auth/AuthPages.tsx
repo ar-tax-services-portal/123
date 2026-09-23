@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BrandLogo } from '../common/BrandLogo';
 import { requestPasswordReset } from '../../firebase/auth';
-import { StageOneOnboardingService } from '../../services/stageOneOnboardingService';
 import { 
   Lock, 
   Mail, 
@@ -240,22 +239,13 @@ export const ClientRegisterPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!acceptedTerms) {
-      setError('Please accept the Terms of Service, Privacy Policy and IRC Â§ 7216 disclosure to proceed.');
+      setError('Please accept the Terms of Service, Privacy Policy and IRC § 7216 disclosure to proceed.');
       return;
     }
     setError(null);
     setLoading(true);
 
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
-
-    // Stage One Onboarding initialization: Generate internal Client ID
-    const dossier = StageOneOnboardingService.createInitialDossier({
-      fullName,
-      email,
-      phone,
-      taxpayerType: category === 'individual' ? 'individual' : 'entity',
-      businessName: category !== 'individual' ? company : undefined
-    });
 
     const success = await register({
       name: fullName,
@@ -458,7 +448,7 @@ export const ClientRegisterPage: React.FC = () => {
               className="mt-0.5 rounded text-[#C6A15B] focus:ring-[#C6A15B]"
             />
             <span>
-              I agree to the <strong>Terms of Service</strong>, <strong>Privacy Policy</strong>, and acknowledge disclosure under <strong>IRC Â§ 7216</strong> regarding taxpayer data protection and electronic communications.
+              I agree to the <strong>Terms of Service</strong>, <strong>Privacy Policy</strong>, and acknowledge disclosure under <strong>IRC § 7216</strong> regarding taxpayer data protection and electronic communications.
             </span>
           </label>
 
@@ -654,7 +644,7 @@ export const StaffLoginPage: React.FC = () => {
                 <input
                   type="password"
                   required
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[#07172B] border border-[#1E3A5F] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[#C6A15B]"
