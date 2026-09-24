@@ -33,7 +33,7 @@ import { AuthenticatedRequest } from './src/server/auth';
 import './src/server/firebase-admin';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Initialize seed credentials
 initSeedPasswords();
