@@ -7,7 +7,9 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
+
 import { initSeedPasswords } from './src/server/auth';
+
 import { authRouter } from './src/server/routes/auth.routes';
 import { onboardingRouter } from './src/server/routes/onboarding.routes';
 import { documentsRouter } from './src/server/routes/documents.routes';
@@ -27,50 +29,137 @@ import { consultationRoomRouter } from './src/server/routes/consultationRoom.rou
 import { intakeRouter } from './src/server/routes/intake.routes';
 import { stagingRouter } from './src/server/routes/staging.routes';
 import { monitoringRouter } from './src/server/routes/monitoring.routes';
-import { taxguardRouter, handleLegacyTaxGuardRoute } from './src/server/routes/taxguard.routes';
+
+import {
+  taxguardRouter,
+  handleLegacyTaxGuardRoute
+} from './src/server/routes/taxguard.routes';
+
+/**
+ * TaxGuard LIVE server-authoritative workflow router.
+ *
+ * Mounted below at:
+ *
+ *   /api/live-workflow
+ *
+ * The router itself owns:
+ *
+ *   GET  /state
+ *   POST /complete-stage
+ *   GET  /eligibility
+ *
+ * Therefore the final production endpoints are:
+ *
+ *   GET  /api/live-workflow/state
+ *   POST /api/live-workflow/complete-stage
+ *   GET  /api/live-workflow/eligibility
+ */
+import liveWorkflowRouter from './src/server/routes/live-workflow.routes';
+
 import { db } from './src/server/db';
 import { AuthenticatedRequest } from './src/server/auth';
+
 import './src/server/firebase-admin';
 
 const app = express();
+
 const PORT = Number(process.env.PORT) || 3000;
 
-// Initialize seed credentials
+/**
+ * Initialize seed credentials.
+ */
 initSeedPasswords();
 
-// Parse JSON and form payloads with generous limits for file base64 data
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+/**
+ * Request body parsers.
+ *
+ * The larger limit is retained because some existing TaxGuard
+ * workflows transport document data through JSON/form payloads.
+ */
+app.use(
+  express.json({
+    limit: '50mb'
+  })
+);
 
-// CORS and Security Headers allowing AI Studio iframe embedding and preview
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: '50mb'
+  })
+);
+
+/**
+ * CORS and security headers.
+ *
+ * Production frontend:
+ *   https://artaxserv.com
+ *   https://www.artaxserv.com
+ *
+ * API runtime:
+ *   Render / Node / Express
+ */
 app.use((req, res, next) => {
-  // Allow AI Studio preview frames and cross-origin previews
   const allowedOrigins = new Set([
-  'https://artaxserv.com',
-  'https://www.artaxserv.com',
-]);
+    'https://artaxserv.com',
+    'https://www.artaxserv.com'
+  ]);
 
-const requestOrigin = req.headers.origin;
+  const requestOrigin = req.headers.origin;
 
-if (requestOrigin && allowedOrigins.has(requestOrigin)) {
-  res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-  res.setHeader('Vary', 'Origin');
-}
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  // Explicitly remove X-Frame-Options so the AI Studio preview iframe can render
+  if (
+    requestOrigin &&
+    allowedOrigins.has(requestOrigin)
+  ) {
+    res.setHeader(
+      'Access-Control-Allow-Origin',
+      requestOrigin
+    );
+
+    res.setHeader(
+      'Vary',
+      'Origin'
+    );
+  }
+
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PUT, DELETE, OPTIONS'
+  );
+
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, x-session-token'
+  );
+
+  res.setHeader(
+    'X-Content-Type-Options',
+    'nosniff'
+  );
+
+  res.setHeader(
+    'Referrer-Policy',
+    'strict-origin-when-cross-origin'
+  );
+
+  /**
+   * Existing application behavior retained.
+   *
+   * The application may be rendered in supported preview
+   * environments, so the server does not force X-Frame-Options.
+   */
   res.removeHeader('X-Frame-Options');
 
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
+
   next();
 });
 
-// Health check endpoint
+/**
+ * Production health endpoint.
+ */
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -83,91 +172,360 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/auth', authRouter);
-app.use('/api/onboarding', onboardingRouter);
-app.use('/api/documents', documentsRouter);
-app.use('/api/engagements', engagementsRouter);
-app.use('/api/appointments', appointmentsRouter);
-app.use('/api/payments', paymentsRouter);
-app.use('/api/integrations', integrationsRouter);
-app.use('/api/messages', messagesRouter);
-app.use('/api/careers', careersRouter);
-app.use('/api/legal', legalRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/security', securityRouter);
-app.use('/api/assignments', assignmentsRouter);
-app.use('/api/accountant', accountantRouter);
-app.use('/api/calendar', calendarRouter);
-app.use('/api/consultation-rooms', consultationRoomRouter);
-app.use('/api/intake', intakeRouter);
-app.use('/api/staging', stagingRouter);
-app.use('/api/monitoring', monitoringRouter);
-app.use('/api/taxguard', taxguardRouter);
+/**
+ * ============================================================
+ * API ROUTES
+ * ============================================================
+ */
 
-// Legacy /taxguard route redirection and security gate
-app.use(['/taxguard', '/taxguard/*'], (req: AuthenticatedRequest, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.startsWith('Bearer ')
-    ? authHeader.substring(7)
-    : (req.headers['x-session-token'] as string);
+app.use(
+  '/api/auth',
+  authRouter
+);
 
-  if (token) {
-    const session = db.sessions.get(token);
-    if (session && Date.now() <= session.expiresAt) {
-      const user = db.users.get(session.userId);
-      if (user && user.status !== 'disabled' && user.status !== 'suspended') {
-        req.user = user;
-        req.token = token;
+app.use(
+  '/api/onboarding',
+  onboardingRouter
+);
+
+app.use(
+  '/api/documents',
+  documentsRouter
+);
+
+app.use(
+  '/api/engagements',
+  engagementsRouter
+);
+
+app.use(
+  '/api/appointments',
+  appointmentsRouter
+);
+
+app.use(
+  '/api/payments',
+  paymentsRouter
+);
+
+app.use(
+  '/api/integrations',
+  integrationsRouter
+);
+
+app.use(
+  '/api/messages',
+  messagesRouter
+);
+
+app.use(
+  '/api/careers',
+  careersRouter
+);
+
+app.use(
+  '/api/legal',
+  legalRouter
+);
+
+app.use(
+  '/api/admin',
+  adminRouter
+);
+
+app.use(
+  '/api/security',
+  securityRouter
+);
+
+app.use(
+  '/api/assignments',
+  assignmentsRouter
+);
+
+app.use(
+  '/api/accountant',
+  accountantRouter
+);
+
+app.use(
+  '/api/calendar',
+  calendarRouter
+);
+
+app.use(
+  '/api/consultation-rooms',
+  consultationRoomRouter
+);
+
+app.use(
+  '/api/intake',
+  intakeRouter
+);
+
+app.use(
+  '/api/staging',
+  stagingRouter
+);
+
+app.use(
+  '/api/monitoring',
+  monitoringRouter
+);
+
+app.use(
+  '/api/taxguard',
+  taxguardRouter
+);
+
+/**
+ * ============================================================
+ * TAXGUARD LIVE WORKFLOW AUTHORITY
+ * ============================================================
+ *
+ * IMPORTANT:
+ *
+ * This mount connects the existing LIVE workflow router to
+ * the production Express application.
+ *
+ * Without this mount the frontend can successfully authenticate
+ * but cannot retrieve the authoritative workflow state.
+ *
+ * Final routes:
+ *
+ * GET
+ * /api/live-workflow/state
+ *
+ * POST
+ * /api/live-workflow/complete-stage
+ *
+ * GET
+ * /api/live-workflow/eligibility
+ */
+app.use(
+  '/api/live-workflow',
+  liveWorkflowRouter
+);
+
+/**
+ * ============================================================
+ * LEGACY TAXGUARD ROUTE
+ * ============================================================
+ *
+ * Preserve the existing compatibility/security behavior.
+ */
+app.use(
+  ['/taxguard', '/taxguard/*'],
+  (
+    req: AuthenticatedRequest,
+    res,
+    next
+  ) => {
+    const authHeader =
+      req.headers.authorization;
+
+    const token =
+      authHeader &&
+      authHeader.startsWith('Bearer ')
+        ? authHeader.substring(7)
+        : (
+            req.headers[
+              'x-session-token'
+            ] as string
+          );
+
+    if (token) {
+      const session =
+        db.sessions.get(token);
+
+      if (
+        session &&
+        Date.now() <= session.expiresAt
+      ) {
+        const user =
+          db.users.get(session.userId);
+
+        if (
+          user &&
+          user.status !== 'disabled' &&
+          user.status !== 'suspended'
+        ) {
+          req.user = user;
+          req.token = token;
+        }
       }
     }
+
+    handleLegacyTaxGuardRoute(
+      req,
+      res
+    );
   }
+);
 
-  handleLegacyTaxGuardRoute(req, res);
-});
+/**
+ * ============================================================
+ * PUBLIC STATIC ASSETS
+ * ============================================================
+ */
 
-// Serve public assets explicitly with cache revalidation
-app.use(express.static(path.join(process.cwd(), 'public'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i)) {
-      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+app.use(
+  express.static(
+    path.join(
+      process.cwd(),
+      'public'
+    ),
+    {
+      setHeaders: (
+        res,
+        filePath
+      ) => {
+        if (
+          filePath.match(
+            /\.(png|jpg|jpeg|webp|gif|svg)$/i
+          )
+        ) {
+          res.setHeader(
+            'Cache-Control',
+            'no-cache, must-revalidate'
+          );
+        }
+      }
     }
-  }
-}));
+  )
+);
 
-// Vite middleware for dev vs static serving in production
+/**
+ * ============================================================
+ * SERVER STARTUP
+ * ============================================================
+ */
+
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+  /**
+   * Development:
+   * Vite operates as Express middleware.
+   */
+  if (
+    process.env.NODE_ENV !==
+    'production'
+  ) {
+    const vite =
+      await createViteServer({
+        server: {
+          middlewareMode: true
+        },
+
+        appType: 'spa'
+      });
+
+    app.use(
+      vite.middlewares
+    );
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    // Redirect any legacy /ar-tax-portal requests to root domain paths
-    app.use((req, res, next) => {
-      if (req.path === '/ar-tax-portal' || req.path === '/ar-tax-portal/') {
-        return res.redirect(301, '/');
+    /**
+     * Production:
+     * Serve the compiled Vite frontend.
+     */
+    const distPath =
+      path.join(
+        process.cwd(),
+        'dist'
+      );
+
+    /**
+     * Redirect legacy /ar-tax-portal URLs.
+     */
+    app.use(
+      (req, res, next) => {
+        if (
+          req.path ===
+            '/ar-tax-portal' ||
+          req.path ===
+            '/ar-tax-portal/'
+        ) {
+          return res.redirect(
+            301,
+            '/'
+          );
+        }
+
+        if (
+          req.path.startsWith(
+            '/ar-tax-portal/'
+          )
+        ) {
+          const cleanPath =
+            req.path.replace(
+              /^\/ar-tax-portal/,
+              ''
+            );
+
+          return res.redirect(
+            301,
+            cleanPath || '/'
+          );
+        }
+
+        next();
       }
-      if (req.path.startsWith('/ar-tax-portal/')) {
-        const cleanPath = req.path.replace(/^\/ar-tax-portal/, '');
-        return res.redirect(301, cleanPath || '/');
+    );
+
+    /**
+     * Serve compiled production assets.
+     */
+    app.use(
+      express.static(
+        distPath
+      )
+    );
+
+    /**
+     * SPA fallback.
+     *
+     * API routes have already been registered above this
+     * fallback, so registered TaxGuard APIs are handled before
+     * the frontend fallback is reached.
+     */
+    app.get(
+      '*',
+      (req, res) => {
+        res.sendFile(
+          path.join(
+            distPath,
+            'index.html'
+          )
+        );
       }
-      next();
-    });
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    );
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[A/R Tax Services] Server successfully initialized on port ${PORT}`);
-  });
+  /**
+   * Render provides PORT dynamically.
+   *
+   * Local development falls back to 3000.
+   */
+  app.listen(
+    PORT,
+    '0.0.0.0',
+    () => {
+      console.log(
+        `[A/R Tax Services] Server successfully initialized on port ${PORT}`
+      );
+    }
+  );
 }
 
-startServer().catch(err => {
-  console.error('Fatal server startup error:', err);
-  process.exit(1);
-});
+/**
+ * Fatal startup protection.
+ */
+startServer().catch(
+  err => {
+    console.error(
+      'Fatal server startup error:',
+      err
+    );
+
+    process.exit(1);
+  }
+);
