@@ -45,7 +45,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // CORS and Security Headers allowing AI Studio iframe embedding and preview
 app.use((req, res, next) => {
   // Allow AI Studio preview frames and cross-origin previews
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const allowedOrigins = new Set([
+  'https://artaxserv.com',
+  'https://www.artaxserv.com',
+]);
+
+const requestOrigin = req.headers.origin;
+
+if (requestOrigin && allowedOrigins.has(requestOrigin)) {
+  res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  res.setHeader('Vary', 'Origin');
+}
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
   res.setHeader('X-Content-Type-Options', 'nosniff');

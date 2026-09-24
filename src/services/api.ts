@@ -67,7 +67,9 @@ export function clearStoredToken() {
     // Storage restricted or unavailable in sandboxed iframe
   }
 }
-
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || ''
+).replace(/\/+$/, '');
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getStoredToken();
   const headers: Record<string, string> = {
@@ -80,7 +82,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers['x-session-token'] = token;
   }
 
-  const response = await fetch(endpoint, {
+const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers
   });

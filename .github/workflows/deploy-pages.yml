@@ -44,8 +44,10 @@ jobs:
       - name: Run TaxGuard regression tests
         run: npm test -- --run
 
-      - name: Build production application
-        run: npm run build
+      - name: Build
+  run: npm run build
+  env:
+    VITE_API_BASE_URL: https://taxguard-api.onrender.com
 
       - name: Verify production build
         run: |
