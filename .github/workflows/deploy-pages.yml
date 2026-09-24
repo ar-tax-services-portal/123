@@ -47,7 +47,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-         VITE_API_BASE_URL: https://taxguard-api.onrender.com
+          VITE_API_BASE_URL: https://taxguard-api.onrender.com
 
       - name: Verify production build
         run: |
