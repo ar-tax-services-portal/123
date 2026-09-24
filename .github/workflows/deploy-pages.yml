@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - taxguard-production-go-live
   workflow_dispatch:
 
 permissions:
@@ -45,6 +46,8 @@ jobs:
         run: npm test -- --run
 
       - name: Build production application
+        env:
+          VITE_API_BASE_URL: https://taxguard-api.onrender.com
         run: npm run build
 
       - name: Verify production build
@@ -77,4 +80,3 @@ jobs:
       - name: Deploy production website
         id: deployment
         uses: actions/deploy-pages@v4
-
